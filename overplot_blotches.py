@@ -3,15 +3,19 @@ from P4_sandbox import helper_functions as hf
 import urllib
 import shutil
 import os
+import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.image as mplimg
 from itertools import cycle
 from matplotlib.patches import Ellipse
 import sys
 
-def data_munging():
+data_root = '/Users/maye/data/planet4'
+
+def data_munging(img_id):
     print("Reading current marked data.")
-    data = hf.get_current_marked()
+    data = pd.read_hdf(os.path.join(data_root, 'marked.h5'),'df',
+                       where='image_id=='+img_id)
     print("Done.")
     return data
 
@@ -33,7 +37,7 @@ def get_image_from_record(line):
     and finally returns it.
     """
     url = line.image_url
-    targetpath = os.path.join('./images', os.path.basename(url))
+    targetpath = os.path.join(data_root, 'images', os.path.basename(url))
     if not os.path.exists(targetpath):
         print("Did not find image. Downloading ...")
         path = urllib.urlretrieve(url)[0]
@@ -46,12 +50,12 @@ def get_image_from_record(line):
 
 
 def main():
-    data = data_munging()
+    # img id should be given on command line
+    img_id = sys.argv[1]
+    data = data_munging(img_id)
     # this will endlessly cycle through the colors given
     colors = cycle('bgrcmyk')
     
-    # img id should be given on command line
-    img_id = sys.argv[1]
     blotches = get_blotches(data, img_id)
     fig, ax = plt.subplots()
     ax.imshow(get_image_from_record(blotches.iloc[0]))
