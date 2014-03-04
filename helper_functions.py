@@ -70,6 +70,10 @@ def get_current_database(with_tutorial=False):
     return df
 
 
+def get_current_marked():
+    return pd.read_hdf('./marked.h5','df')
+
+
 def get_current_done():
     return pd.read_hdf(done_path, 'df')
 
