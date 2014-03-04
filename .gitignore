@@ -34,3 +34,13 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+*.pdf
+*.ppt
+*.png
+*.df
+*.xls
+*.zip
+*.numbers
+*.gz
+*.pptx
+.ipynb_checkpoints/
