@@ -3,7 +3,7 @@ import numpy as np
 import os
 
 size_of_unique = lambda x: x.unique().size
-data_root = '/Users/maye/data/marszoo'
+data_root = '/Users/maye/data/planet4'
 done_path = os.path.join(data_root, 'done.h5')
 
 def classification_counts_per_user(df):
@@ -61,17 +61,17 @@ def define_season_column(df):
 
 def get_current_database(with_tutorial=False):
     if with_tutorial:
-        df = pd.read_hdf('/Users/maye/data/marszoo/2014-02-02_planet_four_classifications.h5',
+        df = pd.read_hdf('/Users/maye/data/planet4/2014-02-02_planet_four_classifications.h5',
                      'df')
     else:
-        df = pd.read_hdf('/Users/maye/data/marszoo/2014-02-02_tutorial_id_removed.h5',
+        df = pd.read_hdf('/Users/maye/data/planet4/2014-02-02_tutorial_id_removed.h5',
                             'df')
     define_season_column(df)
     return df
 
 
 def get_current_marked():
-    return pd.read_hdf('./marked.h5','df')
+    return pd.read_hdf(os.path.join(data_root, 'marked.h5'),'df')
 
 
 def get_current_done():
@@ -81,9 +81,9 @@ def clean_and_save_database(df):
     df = df[df.image_id != 'APF0000x3t']
     define_season_column(df)
     df.loc[:, 'marking'][df.marking.isnull()] = 'None'
-    df.to_hdf('Users/maye/data/marszoo/current_cleaned.h5', 'df')
+    df.to_hdf('Users/maye/data/planet4/current_cleaned.h5', 'df')
 
 
 def get_current_cleaned():
     """docstring for get_current_cleaned"""
-    return pd.read_hdf('/Users/maye/data/marszoo/current_cleaned.h5', 'df')
+    return pd.read_hdf('/Users/maye/data/planet4/current_cleaned.h5', 'df')
