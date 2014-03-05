@@ -49,9 +49,7 @@ def get_image_from_record(line):
     return im
 
 
-def main():
-    # img id should be given on command line
-    img_id = sys.argv[1]
+def main(img_id):
     data = data_munging(img_id)
     # this will endlessly cycle through the colors given
     colors = cycle('bgrcmyk')
@@ -71,4 +69,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # img id should be given on command line
+    img_id = sys.argv[1]
+
+    main(img_id)
