@@ -23,17 +23,21 @@ for someone absolutely requiring it to be a string, I could make this optional.
 I produce different versions of the reduced dataset, increasing in reduction, resulting in smaller
 and faster to read files.
 
+For all file names the date part indicates the date of the database dump which is delivered every
+by Stuart.
 #### Level 1
 All data is included apart from what was removed in above filtering step.
-The product file name scheme is xxxxxxxx
 
+Product file name is `planet_four_level_1_20xx-xx-xx.h5`
 #### Level 2
 This product is reduced to the data records that are finished in Planet4 terms, which is currently
 defined has having 30 individual analyses performed on a specific Planet4 subframe.
 
+Product file name is `planet_four_level_2_20xx-xx-xx.h5`
 #### Level 3
 This product is reduced further from Level 2 by only including data records with `markings!='None'`.
 In other words, each data record of this data product has marking data in it.
 
+Product file name is `planet_four_level_3_20xx-xx-xx.h5`
 ## Clustering analysis
 TBW
