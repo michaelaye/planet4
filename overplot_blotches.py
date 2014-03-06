@@ -27,6 +27,11 @@ def get_blotches(data, img_id):
     return blotches
 
 
+def get_image_name_from_data(data):
+    """This assumes that all data is for the same image!"""
+    line = data.iloc[0]
+    return os.path.basename(line.image_url.strip())
+
 def get_image_from_record(line):
     """Download image if not there yet and return numpy array.
     
@@ -54,16 +59,18 @@ def plot_blotches(data, img_id):
     blotches = get_blotches(data, img_id)
     # this will endlessly cycle through the colors given
     colors = cycle('bgrcmyk')
-    fig, ax = plt.subplots()
-    ax.imshow(get_image_from_record(blotches.iloc[0]))
+    fig, ax = plt.subplots(ncols=2)
+    ax[0].imshow(get_image_from_record(blotches.iloc[0]))
+    ax[1].imshow(get_image_from_record(blotches.iloc[0]))
     for i, color in zip(xrange(len(blotches),), colors):
         line = blotches.iloc[i]
         plt.scatter(line.x, line.y, color=color)
         el = Ellipse((line.x, line.y),
                  line.radius_1, line.radius_2, line.angle,
                  fill=False, color=color, linewidth=1)
-        ax.add_artist(el)
-    ax.set_title('image_id {}'.format(img_id))
+        ax[1].add_artist(el)
+    ax[0].set_title('image_id {}'.format(img_id))
+    plt.savefig('plots/blotches_'+get_image_name_from_data(blotches))
     plt.show()
 
 
