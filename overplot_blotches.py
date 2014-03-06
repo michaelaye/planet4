@@ -39,7 +39,8 @@ def get_image_from_record(line):
     url = line.image_url
     targetpath = os.path.join(data_root, 'images', os.path.basename(url))
     if not os.path.exists(targetpath):
-        print("Did not find image. Downloading ...")
+        print("Did not find image in cache. Downloading ...")
+        sys.stdout.flush()
         path = urllib.urlretrieve(url)[0]
         print("Done.")
         shutil.move(path, targetpath)
@@ -49,12 +50,10 @@ def get_image_from_record(line):
     return im
 
 
-def main(img_id):
-    data = data_munging(img_id)
+def plot_blotches(data, img_id):
+    blotches = get_blotches(data, img_id)
     # this will endlessly cycle through the colors given
     colors = cycle('bgrcmyk')
-    
-    blotches = get_blotches(data, img_id)
     fig, ax = plt.subplots()
     ax.imshow(get_image_from_record(blotches.iloc[0]))
     for i, color in zip(xrange(len(blotches),), colors):
@@ -71,5 +70,5 @@ def main(img_id):
 if __name__ == '__main__':
     # img id should be given on command line
     img_id = sys.argv[1]
-
-    main(img_id)
+    data = data_munging(img_id)
+    main(data, img_id)
