@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
+from math import pi
 
 size_of_unique = lambda x: x.unique().size
 data_root = '/Users/maye/data/planet4'
@@ -34,3 +35,9 @@ def classification_counts_for_user(username, df):
 def no_of_classifications_per_user(df):
     return df.user_name.groupby(df.image_id, sort=False).agg(size_of_unique)
 
+
+def get_blotch_area(record):
+    if record.marking != 'blotch':
+        return 0
+    else:
+        return pi*record.radius_1*record.radius_2
