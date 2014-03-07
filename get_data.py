@@ -1,9 +1,38 @@
 import pandas as pd
 import os
-
+import sys
+import urllib
+import shutil
+import matplotlib.image as mplimg
 
 data_root = '/Users/maye/data/planet4'
 done_path = os.path.join(data_root, 'done.h5')
+
+def get_example_blotches():
+    return pd.read_hdf(os.path.join(data_root,'blotch_data.h5'),'df')
+
+
+def get_image_from_record(line):
+    """Download image if not there yet and return numpy array.
+    
+    Takes a data record (called 'line'), picks out the image_url.
+    First checks if the name of that image is already stored in 
+    the image path. If not, it grabs it from the server.
+    Then uses matplotlib.image to read the image into a numpy-array
+    and finally returns it.
+    """
+    url = line.image_url
+    targetpath = os.path.join(data_root, 'images', os.path.basename(url))
+    if not os.path.exists(targetpath):
+        print("Did not find image in cache. Downloading ...")
+        sys.stdout.flush()
+        path = urllib.urlretrieve(url)[0]
+        print("Done.")
+        shutil.move(path, targetpath)
+    else:
+        print("Found image in cache.")
+    im = mplimg.imread(targetpath)
+    return im
 
 
 def get_current_database(with_tutorial=False):
