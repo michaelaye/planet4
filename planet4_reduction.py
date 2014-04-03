@@ -7,16 +7,28 @@ import argparse
 def csv_parse(fname):
     pass
 
+
+def is_okay(row):
+    "check for incomplete markings and mark them as not okay."
+    if row.marking in ['interesting', 'none']:
+        return True
+    if row[row.isnull()].shape[0] !=2:
+        return False
+    else:
+        return True
+
+
 def main(fname, parse_times=True, do_filter=True):
     fname_base = os.path.basename(fname)
     root = os.path.dirname(fname)
     fname_no_ext = os.path.splitex(fname_base)[0]
-    reader = pd.read_csv(fname, parse_dates=[1], chunksize=1e6, na_values=['null'])
+    reader = pd.read_csv(fname, chunksize=1e6, na_values=['null'])
     data = [chunk for chunk in reader]
     df = pd.concat(data, ignore_index=True)
     df.acquisition_date = pd.to_datetime(df.acquisition_date)
-
-
+    df['okay'] = True # prefill
+    df['okay'] = df.apply(is_okay, axis=1)
+    df = df[df.okay]
     df.to_hdf(os.path.join(root, fname_no_ext+'.h5'),
               'df')
 
