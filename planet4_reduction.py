@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 from __future__ import print_function, division
 import pandas as pd
-import sys
 import os
 import argparse
+
 
 def csv_parse(fname):
     pass
@@ -13,7 +13,7 @@ def is_okay(row):
     "check for incomplete markings and mark them as not okay."
     if row.marking in ['interesting', 'none']:
         return True
-    if row[row.isnull()].shape[0] !=2:
+    if row[row.isnull()].shape[0] != 2:
         return False
     else:
         return True
