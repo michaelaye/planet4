@@ -42,7 +42,7 @@ def add_ellipses_to_axis(ax, blotches):
     colors = cycle('bgrcmyk')
     for i, color in zip(xrange(len(blotches),), colors):
         line = blotches.iloc[i]
-        plt.scatter(line.x, line.y, color=color)
+        ax.scatter(line.x, line.y, color=color)
         el = Ellipse((line.x, line.y),
                      line.radius_1, line.radius_2, line.angle,
                      fill=False, color=color, linewidth=1)
