@@ -29,7 +29,7 @@ def main(fname, raw_times=False, keep_dirt=False):
     if not raw_times:
         df.acquisition_date = pd.to_datetime(df.acquisition_date)
     if not keep_dirt:
-        df['okay'] = True # prefill
+        df['okay'] = True  # prefill
         df['okay'] = df.apply(is_okay, axis=1)
         df = df[df.okay]
         df.drop('okay', axis=1)
@@ -39,16 +39,19 @@ def main(fname, raw_times=False, keep_dirt=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('csv_fname', help="Provide the filename of the database "
-                                           "dump csv-file here.")
-    parser.add_argument('--raw_times', help="Do not parse the times into a Python datetime"
-                                            " object. For the stone-age. ;) Default:"
-                                            " parse into datetime object.",
+    parser.add_argument('csv_fname',
+                        help="Provide the filename of the database "
+                             "dump csv-file here.")
+    parser.add_argument('--raw_times',
+                        help="Do not parse the times into a Python datetime"
+                             " object. For the stone-age. ;) Default:"
+                             " parse into datetime object.",
                         action='store_true')
-    parser.add_argument('--keep_dirt', help="Do not filter for dirty data. Keep everything."
-                                            " Default: Do the filtering.",
+    parser.add_argument('--keep_dirt',
+                        help="Do not filter for dirty data. Keep everything."
+                             " Default: Do the filtering.",
                         action='store_true')
     args = parser.parse_args()
     print(args)
     main(args.csv_fname, args.raw_times, args.keep_dirt)
-    
+
