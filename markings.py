@@ -15,6 +15,8 @@ data_root = '/Users/maye/data/planet4'
 img_x_size = 840
 img_y_size = 648
 
+colors = cycle('rgbcymk')
+
 
 def set_subframe_size(ax):
     ax.set_xlim(0, img_x_size)
@@ -58,15 +60,27 @@ class P4_ImgID(object):
         return self.data[self.data.marking == 'blotch']
 
     def plot_blotches(self):
+        """Plotting blotches using P4_Blotch class and self.get_subframe."""
         blotches = self.get_blotches()
         fig, ax = plt.subplots()
         ax.imshow(self.get_subframe())
-        colors = cycle('rgbcymk')
         for i, color in zip(xrange(len(blotches)), colors):
             blotch = P4_Blotch(blotches.iloc[i])
             blotch.set_color(color)
             ax.add_artist(blotch)
             blotch.plot_center(ax, color=color)
+        set_subframe_size(ax)
+
+    def plot_fans(self):
+        """Plotting fans using P4_Fans class and self.get_subframe."""
+        fans = self.get_fans()
+        fig, ax = plt.subplots()
+        ax.imshow(self.get_subframe())
+        for i, color in zip(xrange(len(fans)), colors):
+            fan = P4_Fan(fans.iloc[i])
+            fan.set_color(color)
+            ax.add_line(fan)
+        set_subframe_size(ax)
 
 
 class P4_Blotch(Ellipse):
