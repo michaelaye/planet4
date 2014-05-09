@@ -20,7 +20,7 @@ colors = cycle('rgbcymk')
 
 def set_subframe_size(ax):
     ax.set_xlim(0, img_x_size)
-    ax.set_ylim(0, img_y_size)
+    ax.set_ylim(img_y_size, 0)
 
 
 class P4_ImgID(object):
@@ -63,7 +63,7 @@ class P4_ImgID(object):
         """Plotting blotches using P4_Blotch class and self.get_subframe."""
         blotches = self.get_blotches()
         fig, ax = plt.subplots()
-        ax.imshow(self.get_subframe())
+        ax.imshow(self.get_subframe(), origin='upper')
         for i, color in zip(xrange(len(blotches)), colors):
             blotch = P4_Blotch(blotches.iloc[i])
             blotch.set_color(color)
@@ -75,7 +75,7 @@ class P4_ImgID(object):
         """Plotting fans using P4_Fans class and self.get_subframe."""
         fans = self.get_fans()
         fig, ax = plt.subplots()
-        ax.imshow(self.get_subframe())
+        ax.imshow(self.get_subframe(), origin='upper')
         for i, color in zip(xrange(len(fans)), colors):
             fan = P4_Fan(fans.iloc[i])
             fan.set_color(color)
