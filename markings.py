@@ -155,8 +155,6 @@ class P4_Fan(lines.Line2D):
         self.vectors = np.vstack((self.p1, self.base, self.p2))
         # init fan line
         lines.Line2D.__init__(self, self.vectors[:, 0], self.vectors[:, 1])
-        # grap the axis and set its view to subframe size
-        set_subframe_size(plt.gca())
 
     def get_arm_length(self):
         half = radians(self.data.spread / 2.0)
@@ -176,4 +174,3 @@ class P4_Fan(lines.Line2D):
         out = 'x: {0}\ny: {1}\nline_x: {2}\nline_y: {3}'\
             .format(self.x, self.y, self.line_x, self.line_y)
         return out
-
