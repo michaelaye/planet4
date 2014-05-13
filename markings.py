@@ -1,13 +1,17 @@
 from matplotlib.patches import Ellipse
 import pandas as pd
 import os
-from math import sin, cos, radians
+from math import sin, cos, radians, degrees
 import sys
 import urllib
 import shutil
+import numpy as np
+from numpy import arctan2
+from numpy import linalg as LA
 import matplotlib.pyplot as plt
 import matplotlib.image as mplimg
 import matplotlib.lines as lines
+import matplotlib.patches as mpatches
 from itertools import cycle
 
 data_root = '/Users/maye/data/planet4'
@@ -18,13 +22,22 @@ img_y_size = 648
 colors = cycle('rgbcymk')
 
 
+def rotate_vector(v, angle):
+    """Rotate vector by angle given in degrees."""
+    rangle = np.radians(angle)
+    rotmat = np.array([[np.cos(rangle), -np.sin(rangle)],
+                       [np.sin(rangle), np.cos(rangle)]])
+    return rotmat.dot(v)
+
+
 def set_subframe_size(ax):
+    """Set plot view limit on Planet 4 subframe size."""
     ax.set_xlim(0, img_x_size)
     ax.set_ylim(img_y_size, 0)
 
 
 class P4_ImgID(object):
-    """docstring for P4_Img_ID"""
+    """Manage Planet 4 Image ids, getting data, plot stuff etc."""
     def __init__(self, imgid):
         super(P4_ImgID, self).__init__()
         self.imgid = imgid
@@ -54,9 +67,11 @@ class P4_ImgID(object):
         return im
 
     def get_fans(self):
+        """Return only data for fan markings."""
         return self.data[self.data.marking == 'fan']
 
     def get_blotches(self):
+        """Return data for blotch markings."""
         return self.data[self.data.marking == 'blotch']
 
     def plot_blotches(self):
@@ -80,6 +95,7 @@ class P4_ImgID(object):
             fan = P4_Fan(fans.iloc[i])
             fan.set_color(color)
             ax.add_line(fan)
+            fan.add_semicircle(ax, color=color)
         set_subframe_size(ax)
 
 
@@ -106,22 +122,41 @@ class P4_Fan(lines.Line2D):
         # first coordinate is the base of fan
         self.x = self.data.x
         self.y = self.data.y
+        self.base = np.array([self.x, self.y])
         # angles
         inside_half = self.data.spread / 2.0
         alpha = self.data.angle - inside_half
         beta = alpha + self.data.spread
         # length of arms
-        length = self.data.distance / cos(radians(inside_half))
+        length = self.get_arm_length()
         # first arm
-        self.line_x = [self.x + length * cos(radians(alpha))] + [self.x]
-        self.line_y = [self.y + length * sin(radians(alpha))] + [self.y]
+        self.p1 = self.base + length * np.array([cos(radians(alpha)),
+                                                 sin(radians(alpha))])
+        self.line_x = [self.p1[0], self.x]
+        self.line_y = [self.p1[1], self.y]
         # second arm
-        self.line_x += [self.x + length * cos(radians(beta))]
-        self.line_y += [self.y + length * sin(radians(beta))]
+        self.p2 = self.base + length * np.array([cos(radians(beta)),
+                                                 sin(radians(beta))])
+        self.line_x.append(self.p2[0])
+        self.line_y.append(self.p2[1])
         # init fan line
         lines.Line2D.__init__(self, self.line_x, self.line_y)
         # grap the axis and set its view to subframe size
         set_subframe_size(plt.gca())
+
+    def get_arm_length(self):
+        half = radians(self.data.spread / 2.0)
+        return self.data.distance / (cos(half) + sin(half))
+
+    def add_semicircle(self, ax, color='b'):
+        circle_base = self.p1 - self.p2
+        center = self.p2 + 0.5 * circle_base
+        radius = 0.5 * LA.norm(circle_base)
+        theta1 = degrees(arctan2(*-circle_base))
+        theta2 = theta1 + 180
+        wedge = mpatches.Wedge(center, radius, theta1, theta2,
+                               width=0.01*radius, color=color)
+        ax.add_patch(wedge)
 
     def __str__(self):
         out = 'x: {0}\ny: {1}\nline_x: {2}\nline_y: {3}'\
