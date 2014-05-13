@@ -24,10 +24,18 @@ colors = cycle('rgbcymk')
 
 def rotate_vector(v, angle):
     """Rotate vector by angle given in degrees."""
-    rangle = np.radians(angle)
-    rotmat = np.array([[np.cos(rangle), -np.sin(rangle)],
-                       [np.sin(rangle), np.cos(rangle)]])
+    rangle = radians(angle)
+    rotmat = np.array([[cos(rangle), -sin(rangle)],
+                       [sin(rangle), cos(rangle)]])
     return rotmat.dot(v)
+
+
+def diffangle(v1, v2, rads=True):
+    """ Returns the angle in radians between vectors 'v1' and 'v2'    """
+    cosang = np.dot(v1, v2)
+    sinang = LA.norm(np.cross(v1, v2))
+    res = np.arctan2(sinang, cosang)
+    return res if rads=True else degrees(res)
 
 
 def set_subframe_size(ax):
@@ -74,28 +82,36 @@ class P4_ImgID(object):
         """Return data for blotch markings."""
         return self.data[self.data.marking == 'blotch']
 
-    def plot_blotches(self):
+    def plot_blotches(self, n=None):
         """Plotting blotches using P4_Blotch class and self.get_subframe."""
         blotches = self.get_blotches()
         fig, ax = plt.subplots()
         ax.imshow(self.get_subframe(), origin='upper')
+        if n is None:
+            n = len(blotches)
         for i, color in zip(xrange(len(blotches)), colors):
             blotch = P4_Blotch(blotches.iloc[i])
             blotch.set_color(color)
             ax.add_artist(blotch)
             blotch.plot_center(ax, color=color)
+            if i == n-1:
+                break
         set_subframe_size(ax)
 
-    def plot_fans(self):
+    def plot_fans(self, n=None):
         """Plotting fans using P4_Fans class and self.get_subframe."""
         fans = self.get_fans()
         fig, ax = plt.subplots()
+        if n is None:
+            n = len(fans)
         ax.imshow(self.get_subframe(), origin='upper')
         for i, color in zip(xrange(len(fans)), colors):
             fan = P4_Fan(fans.iloc[i])
             fan.set_color(color)
             ax.add_line(fan)
             fan.add_semicircle(ax, color=color)
+            if i == n-1:
+                break
         set_subframe_size(ax)
 
 
@@ -130,13 +146,11 @@ class P4_Fan(lines.Line2D):
         # length of arms
         length = self.get_arm_length()
         # first arm
-        self.p1 = self.base + length * np.array([cos(radians(alpha)),
-                                                 sin(radians(alpha))])
+        self.p1 = self.base + rotate_vector([length, 0], alpha)
         self.line_x = [self.p1[0], self.x]
         self.line_y = [self.p1[1], self.y]
         # second arm
-        self.p2 = self.base + length * np.array([cos(radians(beta)),
-                                                 sin(radians(beta))])
+        self.p2 = self.base + rotate_vector([length, 0], beta)
         self.line_x.append(self.p2[0])
         self.line_y.append(self.p2[1])
         # init fan line
