@@ -82,11 +82,12 @@ class P4_ImgID(object):
         """Return data for blotch markings."""
         return self.data[self.data.marking == 'blotch']
 
-    def plot_blotches(self, n=None):
+    def plot_blotches(self, n=None, img=True):
         """Plotting blotches using P4_Blotch class and self.get_subframe."""
         blotches = self.get_blotches()
         fig, ax = plt.subplots()
-        ax.imshow(self.get_subframe(), origin='upper')
+        if img:
+            ax.imshow(self.get_subframe(), origin='upper')
         if n is None:
             n = len(blotches)
         for i, color in zip(xrange(len(blotches)), colors):
@@ -98,13 +99,14 @@ class P4_ImgID(object):
                 break
         set_subframe_size(ax)
 
-    def plot_fans(self, n=None):
+    def plot_fans(self, n=None, img=True):
         """Plotting fans using P4_Fans class and self.get_subframe."""
         fans = self.get_fans()
         fig, ax = plt.subplots()
         if n is None:
             n = len(fans)
-        ax.imshow(self.get_subframe(), origin='upper')
+        if img:
+            ax.imshow(self.get_subframe(), origin='upper')
         for i, color in zip(xrange(len(fans)), colors):
             fan = P4_Fan(fans.iloc[i])
             fan.set_color(color)
