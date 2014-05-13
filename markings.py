@@ -35,7 +35,7 @@ def diffangle(v1, v2, rads=True):
     cosang = np.dot(v1, v2)
     sinang = LA.norm(np.cross(v1, v2))
     res = np.arctan2(sinang, cosang)
-    return res if rads=True else degrees(res)
+    return res if rads else degrees(res)
 
 
 def set_subframe_size(ax):
@@ -147,14 +147,12 @@ class P4_Fan(lines.Line2D):
         length = self.get_arm_length()
         # first arm
         self.p1 = self.base + rotate_vector([length, 0], alpha)
-        self.line_x = [self.p1[0], self.x]
-        self.line_y = [self.p1[1], self.y]
         # second arm
         self.p2 = self.base + rotate_vector([length, 0], beta)
-        self.line_x.append(self.p2[0])
-        self.line_y.append(self.p2[1])
+        # vector matrix
+        self.vectors = np.vstack((self.p1, self.base, self.p2))
         # init fan line
-        lines.Line2D.__init__(self, self.line_x, self.line_y)
+        lines.Line2D.__init__(self, self.vectors[:, 0], self.vectors[:, 1])
         # grap the axis and set its view to subframe size
         set_subframe_size(plt.gca())
 
