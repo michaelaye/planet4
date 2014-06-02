@@ -123,7 +123,7 @@ class P4_Blotch(Ellipse):
         data = json_row
         super(P4_Blotch, self).__init__((data.x, data.y),
                                         data.radius_1, data.radius_2,
-                                        data.angle,
+                                        data.angle, alpha=0.5,
                                         fill=False, linewidth=1, color=color)
         self.data = data
 
@@ -138,9 +138,7 @@ class P4_Fan(lines.Line2D):
     def __init__(self, json_row):
         self.data = json_row
         # first coordinate is the base of fan
-        self.x = self.data.x
-        self.y = self.data.y
-        self.base = np.array([self.x, self.y])
+        self.base = np.array([self.data.x, self.data.y])
         # angles
         inside_half = self.data.spread / 2.0
         alpha = self.data.angle - inside_half
@@ -148,23 +146,27 @@ class P4_Fan(lines.Line2D):
         # length of arms
         length = self.get_arm_length()
         # first arm
-        self.p1 = self.base + rotate_vector([length, 0], alpha)
+        self.v1 = rotate_vector([length, 0], alpha)
         # second arm
-        self.p2 = self.base + rotate_vector([length, 0], beta)
-        # vector matrix
-        self.vectors = np.vstack((self.p1, self.base, self.p2))
-        # init fan line
-        lines.Line2D.__init__(self, self.vectors[:, 0], self.vectors[:, 1])
+        self.v2 = rotate_vector([length, 0], beta)
+        # vector matrix, stows the 1D vectors row-wise
+        self.coords = np.vstack((self.base + self.v1,
+                                 self.base,
+                                 self.base + self.v2))
+        # init fan line, first column are the x-components of the row-vectors
+        lines.Line2D.__init__(self, self.coords[:, 0], self.coords[:, 1],
+                              alpha=0.5)
 
     def get_arm_length(self):
         half = radians(self.data.spread / 2.0)
         return self.data.distance / (cos(half) + sin(half))
 
     def add_semicircle(self, ax, color='b'):
-        circle_base = self.p1 - self.p2
-        center = self.p2 + 0.5 * circle_base
+        circle_base = self.v1 - self.v2
+        center = self.base + self.v2 + 0.5 * circle_base
         radius = 0.5 * LA.norm(circle_base)
-        theta1 = degrees(arctan2(*-circle_base))
+        # reverse order of arguments for arctan2 input requirements
+        theta1 = degrees(arctan2(*circle_base[::-1]))
         theta2 = theta1 + 180
         wedge = mpatches.Wedge(center, radius, theta1, theta2,
                                width=0.01*radius, color=color)
