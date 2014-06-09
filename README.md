@@ -6,7 +6,11 @@ See more on the Wiki [here](https://github.com/CitizenScienceInAstronomyWorkshop
 
 Install:
 
-```python
+```bash
+cd <where_u_store_software_from_others>
+# next command will create folder `P4_sandbox`
+git clone https://github.com/CitizenScienceInAstronomyWorkshop/P4_sandbox.git
+cd P4_sandbox
 python setup.py install
 ```
 
