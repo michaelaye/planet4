@@ -9,3 +9,5 @@ Install:
 ```python
 python setup.py install
 ```
+
+This will add the module `planet4` to your importable list of modules. (Without the need of adapting PYTHONPATH)
