@@ -13,6 +13,7 @@ import matplotlib.image as mplimg
 import matplotlib.lines as lines
 import matplotlib.patches as mpatches
 from itertools import cycle
+import logging
 
 data_root = '/Users/maye/data/planet4'
 
@@ -20,6 +21,15 @@ img_x_size = 840
 img_y_size = 648
 
 colors = cycle('rgbcymk')
+
+
+def set_upper_left_corner(ul_x, ul_y):
+    """Only works with PyQT this way!"""
+    mngr = plt.get_current_fig_manager()
+    # to put it into the upper left corner for example:
+    geom = mngr.window.geometry()
+    x, y, dx, dy = geom.getRect()
+    mngr.window.setGeometry(ul_x, ul_y, dx, dy)
 
 
 def rotate_vector(v, angle):
@@ -64,13 +74,13 @@ class P4_ImgID(object):
         url = self.data.iloc[0].image_url
         targetpath = os.path.join(data_root, 'images', os.path.basename(url))
         if not os.path.exists(targetpath):
-            print("Did not find image in cache. Downloading ...")
+            logging.info("Did not find image in cache. Downloading ...")
             sys.stdout.flush()
             path = urllib.urlretrieve(url)[0]
-            print("Done.")
+            logging.debug("Done.")
             shutil.move(path, targetpath)
         else:
-            print("Found image in cache.")
+            logging.debug("Found image in cache.")
         im = mplimg.imread(targetpath)
         return im
 
@@ -88,15 +98,19 @@ class P4_ImgID(object):
             mask = (mask) & (self.data.user_name == user_name)
         return self.data[mask]
 
-    def plot_blotches(self, n=None, img=True, user_name=None):
+    def plot_blotches(self, n=None, img=True, user_name=None, ax=None,
+                      user_color=None):
         """Plotting blotches using P4_Blotch class and self.get_subframe."""
         blotches = self.get_blotches(user_name)
-        fig, ax = plt.subplots()
+        if ax is None:
+            _, ax = plt.subplots()
         if img:
-            ax.imshow(self.get_subframe(), origin='upper')
+            ax.imshow(self.get_subframe(), origin='upper', aspect='auto')
         if n is None:
             n = len(blotches)
         for i, color in zip(xrange(len(blotches)), colors):
+            if user_color is not None:
+                color = user_color
             blotch = P4_Blotch(blotches.iloc[i])
             blotch.set_color(color)
             ax.add_artist(blotch)
@@ -105,15 +119,19 @@ class P4_ImgID(object):
                 break
         set_subframe_size(ax)
 
-    def plot_fans(self, n=None, img=True, user_name=None):
+    def plot_fans(self, n=None, img=True, user_name=None, ax=None,
+                  user_color=None):
         """Plotting fans using P4_Fans class and self.get_subframe."""
         fans = self.get_fans(user_name)
-        fig, ax = plt.subplots()
+        if ax is None:
+            fig, ax = plt.subplots()
+        if img:
+            ax.imshow(self.get_subframe(), origin='upper', aspect='auto')
         if n is None:
             n = len(fans)
-        if img:
-            ax.imshow(self.get_subframe(), origin='upper')
         for i, color in zip(xrange(len(fans)), colors):
+            if user_color is not None:
+                color = user_color
             fan = P4_Fan(fans.iloc[i])
             fan.set_color(color)
             ax.add_line(fan)
