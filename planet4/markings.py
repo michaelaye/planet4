@@ -46,10 +46,10 @@ def set_subframe_size(ax):
 
 class P4_ImgID(object):
     """Manage Planet 4 Image ids, getting data, plot stuff etc."""
-    def __init__(self, imgid):
+    def __init__(self, imgid, database_fname):
         super(P4_ImgID, self).__init__()
         self.imgid = imgid
-        self.data = pd.read_hdf(os.path.join(data_root, 'marked.h5'), 'df',
+        self.data = pd.read_hdf(database_fname, 'df',
                                 where='image_id=='+imgid)
 
     def get_subframe(self):
@@ -74,17 +74,23 @@ class P4_ImgID(object):
         im = mplimg.imread(targetpath)
         return im
 
-    def get_fans(self):
+    def get_fans(self, user_name=None):
         """Return only data for fan markings."""
-        return self.data[self.data.marking == 'fan']
+        mask = self.data.marking == 'fan'
+        if user_name is not None:
+            mask = (mask) & (self.data.user_name == user_name)
+        return self.data[mask]
 
-    def get_blotches(self):
+    def get_blotches(self, user_name=None):
         """Return data for blotch markings."""
-        return self.data[self.data.marking == 'blotch']
+        mask = self.data.marking == 'blotch'
+        if user_name is not None:
+            mask = (mask) & (self.data.user_name == user_name)
+        return self.data[mask]
 
-    def plot_blotches(self, n=None, img=True):
+    def plot_blotches(self, n=None, img=True, user_name=None):
         """Plotting blotches using P4_Blotch class and self.get_subframe."""
-        blotches = self.get_blotches()
+        blotches = self.get_blotches(user_name)
         fig, ax = plt.subplots()
         if img:
             ax.imshow(self.get_subframe(), origin='upper')
@@ -99,9 +105,9 @@ class P4_ImgID(object):
                 break
         set_subframe_size(ax)
 
-    def plot_fans(self, n=None, img=True):
+    def plot_fans(self, n=None, img=True, user_name=None):
         """Plotting fans using P4_Fans class and self.get_subframe."""
-        fans = self.get_fans()
+        fans = self.get_fans(user_name)
         fig, ax = plt.subplots()
         if n is None:
             n = len(fans)
