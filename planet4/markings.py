@@ -23,6 +23,18 @@ img_y_size = 648
 colors = cycle('rgbcymk')
 
 
+def gold_legend(ax):
+    colors = list('rgbk')
+    names = ('Michael','Meg','Anya','Candy')
+    line1 = plt.Line2D(range(10), range(10), marker='o', color=colors[0])
+    line2 = plt.Line2D(range(10), range(10), marker='o', color=colors[1])
+    line3 = plt.Line2D(range(10), range(10), marker='o', color=colors[2])
+    line4 = plt.Line2D(range(10), range(10), marker='o', color=colors[3])
+    ax.legend((line1, line2, line3, line4),
+              ('color1', 'color2', 'color3', 'color4'),
+              numpoints=2, loc=1)
+
+
 def set_upper_left_corner(ul_x, ul_y):
     """Only works with PyQT this way!"""
     mngr = plt.get_current_fig_manager()
