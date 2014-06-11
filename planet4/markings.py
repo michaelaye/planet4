@@ -167,8 +167,8 @@ class P4_Blotch(Ellipse):
     def __init__(self, json_row, color='b'):
         data = json_row
         super(P4_Blotch, self).__init__((data.x, data.y),
-                                        data.radius_1, data.radius_2,
-                                        data.angle, alpha=0.5,
+                                        data.radius_1*2, data.radius_2*2,
+                                        data.angle, alpha=0.65,
                                         fill=False, linewidth=1, color=color)
         self.data = data
 
@@ -200,7 +200,7 @@ class P4_Fan(lines.Line2D):
                                  self.base + self.v2))
         # init fan line, first column are the x-components of the row-vectors
         lines.Line2D.__init__(self, self.coords[:, 0], self.coords[:, 1],
-                              alpha=0.5)
+                              alpha=0.65)
 
     def get_arm_length(self):
         half = radians(self.data.spread / 2.0)
@@ -214,7 +214,7 @@ class P4_Fan(lines.Line2D):
         theta1 = degrees(arctan2(*circle_base[::-1]))
         theta2 = theta1 + 180
         wedge = mpatches.Wedge(center, radius, theta1, theta2,
-                               width=0.01*radius, color=color)
+                               width=0.01*radius, color=color, alpha=0.65)
         ax.add_patch(wedge)
 
     def __str__(self):
