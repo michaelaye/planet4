@@ -1,5 +1,5 @@
 from __future__ import print_function, division
-from P4_sandbox.get_data import get_image_from_record
+from .get_data import get_image_from_record
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
