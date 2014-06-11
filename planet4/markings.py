@@ -20,19 +20,19 @@ data_root = '/Users/maye/data/planet4'
 img_x_size = 840
 img_y_size = 648
 
-colors = cycle('rgbcymk')
+colors = cycle('rgbcym')
 
+gold_members = ['michaelaye', 'mschwamb', 'Portyankina', 'CJ-DPI']
+gold_plot_colors = list('cmyg')
 
 def gold_legend(ax):
-    colors = list('rgbk')
-    names = ('Michael','Meg','Anya','Candy')
+    colors = list('cmyg')
     line1 = plt.Line2D(range(10), range(10), marker='o', color=colors[0])
     line2 = plt.Line2D(range(10), range(10), marker='o', color=colors[1])
     line3 = plt.Line2D(range(10), range(10), marker='o', color=colors[2])
     line4 = plt.Line2D(range(10), range(10), marker='o', color=colors[3])
     ax.legend((line1, line2, line3, line4),
-              ('color1', 'color2', 'color3', 'color4'),
-              numpoints=2, loc=1)
+              gold_members, numpoints=2, loc='best', fontsize=7)
 
 
 def set_upper_left_corner(ul_x, ul_y):
@@ -96,24 +96,28 @@ class P4_ImgID(object):
         im = mplimg.imread(targetpath)
         return im
 
-    def get_fans(self, user_name=None):
+    def get_fans(self, user_name=None, without_users=None):
         """Return only data for fan markings."""
         mask = self.data.marking == 'fan'
         if user_name is not None:
             mask = (mask) & (self.data.user_name == user_name)
+        if without_users is not None:
+            mask = (mask) & (~self.data.user_name.isin(without_users))
         return self.data[mask]
 
-    def get_blotches(self, user_name=None):
+    def get_blotches(self, user_name=None, without_users=None):
         """Return data for blotch markings."""
         mask = self.data.marking == 'blotch'
         if user_name is not None:
             mask = (mask) & (self.data.user_name == user_name)
+        if without_users is not None:
+            mask = (mask) & (~self.data.user_name.isin(without_users))
         return self.data[mask]
 
     def plot_blotches(self, n=None, img=True, user_name=None, ax=None,
-                      user_color=None):
+                      user_color=None, without_users=None):
         """Plotting blotches using P4_Blotch class and self.get_subframe."""
-        blotches = self.get_blotches(user_name)
+        blotches = self.get_blotches(user_name, without_users)
         if ax is None:
             _, ax = plt.subplots()
         if img:
@@ -126,15 +130,15 @@ class P4_ImgID(object):
             blotch = P4_Blotch(blotches.iloc[i])
             blotch.set_color(color)
             ax.add_artist(blotch)
-            blotch.plot_center(ax, color=color)
+            # blotch.plot_center(ax, color=color)
             if i == n-1:
                 break
         set_subframe_size(ax)
 
     def plot_fans(self, n=None, img=True, user_name=None, ax=None,
-                  user_color=None):
+                  user_color=None, without_users=None):
         """Plotting fans using P4_Fans class and self.get_subframe."""
-        fans = self.get_fans(user_name)
+        fans = self.get_fans(user_name, without_users)
         if ax is None:
             fig, ax = plt.subplots()
         if img:
