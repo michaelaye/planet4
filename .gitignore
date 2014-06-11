@@ -45,3 +45,4 @@ nosetests.xml
 *.pptx
 .ipynb_checkpoints/
 *.jpg
+*.h5
