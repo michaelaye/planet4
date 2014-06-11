@@ -114,6 +114,11 @@ class P4_ImgID(object):
             mask = (mask) & (~self.data.user_name.isin(without_users))
         return self.data[mask]
 
+    def show_subframe(self, ax=None, aspect='auto'):
+        if ax is None:
+            fig, ax = plt.subplots()
+        ax.imshow(self.get_subframe(), origin='upper', aspect=aspect)
+
     def plot_blotches(self, n=None, img=True, user_name=None, ax=None,
                       user_color=None, without_users=None):
         """Plotting blotches using P4_Blotch class and self.get_subframe."""
@@ -121,7 +126,7 @@ class P4_ImgID(object):
         if ax is None:
             _, ax = plt.subplots()
         if img:
-            ax.imshow(self.get_subframe(), origin='upper', aspect='auto')
+            self.show_subframe(ax)
         if n is None:
             n = len(blotches)
         for i, color in zip(xrange(len(blotches)), colors):
@@ -142,7 +147,7 @@ class P4_ImgID(object):
         if ax is None:
             fig, ax = plt.subplots()
         if img:
-            ax.imshow(self.get_subframe(), origin='upper', aspect='auto')
+            self.show_subframe(ax)
         if n is None:
             n = len(fans)
         for i, color in zip(xrange(len(fans)), colors):
