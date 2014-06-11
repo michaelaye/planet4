@@ -3,10 +3,40 @@ import os
 import sys
 import urllib
 import shutil
+import glob
 import matplotlib.image as mplimg
+import datetime as dt
+
 
 data_root = '/Users/maye/data/planet4'
 done_path = os.path.join(data_root, 'done.h5')
+
+
+def split_date_from_fname(fname):
+    fname = os.path.basename(fname)
+    datestr = fname.split('_')[0]
+    return [int(i) for i in datestr.split('-')]
+
+
+def get_dt_from_fname(fname):
+    """Return date part of planet 4 database files.
+
+    These files are named yyyy-mm-dd_planet_four_classifications.[csv|h5].
+    Hence, this returns the date part for files named like that.
+    """
+    return dt.datetime(*split_date_from_fname(fname))
+
+
+def get_current_database_fname():
+    h5files = glob.glob(data_root+'/*.h5')
+    retval = h5files[0]
+    dtnow = get_dt_from_fname(retval)
+    for fname in h5files[1:]:
+        dt_to_check = get_dt_from_fname(fname)
+        if dt_to_check > dtnow:
+            dtnow = dt_to_check
+            retval = fname
+    return retval
 
 
 def get_example_blotches():
