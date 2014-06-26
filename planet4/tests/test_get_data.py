@@ -24,3 +24,8 @@ def test_from_2_files_get_latest_file(monkeypatch):
     monkeypatch.setattr(glob, 'glob', mockreturn)
     x = get_data.get_current_database_fname()
     assert x == fname2
+
+
+def test_get_tutorial_data():
+    data = get_data.get_tutorial_data()
+    assert data.image_name.unique()[0] == 'tutorial'
