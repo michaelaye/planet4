@@ -1,9 +1,12 @@
-
+#!/usr/bin/env python
 """Checks if a given html file was processed by given user name using
 the current available data file."""
+from __future__ import print_function, division
 from HTMLParser import HTMLParser
 import pandas as pd
-import sys
+import argparse
+import markings
+import get_data
 
 
 class MyHTMLParser(HTMLParser):
@@ -18,24 +21,33 @@ class MyHTMLParser(HTMLParser):
             if '#' in url:
                 self.container.append(url.split('/')[-1])
 
-parser = MyHTMLParser()
-# first argument should be the html file from Meg to check:
-fname = sys.argv[1]
 
-with open(fname) as f:
-    parser.feed(f.read())
+def main(fname, user_name='michaelaye'):
+    parser = MyHTMLParser()
 
-user_name = 'michaelaye'
-df = pd.read_hdf('/Users/maye/data/planet4/'
-                 '2014-06-09_planet_four_classifications_queryable.h5',
-                 'df', where='user_name={0}'.format(user_name))
+    with open(fname) as f:
+        parser.feed(f.read())
 
-check = pd.DataFrame(parser.container, columns=['ids_to_test'])
+    dbname = get_data.get_current_database_fname()
+    df = pd.read_hdf(dbname, 'df', where='user_name={0}'.format(user_name))
 
-check['status'] = check.ids_to_test.isin(df.image_id)
+    check = pd.DataFrame(parser.container, columns=['ids_to_test'])
 
-if check.status.all():
-    print("All ids done.")
-else:
-    print("The following still need to be done:")
-    print(check[~check.status].ids_to_test)
+    check['Done'] = check.ids_to_test.isin(df.image_id)
+
+    if check.Done.all():
+        print("All ids done.")
+    else:
+        print("\nSome are not done yet. Here's the status for all:\n")
+        print(check)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    # first argument should be the html file from Meg to check:
+    parser.add_argument('fname', help='HTML filename from Meg to check.')
+    parser.add_argument('--user', help='username to check for',
+                        choices=markings.gold_members,
+                        default='michaelaye')
+    args = parser.parse_args()
+    main(args.fname, user_name=args.user)
