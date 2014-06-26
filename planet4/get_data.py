@@ -8,7 +8,7 @@ import matplotlib.image as mplimg
 import datetime as dt
 import platform
 
-node_name = platform.node().split('.')[0]
+node_name = platform.node().split('.')[0]  # e.g. luna4[.diviner.ucla.edu]
 
 if node_name.startswith('luna'):
     data_root = '/raid1/maye/planet4'
@@ -69,19 +69,6 @@ def get_image_from_record(line):
         print("Found image in cache.")
     im = mplimg.imread(targetpath)
     return im
-
-
-def get_current_database(with_tutorial=False):
-    if with_tutorial:
-        df = pd.read_hdf('/Users/maye/data/planet4/'
-                         '2014-02-02_planet_four_classifications.h5',
-                         'df')
-    else:
-        df = pd.read_hdf('/Users/maye/data/planet4/'
-                         '2014-02-02_tutorial_id_removed.h5',
-                         'df')
-    define_season_column(df)
-    return df
 
 
 def get_current_marked():
