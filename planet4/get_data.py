@@ -6,9 +6,14 @@ import shutil
 import glob
 import matplotlib.image as mplimg
 import datetime as dt
+import platform
 
+node_name = platform.node().split('.')[0]
 
-data_root = '/Users/maye/data/planet4'
+if node_name.startswith('luna'):
+    data_root = '/raid1/maye/planet4'
+else:
+    data_root = '/Users/maye/data/planet4'
 done_path = os.path.join(data_root, 'done.h5')
 
 
