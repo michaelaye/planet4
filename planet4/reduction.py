@@ -4,6 +4,7 @@ import pandas as pd
 import os
 import argparse
 import logging
+import sys
 
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
@@ -108,6 +109,12 @@ def main(fname, raw_times=False, keep_dirt=False):
 
 
 if __name__ == '__main__':
+    import imp
+    try:
+        imp.find_module('tables')
+    except ImportError:
+        print("Please install the PyTables module. It is required.")
+        sys.exit()
     parser = argparse.ArgumentParser()
     parser.add_argument('csv_fname',
                         help="Provide the filename of the database "
