@@ -10,7 +10,9 @@ import platform
 
 node_name = platform.node().split('.')[0]  # e.g. luna4[.diviner.ucla.edu]
 
-if node_name.startswith('luna'):
+if os.environ['USER'] == 'gapo7695':
+    data_root = '/Users/gapo7695/Dropbox/myPy/others/P4_sandbox/databaseP4'
+elif node_name.startswith('luna'):
     data_root = '/raid1/maye/planet4'
 else:
     data_root = '/Users/maye/data/planet4'
@@ -32,8 +34,11 @@ def get_dt_from_fname(fname):
     return dt.datetime(*split_date_from_fname(fname))
 
 
-def get_current_database_fname():
-    h5files = glob.glob(data_root+'/*.h5')
+def get_current_database_fname(datadir=None):
+    if datadir is None:
+        datadir = data_root
+
+    h5files = glob.glob(datadir + '/*.h5')
     retval = h5files[0]
     dtnow = get_dt_from_fname(retval)
     for fname in h5files[1:]:

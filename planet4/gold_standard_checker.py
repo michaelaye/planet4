@@ -22,13 +22,13 @@ class MyHTMLParser(HTMLParser):
                 self.container.append(url.split('/')[-1])
 
 
-def main(fname, user_name='michaelaye'):
+def main(fname, user_name='michaelaye', datadir=None):
     parser = MyHTMLParser()
 
     with open(fname) as f:
         parser.feed(f.read())
 
-    dbname = get_data.get_current_database_fname()
+    dbname = get_data.get_current_database_fname(datadir)
     df = pd.read_hdf(dbname, 'df', where='user_name={0}'.format(user_name))
 
     check = pd.DataFrame(parser.container, columns=['ids_to_test'])
@@ -49,5 +49,7 @@ if __name__ == '__main__':
     parser.add_argument('--user', help='username to check for',
                         choices=markings.gold_members,
                         default='michaelaye')
+    parser.add_argument('--datadir', help='folder where the csv and h5 files'
+                        'are stored.')
     args = parser.parse_args()
-    main(args.fname, user_name=args.user)
+    main(args.fname, user_name=args.user, datadir=args.datadir)
