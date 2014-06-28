@@ -39,7 +39,6 @@ def get_current_database_fname(datadir=None):
         datadir = data_root
 
     h5files = glob.glob(datadir + '/*_queryable.h5')
-    print h5files
     retval = h5files[0]
     dtnow = get_dt_from_fname(retval)
     for fname in h5files[1:]:
