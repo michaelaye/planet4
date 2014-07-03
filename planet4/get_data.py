@@ -77,7 +77,8 @@ def get_image_from_record(line):
 
 
 def get_current_marked():
-    return pd.read_hdf(os.path.join(data_root, 'marked.h5'), 'df')
+    return pd.read_hdf(get_current_database_fname(), 'df',
+                       where='marking!=None')
 
 
 def get_current_done():

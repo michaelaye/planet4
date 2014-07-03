@@ -50,6 +50,6 @@ if __name__ == '__main__':
                         choices=markings.gold_members,
                         default='michaelaye')
     parser.add_argument('--datadir', help='folder where the csv and h5 files'
-                        'are stored.')
+                        ' are stored.')
     args = parser.parse_args()
     main(args.fname, user_name=args.user, datadir=args.datadir)
