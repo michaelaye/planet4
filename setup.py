@@ -24,10 +24,16 @@ setup(
     version = "0.1beta1",
     packages = find_packages(),
 
-    install_requires = ['pandas>='+pandas_version],
+    install_requires = ['pandas>='+pandas_version, 'cliutils'],
     tests_require = ['pytest'],
 
     cmdclass = {'test': PyTest},
+
+    entry_points={
+        "console_scripts": [
+            'p4reduction = planet4.reduction:main'
+            ]
+    },
 
     #metadata
     author = "K.-Michael Aye",

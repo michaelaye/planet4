@@ -5,6 +5,7 @@ import os
 import argparse
 import logging
 import sys
+from cliutils import cliargs
 
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
@@ -43,6 +44,7 @@ def scan_for_incomplete(df, marking):
     return pd.concat([marked, rest])
 
 
+@cliargs
 def main(fname, raw_times=False, keep_dirt=False):
     logging.info("Starting reduction.")
 
