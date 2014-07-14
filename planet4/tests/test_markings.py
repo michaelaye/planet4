@@ -1,4 +1,4 @@
-from planet4.markings import diffangle, rotate_vector, P4_Fan
+from planet4.markings import diffangle, rotate_vector, Fan
 import numpy as np
 import pytest
 import pandas as pd
@@ -24,26 +24,43 @@ def test_rotate_vector():
     assert (diffangle(v1, new_vec, rads=False) - 270.0) < delta
 
 
-class Test_P4_Fan:
-    @pytest.fixture
-    def datarow(self):
-        # spread is half-spread here
-        index = 'x y distance angle spread'.split()
+class Test_Fan:
+    index = 'x y distance angle spread'.split()
+     # spread is half-spread here
+
+    def test_along_x(self):
         data = [0, 0, 1, 0, 45]
-        return pd.Series(data=data, index=index)
+        datarow = pd.Series(data=data, index=self.index)
+        fan = Fan(datarow)
 
-    @pytest.fixture
-    def fan(self, datarow):
-        return P4_Fan(datarow)
-
-    def test_base(self, fan):
         assert np.array_equal(fan.base, np.array([0, 0]))
 
-    def test_length(self, fan):
         assert np.allclose(np.sqrt(0.5), fan.length)
 
-    def test_v1(self, fan):
         assert np.allclose(np.array([0.5, -0.5]), fan.v1)
 
-    def test_v2(self, fan):
         assert np.allclose(np.array([0.5, 0.5]), fan.v2)
+
+    def test_along_y(self):
+        data = [0, 0, 2, 90, 45]
+        fan = Fan(pd.Series(data=data, index=self.index))
+
+        assert np.array_equal(fan.base, np.array([0, 0]))
+
+        assert np.allclose(np.sqrt(2), fan.length)
+
+        assert np.allclose(np.array([1.0, 1.0]), fan.v1)
+
+        assert np.allclose(np.array([-1.0, 1.0]), fan.v2)
+
+    def test_along_first_sector(self):
+        data = [0, 0, np.sqrt(2), 45, 45]
+        fan = Fan(pd.Series(data=data, index=self.index))
+
+        assert np.array_equal(fan.base, np.array([0, 0]))
+
+        assert np.allclose(1.0, fan.length)
+
+        assert np.allclose(np.array([1.0, 0.0]), fan.v1)
+
+        assert np.allclose(np.array([0.0, 1.0]), fan.v2)

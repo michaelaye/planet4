@@ -68,10 +68,10 @@ def set_subframe_size(ax):
     ax.set_ylim(img_y_size, 0)
 
 
-class P4_ImgID(object):
+class ImageID(object):
     """Manage Planet 4 Image ids, getting data, plot stuff etc."""
     def __init__(self, imgid, database_fname=None, data=None):
-        super(P4_ImgID, self).__init__()
+        super(ImageID, self).__init__()
         self.imgid = imgid
         if data is not None:
             self.data = data
@@ -128,7 +128,7 @@ class P4_ImgID(object):
 
     def plot_blotches(self, n=None, img=True, user_name=None, ax=None,
                       user_color=None, without_users=None):
-        """Plotting blotches using P4_Blotch class and self.get_subframe."""
+        """Plotting blotches using Blotch class and self.get_subframe."""
         blotches = self.get_blotches(user_name, without_users)
         if ax is None:
             _, ax = plt.subplots()
@@ -139,7 +139,7 @@ class P4_ImgID(object):
         for i, color in zip(xrange(len(blotches)), colors):
             if user_color is not None:
                 color = user_color
-            blotch = P4_Blotch(blotches.iloc[i])
+            blotch = Blotch(blotches.iloc[i])
             blotch.set_color(color)
             ax.add_artist(blotch)
             # blotch.plot_center(ax, color=color)
@@ -149,7 +149,7 @@ class P4_ImgID(object):
 
     def plot_fans(self, n=None, img=True, user_name=None, ax=None,
                   user_color=None, without_users=None):
-        """Plotting fans using P4_Fans class and self.get_subframe."""
+        """Plotting fans using Fans class and self.get_subframe."""
         fans = self.get_fans(user_name, without_users)
         if ax is None:
             fig, ax = plt.subplots()
@@ -160,7 +160,7 @@ class P4_ImgID(object):
         for i, color in zip(xrange(len(fans)), colors):
             if user_color is not None:
                 color = user_color
-            fan = P4_Fan(fans.iloc[i])
+            fan = Fan(fans.iloc[i])
             fan.set_color(color)
             ax.add_line(fan)
             fan.add_semicircle(ax, color=color)
@@ -169,14 +169,14 @@ class P4_ImgID(object):
         set_subframe_size(ax)
 
 
-class P4_Blotch(Ellipse):
+class Blotch(Ellipse):
     """Blotch management class for P4."""
     def __init__(self, json_row, color='b'):
         data = json_row
-        super(P4_Blotch, self).__init__((data.x, data.y),
-                                        data.radius_1*2, data.radius_2*2,
-                                        data.angle, alpha=0.65,
-                                        fill=False, linewidth=1, color=color)
+        super(Blotch, self).__init__((data.x, data.y),
+                                     data.radius_1*2, data.radius_2*2,
+                                     data.angle, alpha=0.65,
+                                     fill=False, linewidth=1, color=color)
         self.data = data
 
     def plot_center(self, ax, color='b'):
@@ -184,7 +184,7 @@ class P4_Blotch(Ellipse):
                    s=20, c='b', marker='o')
 
 
-class P4_Fan(lines.Line2D):
+class Fan(lines.Line2D):
     """Fan management class for P4. """
 
     def __init__(self, json_row):
@@ -192,7 +192,7 @@ class P4_Fan(lines.Line2D):
         # first coordinate is the base of fan
         self.base = self.data[['x', 'y']].values
         # angles
-        self.inside_half = self.data.spread #/ 2.0
+        self.inside_half = self.data.spread
         alpha = self.data.angle - self.inside_half
         beta = self.data.angle + self.inside_half
         # length of arms
