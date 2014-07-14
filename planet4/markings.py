@@ -190,17 +190,17 @@ class P4_Fan(lines.Line2D):
     def __init__(self, json_row):
         self.data = json_row
         # first coordinate is the base of fan
-        self.base = np.array([self.data.x, self.data.y])
+        self.base = self.data[['x', 'y']].values
         # angles
-        inside_half = self.data.spread / 2.0
-        alpha = self.data.angle - inside_half
-        beta = alpha + self.data.spread
+        self.inside_half = self.data.spread #/ 2.0
+        alpha = self.data.angle - self.inside_half
+        beta = self.data.angle + self.inside_half
         # length of arms
-        length = self.get_arm_length()
+        self.length = self.get_arm_length()
         # first arm
-        self.v1 = rotate_vector([length, 0], alpha)
+        self.v1 = rotate_vector([self.length, 0], alpha)
         # second arm
-        self.v2 = rotate_vector([length, 0], beta)
+        self.v2 = rotate_vector([self.length, 0], beta)
         # vector matrix, stows the 1D vectors row-wise
         self.coords = np.vstack((self.base + self.v1,
                                  self.base,
@@ -210,7 +210,7 @@ class P4_Fan(lines.Line2D):
                               alpha=0.65)
 
     def get_arm_length(self):
-        half = radians(self.data.spread / 2.0)
+        half = radians(self.inside_half)
         return self.data.distance / (cos(half) + sin(half))
 
     def add_semicircle(self, ax, color='b'):
@@ -225,6 +225,6 @@ class P4_Fan(lines.Line2D):
         ax.add_patch(wedge)
 
     def __str__(self):
-        out = 'x: {0}\ny: {1}\nline_x: {2}\nline_y: {3}'\
-            .format(self.x, self.y, self.line_x, self.line_y)
+        out = 'base: {0}\nlength: {1}\nv1: {2}\nv2: {3}'\
+            .format(self.base, self.length, self.v1, self.v2)
         return out
