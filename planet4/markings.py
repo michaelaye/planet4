@@ -14,6 +14,7 @@ import matplotlib.lines as lines
 import matplotlib.patches as mpatches
 from itertools import cycle
 import logging
+import get_data
 
 data_root = '/Users/maye/data/planet4'
 
@@ -24,6 +25,7 @@ colors = cycle('rgbcym')
 
 gold_members = ['michaelaye', 'mschwamb', 'Portyankina', 'CJ-DPI']
 gold_plot_colors = list('cmyg')
+
 
 def gold_legend(ax):
     colors = list('cmyg')
@@ -68,11 +70,16 @@ def set_subframe_size(ax):
 
 class P4_ImgID(object):
     """Manage Planet 4 Image ids, getting data, plot stuff etc."""
-    def __init__(self, imgid, database_fname):
+    def __init__(self, imgid, database_fname=None, data=None):
         super(P4_ImgID, self).__init__()
         self.imgid = imgid
-        self.data = pd.read_hdf(database_fname, 'df',
-                                where='image_id=='+imgid)
+        if data is not None:
+            self.data = data
+        else:
+            if database_fname is None:
+                database_fname = get_data.get_current_database_fname()
+            self.data = pd.read_hdf(database_fname, 'df',
+                                    where='image_id=='+imgid)
 
     def get_subframe(self):
         """Download image if not there yet and return numpy array.
