@@ -34,19 +34,31 @@ def get_dt_from_fname(fname):
     return dt.datetime(*split_date_from_fname(fname))
 
 
-def get_current_database_fname(datadir=None):
-    if datadir is None:
-        datadir = data_root
-
-    h5files = glob.glob(datadir + '/*_queryable.h5')
-    retval = h5files[0]
+def get_latest_file(filenames):
+    retval = filenames[0]
     dtnow = get_dt_from_fname(retval)
-    for fname in h5files[1:]:
+    for fname in filenames[1:]:
         dt_to_check = get_dt_from_fname(fname)
         if dt_to_check > dtnow:
             dtnow = dt_to_check
             retval = fname
     return retval
+
+
+def get_current_database_fname(datadir=None):
+    if datadir is None:
+        datadir = data_root
+
+    h5files = glob.glob(datadir + '/*_queryable.h5')
+    return get_latest_file(h5files)
+
+
+def get_latest_tutorial_data(datadir=None):
+    if datadir is None:
+        datadir = data_root
+
+    tut_files = glob.glob(datadir + '/*_tutorials.h5')
+    return pd.read_hdf(get_latest_file(tut_files), 'df')
 
 
 def get_example_blotches():
