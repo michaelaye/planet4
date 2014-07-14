@@ -43,7 +43,7 @@ def scan_for_incomplete(df, marking):
     return pd.concat([marked, rest])
 
 
-def main(fname, raw_times=False, keep_dirt=False):
+def main(fname, raw_times=False, keep_dirt=False, do_fastread=False):
     logging.info("Starting reduction.")
 
     # creating file paths
@@ -88,16 +88,16 @@ def main(fname, raw_times=False, keep_dirt=False):
         logging.info("Now scanning for incomplete marking data.")
         for marking in ['fan', 'blotch']:
             df = scan_for_incomplete(df, marking)
+    logging.info("Done removing incompletes.")
 
-    logging.info("Done removing incompletes. "
-                 "Now writing fixed format datafile for "
-                 "fast read-in of all data.")
-    newfpath = '{0}_fast_all_read.h5'.format(rootpath)
-    df.to_hdf(newfpath, 'df')
+    if do_fastread:
+        logging.info("Now writing fixed format datafile for "
+                     "fast read-in of all data.")
+        newfpath = '{0}_fast_all_read.h5'.format(rootpath)
+        df.to_hdf(newfpath, 'df')
+        logging.info("Created {}.".format(newfpath))
 
-    logging.info("Created {}. Now writing query-able database file."
-                 .format(newfpath))
-
+    logging.info("Now writing query-able database file.")
     newfpath = '{0}_queryable.h5'.format(rootpath)
     df.to_hdf(newfpath, 'df',
               format='table',
@@ -128,5 +128,9 @@ if __name__ == '__main__':
                         help="Do not filter for dirty data. Keep everything."
                              " Default: Do the filtering.",
                         action='store_true')
+    parser.add_argument('--do_fastread',
+                        help='Produce the fast-read database file for'
+                             ' complete read into memory.',
+                        action='store_true')
     args = parser.parse_args()
-    main(args.csv_fname, args.raw_times, args.keep_dirt)
+    main(args.csv_fname, args.raw_times, args.keep_dirt, args.do_fastread)
