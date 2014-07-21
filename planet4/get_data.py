@@ -61,6 +61,15 @@ def get_latest_tutorial_data(datadir=None):
     return pd.read_hdf(get_latest_file(tut_files), 'df')
 
 
+def common_gold_ids():
+    # read the common gold_ids to check
+    with open('../data/gold_standard_commons.txt') as f:
+        gold_ids = f.read()
+    gold_ids = gold_ids.split('\n')
+    del gold_ids[-1]  # last one is empty
+    return gold_ids
+
+
 def get_example_blotches():
     return pd.read_hdf(os.path.join(data_root, 'blotch_data.h5'), 'df')
 
