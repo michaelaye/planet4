@@ -176,7 +176,7 @@ class Blotch(Ellipse):
         super(Blotch, self).__init__((data.x, data.y),
                                      data.radius_1*2, data.radius_2*2,
                                      data.angle, alpha=0.65,
-                                     fill=False, linewidth=1, color=color)
+                                     fill=False, linewidth=2, color=color)
         self.data = data
 
     def plot_center(self, ax, color='b'):
@@ -207,7 +207,7 @@ class Fan(lines.Line2D):
                                  self.base + self.v2))
         # init fan line, first column are the x-components of the row-vectors
         lines.Line2D.__init__(self, self.coords[:, 0], self.coords[:, 1],
-                              alpha=0.65)
+                              alpha=0.65, linewidth=2)
 
     def get_arm_length(self):
         half = radians(self.inside_half)
