@@ -170,7 +170,7 @@ class Blotch(Ellipse):
 class Fan(lines.Line2D):
     """Fan management class for P4. """
 
-    def __init__(self, json_row):
+    def __init__(self, json_row, **kwargs):
         self.data = json_row
         # first coordinate is the base of fan
         self.base = self.data[['x', 'y']].values
@@ -190,7 +190,8 @@ class Fan(lines.Line2D):
                                  self.base + self.v2))
         # init fan line, first column are the x-components of the row-vectors
         lines.Line2D.__init__(self, self.coords[:, 0], self.coords[:, 1],
-                              alpha=0.65, linewidth=2)
+                              alpha=0.65, linewidth=2, color='white',
+                              **kwargs)
 
     def get_arm_length(self):
         half = radians(self.inside_half)
