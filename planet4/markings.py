@@ -21,6 +21,8 @@ data_root = '/Users/maye/data/planet4'
 img_x_size = 840
 img_y_size = 648
 
+img_shape = (img_y_size, img_x_size)
+
 colors = cycle('rgbcym')
 
 gold_members = ['michaelaye', 'mschwamb', 'Portyankina', 'CJ-DPI']
@@ -207,6 +209,13 @@ class Fan(lines.Line2D):
         wedge = mpatches.Wedge(center, radius, theta1, theta2,
                                width=0.01*radius, color=color, alpha=0.65)
         ax.add_patch(wedge)
+
+    def plot(self):
+        fig, ax = plt.subplots()
+        img = np.ones(img_shape)
+        ax.imshow(img)
+        ax.add_line(self)
+        plt.show()
 
     def __str__(self):
         out = 'base: {0}\nlength: {1}\nv1: {2}\nv2: {3}'\
