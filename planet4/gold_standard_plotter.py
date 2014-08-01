@@ -32,9 +32,9 @@ def main():
         start = None
         end = None
 
-    for id in gold_ids[start:end]:
-        print(id)
-        gold_id = markings.ImageID(id, fname)
+    for imgid in gold_ids[start:end]:
+        print(imgid)
+        gold_id = markings.ImageID(imgid)
         my_dpi = 96
         fig, axes = plt.subplots(2, 2,
                                  figsize=(1280/my_dpi, 1024/my_dpi),
@@ -52,9 +52,9 @@ def main():
         markings.gold_legend(axes[0])
         if not os.path.exists('plots'):
             os.mkdir('plots')
-        fig.suptitle(id)
-        plt.savefig('{folder}/{id}.png'.format(folder='plots',
-                                               id=gold_id.imgid),
+        fig.suptitle(imgid)
+        plt.savefig('{folder}/{imgid}.png'.format(folder='plots',
+                                                  imgid=gold_id.imgid),
                     dpi=2*my_dpi)
         plt.close(fig)
     # plt.show()
