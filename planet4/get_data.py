@@ -7,6 +7,7 @@ import glob
 import matplotlib.image as mplimg
 import datetime as dt
 import platform
+import logging
 
 node_name = platform.node().split('.')[0]  # e.g. luna4[.diviner.ucla.edu]
 
@@ -17,6 +18,28 @@ elif node_name.startswith('luna4'):
 else:
     data_root = '/Users/maye/data/planet4'
 done_path = os.path.join(data_root, 'done.h5')
+
+
+def get_subframe(url):
+    """Download image if not there yet and return numpy array.
+
+    Takes a data record (called 'line'), picks out the image_url.
+    First checks if the name of that image is already stored in
+    the image path. If not, it grabs it from the server.
+    Then uses matplotlib.image to read the image into a numpy-array
+    and finally returns it.
+    """
+    targetpath = os.path.join(data_root, 'images', os.path.basename(url))
+    if not os.path.exists(targetpath):
+        logging.info("Did not find image in cache. Downloading ...")
+        sys.stdout.flush()
+        path = urllib.urlretrieve(url)[0]
+        logging.debug("Done.")
+        shutil.move(path, targetpath)
+    else:
+        logging.debug("Found image in cache.")
+    im = mplimg.imread(targetpath)
+    return im
 
 
 def split_date_from_fname(fname):

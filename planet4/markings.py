@@ -81,27 +81,10 @@ class ImageID(object):
             self.data = pd.read_hdf(database_fname, 'df',
                                     where='image_id=='+imgid)
 
-    def get_subframe(self):
-        """Download image if not there yet and return numpy array.
-
-        Takes a data record (called 'line'), picks out the image_url.
-        First checks if the name of that image is already stored in
-        the image path. If not, it grabs it from the server.
-        Then uses matplotlib.image to read the image into a numpy-array
-        and finally returns it.
-        """
+    @property
+    def subframe(self):
         url = self.data.iloc[0].image_url
-        targetpath = os.path.join(data_root, 'images', os.path.basename(url))
-        if not os.path.exists(targetpath):
-            logging.info("Did not find image in cache. Downloading ...")
-            sys.stdout.flush()
-            path = urllib.urlretrieve(url)[0]
-            logging.debug("Done.")
-            shutil.move(path, targetpath)
-        else:
-            logging.debug("Found image in cache.")
-        im = mplimg.imread(targetpath)
-        return im
+        return get_data.get_subframe(url)
 
     def get_fans(self, user_name=None, without_users=None):
         """Return only data for fan markings."""
@@ -124,11 +107,11 @@ class ImageID(object):
     def show_subframe(self, ax=None, aspect='auto'):
         if ax is None:
             fig, ax = plt.subplots()
-        ax.imshow(self.get_subframe(), origin='upper', aspect=aspect)
+        ax.imshow(self.subframe(), origin='upper', aspect=aspect)
 
     def plot_blotches(self, n=None, img=True, user_name=None, ax=None,
                       user_color=None, without_users=None):
-        """Plotting blotches using Blotch class and self.get_subframe."""
+        """Plotting blotches using Blotch class and self.subframe."""
         blotches = self.get_blotches(user_name, without_users)
         if ax is None:
             _, ax = plt.subplots()
@@ -149,7 +132,7 @@ class ImageID(object):
 
     def plot_fans(self, n=None, img=True, user_name=None, ax=None,
                   user_color=None, without_users=None):
-        """Plotting fans using Fans class and self.get_subframe."""
+        """Plotting fans using Fans class and self.subframe."""
         fans = self.get_fans(user_name, without_users)
         if ax is None:
             fig, ax = plt.subplots()
