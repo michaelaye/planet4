@@ -16,15 +16,8 @@ def gold_star_plotter(gold_id, axis, fans=False):
 
 
 def main():
-    # database name
-    fname = get_data.get_current_database_fname()
 
-    # read the common gold_ids to check
-    with open('../data/gold_standard_commons.txt') as f:
-        gold_ids = f.read()
-    gold_ids = gold_ids.split('\n')
-    del gold_ids[-1]  # last one is empty
-
+    gold_ids = get_data.common_gold_ids()
     try:
         start = int(sys.argv[1])
         end = int(sys.argv[2])
