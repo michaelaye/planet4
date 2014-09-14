@@ -68,11 +68,12 @@ def main(fname, raw_times=False, keep_dirt=False, do_fastread=False):
 
     # convert times to datetime object
     if not raw_times:
+        logging.info("Starting time conversion now.")
         df.acquisition_date = pd.to_datetime(df.acquisition_date)
         df.created_at = pd.to_datetime(df.created_at,
                                        format='%Y-%m-%d %H:%M:%S %Z')
-
-    logging.info("Time conversions done. Splitting off tutorials now.")
+        logging.info("Time conversions done.")
+    logging.info("Splitting off tutorials now.")
     tutorials = df[df.image_name == 'tutorial']
     tutfpath = '{0}_tutorials.h5'.format(rootpath)
     tutorials.to_hdf(tutfpath, 'df')
