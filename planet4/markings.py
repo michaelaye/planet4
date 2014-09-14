@@ -177,7 +177,7 @@ class Fan(lines.Line2D):
         # first coordinate is the base of fan
         self.base = self.data[['x', 'y']].values
         # angles
-        self.inside_half = self.data.spread
+        self.inside_half = self.data.spread / 2.0
         alpha = self.data.angle - self.inside_half
         beta = self.data.angle + self.inside_half
         # length of arms
