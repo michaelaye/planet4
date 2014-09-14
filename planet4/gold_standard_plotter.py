@@ -7,10 +7,11 @@ import sys
 import get_data
 
 
-def gold_star_plotter(gold_id, axis, fans=False):
+def gold_star_plotter(gold_id, axis, blotches=True, fans=False):
     for goldstar, color in zip(markings.gold_members,
                                markings.gold_plot_colors):
-        gold_id.plot_blotches(user_name=goldstar, ax=axis, user_color=color)
+        if blotches:
+            gold_id.plot_blotches(user_name=goldstar, ax=axis, user_color=color)
         if fans:
             gold_id.plot_fans(user_name=goldstar, ax=axis, user_color=color)
 
