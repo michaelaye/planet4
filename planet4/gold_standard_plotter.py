@@ -7,24 +7,18 @@ import sys
 import get_data
 
 
-def gold_star_plotter(gold_id, axis, fans=False):
+def gold_star_plotter(gold_id, axis, blotches=True, fans=False):
     for goldstar, color in zip(markings.gold_members,
                                markings.gold_plot_colors):
-        gold_id.plot_blotches(user_name=goldstar, ax=axis, user_color=color)
+        if blotches:
+            gold_id.plot_blotches(user_name=goldstar, ax=axis, user_color=color)
         if fans:
             gold_id.plot_fans(user_name=goldstar, ax=axis, user_color=color)
 
 
 def main():
-    # database name
-    fname = get_data.get_current_database_fname()
 
-    # read the common gold_ids to check
-    with open('../data/gold_standard_commons.txt') as f:
-        gold_ids = f.read()
-    gold_ids = gold_ids.split('\n')
-    del gold_ids[-1]  # last one is empty
-
+    gold_ids = get_data.common_gold_ids()
     try:
         start = int(sys.argv[1])
         end = int(sys.argv[2])
@@ -32,9 +26,9 @@ def main():
         start = None
         end = None
 
-    for id in gold_ids[start:end]:
-        print(id)
-        gold_id = markings.P4_ImgID(id, fname)
+    for imgid in gold_ids[start:end]:
+        print(imgid)
+        gold_id = markings.ImageID(imgid)
         my_dpi = 96
         fig, axes = plt.subplots(2, 2,
                                  figsize=(1280/my_dpi, 1024/my_dpi),
@@ -52,9 +46,9 @@ def main():
         markings.gold_legend(axes[0])
         if not os.path.exists('plots'):
             os.mkdir('plots')
-        fig.suptitle(id)
-        plt.savefig('{folder}/{id}.png'.format(folder='plots',
-                                               id=gold_id.imgid),
+        fig.suptitle(imgid)
+        plt.savefig('{folder}/{imgid}.png'.format(folder='plots',
+                                                  imgid=gold_id.imgid),
                     dpi=2*my_dpi)
         plt.close(fig)
     # plt.show()

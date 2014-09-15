@@ -14,16 +14,20 @@ import matplotlib.lines as lines
 import matplotlib.patches as mpatches
 from itertools import cycle
 import logging
+import get_data
 
 data_root = '/Users/maye/data/planet4'
 
 img_x_size = 840
 img_y_size = 648
 
+img_shape = (img_y_size, img_x_size)
+
 colors = cycle('rgbcym')
 
 gold_members = ['michaelaye', 'mschwamb', 'Portyankina', 'CJ-DPI']
 gold_plot_colors = list('cmyg')
+
 
 def gold_legend(ax):
     colors = list('cmyg')
@@ -66,35 +70,23 @@ def set_subframe_size(ax):
     ax.set_ylim(img_y_size, 0)
 
 
-class P4_ImgID(object):
+class ImageID(object):
     """Manage Planet 4 Image ids, getting data, plot stuff etc."""
-    def __init__(self, imgid, database_fname):
-        super(P4_ImgID, self).__init__()
+    def __init__(self, imgid, database_fname=None, data=None):
+        super(ImageID, self).__init__()
         self.imgid = imgid
-        self.data = pd.read_hdf(database_fname, 'df',
-                                where='image_id=='+imgid)
-
-    def get_subframe(self):
-        """Download image if not there yet and return numpy array.
-
-        Takes a data record (called 'line'), picks out the image_url.
-        First checks if the name of that image is already stored in
-        the image path. If not, it grabs it from the server.
-        Then uses matplotlib.image to read the image into a numpy-array
-        and finally returns it.
-        """
-        url = self.data.iloc[0].image_url
-        targetpath = os.path.join(data_root, 'images', os.path.basename(url))
-        if not os.path.exists(targetpath):
-            logging.info("Did not find image in cache. Downloading ...")
-            sys.stdout.flush()
-            path = urllib.urlretrieve(url)[0]
-            logging.debug("Done.")
-            shutil.move(path, targetpath)
+        if data is not None:
+            self.data = data
         else:
-            logging.debug("Found image in cache.")
-        im = mplimg.imread(targetpath)
-        return im
+            if database_fname is None:
+                database_fname = get_data.get_current_database_fname()
+            self.data = pd.read_hdf(database_fname, 'df',
+                                    where='image_id=='+imgid)
+
+    @property
+    def subframe(self):
+        url = self.data.iloc[0].image_url
+        return get_data.get_subframe(url)
 
     def get_fans(self, user_name=None, without_users=None):
         """Return only data for fan markings."""
@@ -117,11 +109,11 @@ class P4_ImgID(object):
     def show_subframe(self, ax=None, aspect='auto'):
         if ax is None:
             fig, ax = plt.subplots()
-        ax.imshow(self.get_subframe(), origin='upper', aspect=aspect)
+        ax.imshow(self.subframe(), origin='upper', aspect=aspect)
 
     def plot_blotches(self, n=None, img=True, user_name=None, ax=None,
                       user_color=None, without_users=None):
-        """Plotting blotches using P4_Blotch class and self.get_subframe."""
+        """Plotting blotches using Blotch class and self.subframe."""
         blotches = self.get_blotches(user_name, without_users)
         if ax is None:
             _, ax = plt.subplots()
@@ -132,7 +124,7 @@ class P4_ImgID(object):
         for i, color in zip(xrange(len(blotches)), colors):
             if user_color is not None:
                 color = user_color
-            blotch = P4_Blotch(blotches.iloc[i])
+            blotch = Blotch(blotches.iloc[i])
             blotch.set_color(color)
             ax.add_artist(blotch)
             # blotch.plot_center(ax, color=color)
@@ -142,7 +134,7 @@ class P4_ImgID(object):
 
     def plot_fans(self, n=None, img=True, user_name=None, ax=None,
                   user_color=None, without_users=None):
-        """Plotting fans using P4_Fans class and self.get_subframe."""
+        """Plotting fans using Fans class and self.subframe."""
         fans = self.get_fans(user_name, without_users)
         if ax is None:
             fig, ax = plt.subplots()
@@ -153,7 +145,7 @@ class P4_ImgID(object):
         for i, color in zip(xrange(len(fans)), colors):
             if user_color is not None:
                 color = user_color
-            fan = P4_Fan(fans.iloc[i])
+            fan = Fan(fans.iloc[i])
             fan.set_color(color)
             ax.add_line(fan)
             fan.add_semicircle(ax, color=color)
@@ -162,14 +154,14 @@ class P4_ImgID(object):
         set_subframe_size(ax)
 
 
-class P4_Blotch(Ellipse):
+class Blotch(Ellipse):
     """Blotch management class for P4."""
     def __init__(self, json_row, color='b'):
         data = json_row
-        super(P4_Blotch, self).__init__((data.x, data.y),
-                                        data.radius_1*2, data.radius_2*2,
-                                        data.angle, alpha=0.65,
-                                        fill=False, linewidth=1, color=color)
+        super(Blotch, self).__init__((data.x, data.y),
+                                     data.radius_1*2, data.radius_2*2,
+                                     data.angle, alpha=0.65,
+                                     fill=False, linewidth=2, color=color)
         self.data = data
 
     def plot_center(self, ax, color='b'):
@@ -177,33 +169,34 @@ class P4_Blotch(Ellipse):
                    s=20, c='b', marker='o')
 
 
-class P4_Fan(lines.Line2D):
+class Fan(lines.Line2D):
     """Fan management class for P4. """
 
-    def __init__(self, json_row):
+    def __init__(self, json_row, **kwargs):
         self.data = json_row
         # first coordinate is the base of fan
-        self.base = np.array([self.data.x, self.data.y])
+        self.base = self.data[['x', 'y']].values
         # angles
-        inside_half = self.data.spread / 2.0
-        alpha = self.data.angle - inside_half
-        beta = alpha + self.data.spread
+        self.inside_half = self.data.spread / 2.0
+        alpha = self.data.angle - self.inside_half
+        beta = self.data.angle + self.inside_half
         # length of arms
-        length = self.get_arm_length()
+        self.length = self.get_arm_length()
         # first arm
-        self.v1 = rotate_vector([length, 0], alpha)
+        self.v1 = rotate_vector([self.length, 0], alpha)
         # second arm
-        self.v2 = rotate_vector([length, 0], beta)
+        self.v2 = rotate_vector([self.length, 0], beta)
         # vector matrix, stows the 1D vectors row-wise
         self.coords = np.vstack((self.base + self.v1,
                                  self.base,
                                  self.base + self.v2))
         # init fan line, first column are the x-components of the row-vectors
         lines.Line2D.__init__(self, self.coords[:, 0], self.coords[:, 1],
-                              alpha=0.65)
+                              alpha=0.65, linewidth=2, color='white',
+                              **kwargs)
 
     def get_arm_length(self):
-        half = radians(self.data.spread / 2.0)
+        half = radians(self.inside_half)
         return self.data.distance / (cos(half) + sin(half))
 
     def add_semicircle(self, ax, color='b'):
@@ -217,7 +210,23 @@ class P4_Fan(lines.Line2D):
                                width=0.01*radius, color=color, alpha=0.65)
         ax.add_patch(wedge)
 
+    def add_mean_wind_pointer(self, ax, color='b'):
+        endpoint = rotate_vector([5*self.length, 0], self.data.angle)
+        coords = np.vstack((self.base,
+                           self.base + endpoint))
+        pointer = lines.Line2D(coords[:, 0], coords[:, 1],
+                               alpha=0.65, linewidth=2)
+        pointer.set_color(color)
+        ax.add_line(pointer)
+
+    def plot(self):
+        fig, ax = plt.subplots()
+        img = np.ones(img_shape)
+        ax.imshow(img)
+        ax.add_line(self)
+        plt.show()
+
     def __str__(self):
-        out = 'x: {0}\ny: {1}\nline_x: {2}\nline_y: {3}'\
-            .format(self.x, self.y, self.line_x, self.line_y)
+        out = 'base: {0}\nlength: {1}\nv1: {2}\nv2: {3}'\
+            .format(self.base, self.length, self.v1, self.v2)
         return out
