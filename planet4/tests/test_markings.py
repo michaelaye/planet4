@@ -1,6 +1,5 @@
 from planet4.markings import diffangle, rotate_vector, Fan
 import numpy as np
-import pytest
 import pandas as pd
 
 
@@ -26,10 +25,10 @@ def test_rotate_vector():
 
 class Test_Fan:
     index = 'x y distance angle spread'.split()
-     # spread is half-spread here
+     # spread is full spread here
 
     def test_along_x(self):
-        data = [0, 0, 1, 0, 45]
+        data = [0, 0, 1, 0, 90]
         datarow = pd.Series(data=data, index=self.index)
         fan = Fan(datarow)
 
@@ -42,7 +41,7 @@ class Test_Fan:
         assert np.allclose(np.array([0.5, 0.5]), fan.v2)
 
     def test_along_y(self):
-        data = [0, 0, 2, 90, 45]
+        data = [0, 0, 2, 90, 90]
         fan = Fan(pd.Series(data=data, index=self.index))
 
         assert np.array_equal(fan.base, np.array([0, 0]))
@@ -54,7 +53,7 @@ class Test_Fan:
         assert np.allclose(np.array([-1.0, 1.0]), fan.v2)
 
     def test_along_first_sector(self):
-        data = [0, 0, np.sqrt(2), 45, 45]
+        data = [0, 0, np.sqrt(2), 45, 90]
         fan = Fan(pd.Series(data=data, index=self.index))
 
         assert np.array_equal(fan.base, np.array([0, 0]))
