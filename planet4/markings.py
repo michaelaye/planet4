@@ -1,15 +1,10 @@
 from matplotlib.patches import Ellipse
 import pandas as pd
-import os
 from math import sin, cos, radians, degrees
-import sys
-import urllib
-import shutil
 import numpy as np
 from numpy import arctan2
 from numpy import linalg as LA
 import matplotlib.pyplot as plt
-import matplotlib.image as mplimg
 import matplotlib.lines as lines
 import matplotlib.patches as mpatches
 from itertools import cycle
@@ -109,7 +104,7 @@ class ImageID(object):
     def show_subframe(self, ax=None, aspect='auto'):
         if ax is None:
             fig, ax = plt.subplots()
-        ax.imshow(self.subframe(), origin='upper', aspect=aspect)
+        ax.imshow(self.subframe, origin='upper', aspect=aspect)
 
     def plot_blotches(self, n=None, img=True, user_name=None, ax=None,
                       user_color=None, without_users=None):
