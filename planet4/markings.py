@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from matplotlib.patches import Ellipse
 import pandas as pd
 from math import sin, cos, radians, degrees
@@ -10,6 +11,7 @@ import matplotlib.patches as mpatches
 from itertools import cycle
 import logging
 import get_data
+import argparse
 
 data_root = '/Users/maye/data/planet4'
 
@@ -148,6 +150,14 @@ class ImageID(object):
                 break
         set_subframe_size(ax)
 
+    def plot_all(self):
+        fig, axes = plt.subplots(2, 2)
+        self.show_subframe(ax=axes[0, 0])
+        self.show_subframe(ax=axes[1, 0])
+        self.plot_fans(ax=axes[0, 1])
+        self.plot_blotches(ax=axes[1, 1])
+        plt.show()
+
 
 class Blotch(Ellipse):
     """Blotch management class for P4."""
@@ -225,3 +235,17 @@ class Fan(lines.Line2D):
         out = 'base: {0}\nlength: {1}\nv1: {2}\nv2: {3}'\
             .format(self.base, self.length, self.v1, self.v2)
         return out
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('imgid',
+                        help='zooniverse image id to plot')
+    args = parser.parse_args()
+
+    imgid = ImageID(args.imgid)
+    imgid.plot_all()
+
+
+if __name__ == '__main__':
+    main()

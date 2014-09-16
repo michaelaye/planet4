@@ -21,17 +21,18 @@ class PyTest(TestCommand):
 
 setup(
     name = "Planet4",
-    version = "0.1beta1",
+    version = "0.1beta2",
     packages = find_packages(),
 
-    install_requires = ['pandas>='+pandas_version, 'cliutils'],
+    install_requires = ['pandas>='+pandas_version],
     tests_require = ['pytest'],
 
     cmdclass = {'test': PyTest},
 
     entry_points={
         "console_scripts": [
-            'p4reduction = planet4.reduction:main'
+            'p4reduction = planet4.reduction:main',
+            'plot_p4_imageid = planet4.markings:main',
             ]
     },
 
