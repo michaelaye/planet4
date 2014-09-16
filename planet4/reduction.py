@@ -5,14 +5,8 @@ import os
 import argparse
 import logging
 import sys
-from cliutils import cliargs
 
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-
-colnames = ["classification_id", "created_at", "image_id", "image_name",
-            "image_url", "user_name", "marking", "x_tile", "y_tile",
-            "acquisition_date", "local_mars_time", "x", "y", "image_x",
-            "image_y", "radius_1", "radius_2", "distance", "angle", "spread"]
 
 # the split trick creates lists when u don't want to break ur fingers with
 # typing ',,'','',',,' all the time...
@@ -44,7 +38,6 @@ def scan_for_incomplete(df, marking):
     return pd.concat([marked, rest])
 
 
-@cliargs
 def main(fname, raw_times=False, keep_dirt=False, do_fastread=False):
     logging.info("Starting reduction.")
 
@@ -57,8 +50,7 @@ def main(fname, raw_times=False, keep_dirt=False, do_fastread=False):
     # creating reader object with pandas interface for csv parsing
     # doing this in chunks as its faster. Also, later will do a split
     # into multiple processes to do this.
-    reader = pd.read_csv(fname, chunksize=1e6, na_values=['null'], header=0,
-                         names=colnames)
+    reader = pd.read_csv(fname, chunksize=1e6, na_values=['null'])
 
     # read in data chunk by chunk and collect into python list
     data = [chunk for chunk in reader]
