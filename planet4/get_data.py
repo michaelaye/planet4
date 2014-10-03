@@ -8,6 +8,7 @@ import matplotlib.image as mplimg
 import datetime as dt
 import platform
 import logging
+import helper_functions as hf
 
 node_name = platform.node().split('.')[0]  # e.g. luna4[.diviner.ucla.edu]
 
@@ -130,25 +131,9 @@ def get_current_done():
 
 
 def get_and_save_done(df, limit=30):
-    counts = classification_counts_per_image(df)
+    counts = hf.classification_counts_per_image(df)
     ids_done = counts[counts >= limit].index
     df[df.image_id.isin(ids_done)].to_hdf(done_path, 'df')
-
-
-###
-### Season related stuff
-###
-
-def unique_image_ids_per_season(df):
-    return df.image_id.groupby(df.season, sort=False).agg(size_of_unique)
-
-
-def define_season_column(df):
-    thousands = df.image_name.str[5:7].astype('int')
-    df['season'] = 0
-    df.loc[:, 'season'][df.image_name.str.startswith('PSP')] = 1
-    df.loc[:, 'season'][(thousands > 10) & (thousands < 20)] = 2
-    df.loc[:, 'season'][thousands > 19] = 3
 
 
 ###
@@ -157,7 +142,7 @@ def define_season_column(df):
 
 def clean_and_save_database(df):
     df = df[df.image_id != 'APF0000x3t']
-    define_season_column(df)
+    hf.define_season_column(df)
     df.loc[:, 'marking'][df.marking.isnull()] = 'None'
     df.to_hdf('Users/maye/data/planet4/current_cleaned.h5', 'df')
 

@@ -45,3 +45,20 @@ def get_blotch_area(record):
         return 0
     else:
         return pi*record.radius_1*record.radius_2
+
+
+###
+### Season related stuff
+###
+
+
+def unique_image_ids_per_season(df):
+    return df.image_id.groupby(df.season, sort=False).agg(size_of_unique)
+
+
+def define_season_column(df):
+    thousands = df.image_name.str[5:7].astype('int')
+    df['season'] = 0
+    df.loc[:, 'season'][df.image_name.str.startswith('PSP')] = 1
+    df.loc[:, 'season'][(thousands > 10) & (thousands < 20)] = 2
+    df.loc[:, 'season'][thousands > 19] = 3
