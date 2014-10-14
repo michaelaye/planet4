@@ -215,12 +215,12 @@ class Fan(lines.Line2D):
                                width=0.01*radius, color=color, alpha=0.65)
         ax.add_patch(wedge)
 
-    def add_mean_wind_pointer(self, ax, color='b'):
+    def add_mean_wind_pointer(self, ax, color='b', ls='-'):
         endpoint = rotate_vector([5*self.length, 0], self.data.angle)
         coords = np.vstack((self.base,
                            self.base + endpoint))
         pointer = lines.Line2D(coords[:, 0], coords[:, 1],
-                               alpha=0.65, linewidth=2)
+                               alpha=0.65, linewidth=3, linestyle=ls)
         pointer.set_color(color)
         ax.add_line(pointer)
 
