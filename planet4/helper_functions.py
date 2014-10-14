@@ -24,10 +24,15 @@ def classification_counts_per_image(df):
                                         sort=False).agg(size_of_unique)
 
 
-def get_status(df, limit=30):
-    no_all = len(df.image_id.unique())
+def get_no_done(df, limit=30):
     counts = classification_counts_per_image(df)
     no_done = counts[counts >= limit].size
+    return no_done
+
+
+def get_status(df, limit=30):
+    no_all = len(df.image_id.unique())
+    no_done = get_no_done(df, limit)
     return np.round(100.0 * no_done / no_all, 1)
 
 
