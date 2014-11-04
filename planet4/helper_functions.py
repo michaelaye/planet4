@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 import os
 from math import pi
@@ -33,7 +32,10 @@ def get_no_done(df, limit=30):
 def get_status(df, limit=30):
     no_all = len(df.image_id.unique())
     no_done = get_no_done(df, limit)
-    return np.round(100.0 * no_done / no_all, 1)
+    try:
+        return np.round(100.0 * no_done / no_all, 1)
+    except ZeroDivisionError:
+        return np.nan
 
 
 def classification_counts_for_user(username, df):
