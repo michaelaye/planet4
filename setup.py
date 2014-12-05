@@ -4,7 +4,7 @@ import sys
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
 
-pandas_version = '0.13.1'
+pandas_version = '0.14.1'
 
 class PyTest(TestCommand):
     def finalize_options(self):
