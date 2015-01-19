@@ -2,7 +2,10 @@
 """Checks if a given html file was processed by given user name using
 the current available data file."""
 from __future__ import print_function, division
-from HTMLParser import HTMLParser
+try:
+    from HTMLParser import HTMLParser
+except ImportError:
+    from html.parser import HTMLParser
 import pandas as pd
 import argparse
 import markings
