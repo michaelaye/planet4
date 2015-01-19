@@ -11,7 +11,7 @@ ellipse_cols = 'x y radius_1 radius_2 angle'.split()
 fan_cols = 'x y angle spread distance'.split()
 
 
-def get_mean_ellipse(data, label_members, fan=False):
+def get_mean_marking(data, label_members, fan=False):
     if not fan:
         ellipsedata = data[ellipse_cols].iloc[label_members]
     else:
@@ -23,8 +23,9 @@ def get_mean_ellipse(data, label_members, fan=False):
         return markings.Fan(meandata)
 
 
-def perform_dbscan(current_data, current_axis, eps=10, min_samples=3,
-                   fans=False, ls='-'):
+def perform_dbscan(current_data, current_axis=None, eps=10, min_samples=3,
+                   fans=False, linestyle='-'):
+    """took out axes as 2nd parameter"""
     center_only = ['x', 'y']
     # center_and_radii = 'x y radius_1 radius_2'.split()
     current_X = current_data[center_only].values
@@ -37,31 +38,39 @@ def perform_dbscan(current_data, current_axis, eps=10, min_samples=3,
 
     unique_labels = set(labels)
     colors = plt.cm.Spectral(np.linspace(0, 1, len(unique_labels)))
+    reduced_data = []
     for k, color in zip(unique_labels, colors):
         label_members = [index[0] for index in np.argwhere(labels == k)]
-        if k == -1:
-            color = 'w'
-            markersize = 5
-        for index in label_members:
-            x = current_X[index]
-            if index in core_samples and k != -1:
-                markersize = 8
-            else:
+
+        # only do the following if we have a matplotlib axis
+        if current_axis:
+            if k == -1:
+                color = 'w'
                 markersize = 5
-            current_axis.plot(x[0], x[1], 'o', markerfacecolor=color,
-                              markeredgecolor='k', markersize=markersize)
+            for index in label_members:
+                x = current_X[index]
+                if index in core_samples and k != -1:
+                    markersize = 8
+                else:
+                    markersize = 5
+                current_axis.plot(x[0], x[1], 'o', markerfacecolor=color,
+                                  markeredgecolor='k', markersize=markersize)
+        # do this part always to get the mean ellipse data
         if k > -0.5:
-            el = get_mean_ellipse(current_data, label_members,
+            el = get_mean_marking(current_data, label_members,
                                   fan=fans)
-            el.set_color(color)
-            if not fans:
-                current_axis.add_artist(el)
-            else:
-                current_axis.add_line(el)
-                el.add_semicircle(current_axis, color=color)
-                el.add_mean_wind_pointer(current_axis, color=color, ls=ls)
-        markings.set_subframe_size(current_axis)
-    return db
+            reduced_data.append(el)
+            if current_axis:
+                el.set_color(color)
+                if not fans:
+                    current_axis.add_artist(el)
+                else:
+                    current_axis.add_line(el)
+                    el.add_semicircle(current_axis, color=color)
+                    el.add_mean_wind_pointer(current_axis, color=color, ls=linestyle)
+        if current_axis:
+            markings.set_subframe_size(current_axis)
+    return reduced_data
 
 
 def gold_star_plotter(gold_id, axis, blotches=True, fans=False):
