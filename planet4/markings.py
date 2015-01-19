@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as lines
 import matplotlib.patches as mpatches
 from itertools import cycle
-import logging
 import get_data
 import argparse
 
