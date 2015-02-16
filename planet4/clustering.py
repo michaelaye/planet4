@@ -24,17 +24,22 @@ def get_mean_marking(data, label_members, fan=False):
 
 
 def perform_dbscan(current_data, current_axis=None, eps=10, min_samples=3,
-                   fans=False, linestyle='-'):
+                   fans=False, linestyle='-', quiet=True):
     """took out axes as 2nd parameter"""
     center_only = ['x', 'y']
     # center_and_radii = 'x y radius_1 radius_2'.split()
     current_X = current_data[center_only].values
+
+    # there could be no markings! Returning None then.
+    if len(current_X) == 0:
+        return None
     db = DBSCAN(eps=eps, min_samples=min_samples).fit(current_X)
     labels = db.labels_.astype('int')
     core_samples = db.core_sample_indices_
     # number of clusters in labels, ignoring noise if present
     n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
-    print("Estimated number of clusters:", n_clusters)
+    if not quiet:
+        print("Estimated number of clusters:", n_clusters)
 
     unique_labels = set(labels)
     colors = plt.cm.Spectral(np.linspace(0, 1, len(unique_labels)))
