@@ -12,7 +12,7 @@ from itertools import cycle
 import get_data
 import argparse
 
-data_root = '/Users/maye/data/planet4'
+data_root = get_data.data_root
 
 img_x_size = 840
 img_y_size = 648
