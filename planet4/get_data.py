@@ -11,13 +11,14 @@ import logging
 import helper_functions as hf
 
 node_name = platform.node().split('.')[0]  # e.g. luna4[.diviner.ucla.edu]
+HOME = os.environ["HOME"]
 
 if os.environ['USER'] == 'gapo7695':
     data_root = '/Users/gapo7695/Dropbox/myPy/others/P4_sandbox/databaseP4'
 elif node_name.startswith('luna4'):
     data_root = '/raid1/maye/planet4'
 else:
-    data_root = '/Users/maye/data/planet4'
+    data_root = os.path.join(HOME, 'data/planet4')
 done_path = os.path.join(data_root, 'done.h5')
 
 
@@ -31,6 +32,8 @@ def get_subframe(url):
     and finally returns it.
     """
     targetpath = os.path.join(data_root, 'images', os.path.basename(url))
+    if not os.path.exists(os.path.dirname(targetpath)):
+        os.makedirs(os.path.dirname(targetpath))
     if not os.path.exists(targetpath):
         logging.info("Did not find image in cache. Downloading ...")
         sys.stdout.flush()
