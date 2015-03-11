@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as lines
 import matplotlib.patches as mpatches
 from itertools import cycle
-import get_data
+from . import get_data
 import argparse
 
 data_root = get_data.data_root
@@ -53,7 +53,7 @@ def rotate_vector(v, angle):
 
 
 def diffangle(v1, v2, rads=True):
-    """ Returns the angle in radians between vectors 'v1' and 'v2'    """
+    """ Returns the angle in radians between vectors 'v1' and 'v2'."""
     cosang = np.dot(v1, v2)
     sinang = LA.norm(np.cross(v1, v2))
     res = np.arctan2(sinang, cosang)
@@ -68,8 +68,12 @@ def set_subframe_size(ax):
 
 class ImageID(object):
     """Manage Planet 4 Image ids, getting data, plot stuff etc."""
+    imgid_template = "APF0000000"
+
     def __init__(self, imgid, database_fname=None, data=None):
         super(ImageID, self).__init__()
+        if len(imgid) < len(self.imgid_template):
+            imgid = self.imgid_template[:-len(imgid)] + imgid
         self.imgid = imgid
         if data is not None:
             self.data = data
@@ -108,9 +112,10 @@ class ImageID(object):
         ax.imshow(self.subframe, origin='upper', aspect=aspect)
 
     def plot_blotches(self, n=None, img=True, user_name=None, ax=None,
-                      user_color=None, without_users=None):
+                      user_color=None, without_users=None, blotches=None):
         """Plotting blotches using Blotch class and self.subframe."""
-        blotches = self.get_blotches(user_name, without_users)
+        if blotches is None:
+            blotches = self.get_blotches(user_name, without_users)
         if ax is None:
             _, ax = plt.subplots()
         if img:
@@ -129,9 +134,10 @@ class ImageID(object):
         set_subframe_size(ax)
 
     def plot_fans(self, n=None, img=True, user_name=None, ax=None,
-                  user_color=None, without_users=None):
+                  user_color=None, without_users=None, fans=None):
         """Plotting fans using Fans class and self.subframe."""
-        fans = self.get_fans(user_name, without_users)
+        if fans is None:
+            fans = self.get_fans(user_name, without_users)
         if ax is None:
             fig, ax = plt.subplots()
         if img:
