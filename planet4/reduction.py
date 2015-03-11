@@ -13,6 +13,28 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 blotch_data_cols = 'x y image_x image_y radius_1 radius_2'.split()
 fan_data_cols = 'x y image_x image_y distance angle spread'.split()
 
+analysis_cols = ['classification_id',
+                 'created_at',
+                 'image_id',
+                 'image_name',
+                 'image_url',
+                 'user_name',
+                 'marking',
+                 'x_tile',
+                 'y_tile',
+                 'acquisition_date',
+                 'local_mars_time',
+                 'x',
+                 'y',
+                 'image_x',
+                 'image_y',
+                 'radius_1',
+                 'radius_2',
+                 'distance',
+                 'angle',
+                 'spread',
+                 'version']
+
 
 def scan_for_incomplete(df, marking):
     """scan for incomplete data and remove from dataframe."""
@@ -50,13 +72,14 @@ def main(fname, raw_times=False, keep_dirt=False, do_fastread=False):
     # creating reader object with pandas interface for csv parsing
     # doing this in chunks as its faster. Also, later will do a split
     # into multiple processes to do this.
-    reader = pd.read_csv(fname, chunksize=1e6, na_values=['null'])
+    reader = pd.read_csv(fname, chunksize=1e6, na_values=['null'],
+                         usecols=analysis_cols)
 
     # read in data chunk by chunk and collect into python list
     data = [chunk for chunk in reader]
     logging.info("Data collected into list.")
 
-    #convert list into Pandas dataframe
+    # convert list into Pandas dataframe
     df = pd.concat(data, ignore_index=True)
     logging.info("Conversion to dataframe complete.")
 
