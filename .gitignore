@@ -47,3 +47,5 @@ nosetests.xml
 *.jpg
 *.h5
 *.mp4
+*.hdf
+*.csv
