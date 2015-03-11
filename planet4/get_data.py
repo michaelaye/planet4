@@ -8,7 +8,7 @@ import matplotlib.image as mplimg
 import datetime as dt
 import platform
 import logging
-import helper_functions as hf
+from . import helper_functions as hf
 
 node_name = platform.node().split('.')[0]  # e.g. luna4[.diviner.ucla.edu]
 HOME = os.environ["HOME"]
