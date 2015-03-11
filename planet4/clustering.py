@@ -2,10 +2,11 @@ from __future__ import print_function, division
 from planet4 import markings
 from planet4 import get_data
 from sklearn.cluster import DBSCAN
-import matplotlib
-matplotlib.style.use('bmh')
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+
+matplotlib.style.use('bmh')
 
 ellipse_cols = 'x y radius_1 radius_2 angle'.split()
 fan_cols = 'x y angle spread distance'.split()
@@ -72,7 +73,9 @@ def perform_dbscan(current_data, current_axis=None, eps=10, min_samples=3,
                 else:
                     current_axis.add_line(el)
                     el.add_semicircle(current_axis, color=color)
-                    el.add_mean_wind_pointer(current_axis, color=color, ls=linestyle)
+                    el.add_mean_wind_pointer(current_axis,
+                                             color=color,
+                                             ls=linestyle)
         if current_axis:
             markings.set_subframe_size(current_axis)
     return reduced_data
