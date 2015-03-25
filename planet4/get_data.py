@@ -1,7 +1,10 @@
 import pandas as pd
 import os
 import sys
-import urllib
+try:
+    from urllib import urlretrieve
+except ImportError:
+    from urllib.request import urlretrieve
 import shutil
 import glob
 import matplotlib.image as mplimg
@@ -9,6 +12,7 @@ import datetime as dt
 import platform
 import logging
 from . import helper_functions as hf
+import blaze as bz
 
 node_name = platform.node().split('.')[0]  # e.g. luna4[.diviner.ucla.edu]
 HOME = os.environ["HOME"]
@@ -20,6 +24,52 @@ elif node_name.startswith('luna4'):
 else:
     data_root = os.path.join(HOME, 'data/planet4')
 done_path = os.path.join(data_root, 'done.h5')
+
+
+class ResultManager:
+    resultpath = '/Users/klay6683/data/planet4/reduced/'
+
+    def __init__(self, image_name):
+        self.image_name = image_name
+        self.fanfname = os.path.join(self.resultpath,
+                                     image_name + '_reduced_fans.hdf')
+        self.blotchfname = os.path.join(self.resultpath,
+                                        image_name + '_reduced_blotches.hdf')
+
+    def load_dataframes(self):
+        self.fans = pd.read_hdf(self.fanfname, 'df')
+        self.blotches = pd.read_hdf(self.blotchfname, 'df')
+
+    def clean_up(self):
+        if os.path.exists(self.fanfname):
+            os.remove(self.fanfname)
+        if os.path.exists(self.blotchfname):
+            os.remove(self.blotchfname)
+
+
+def is_catalog_production_good():
+    from pandas.core.index import InvalidIndexError
+    dbfile = get_current_database_fname()
+    p4data = bz.Data('hdfstore://'+dbfile+'::df')
+    image_names = p4data.image_name.distinct()
+
+    not_there = []
+    invalid_index = []
+    value_error = []
+    for image_name in image_names:
+        try:
+            ResultManager(image_name)
+        except InvalidIndexError:
+            invalid_index.append(image_name)
+        except ValueError:
+            value_error.append(image_name)
+        except:
+            not_there.append(image_name)
+    if len(value_error) == 0 and len(not_there) == 0 and\
+            len(invalid_index) == 0:
+        return True
+    else:
+        return False
 
 
 def get_subframe(url):
@@ -37,7 +87,7 @@ def get_subframe(url):
     if not os.path.exists(targetpath):
         logging.info("Did not find image in cache. Downloading ...")
         sys.stdout.flush()
-        path = urllib.urlretrieve(url)[0]
+        path = urlretrieve(url)[0]
         logging.debug("Done.")
         shutil.move(path, targetpath)
     else:

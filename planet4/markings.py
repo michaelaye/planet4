@@ -25,6 +25,16 @@ gold_members = ['michaelaye', 'mschwamb', 'Portyankina', 'CJ-DPI']
 gold_plot_colors = list('cmyg')
 
 
+def calc_fig_size(width):
+    """Calc figure height in ratio of subframes."""
+    ratio = img_x_size / img_y_size
+    return (width, width/ratio)
+
+
+def calc_4_3(width):
+    return (width, width/(4/3.0))
+
+
 def gold_legend(ax):
     colors = list('cmyg')
     line1 = plt.Line2D(range(10), range(10), marker='o', color=colors[0])
@@ -107,22 +117,26 @@ class ImageID(object):
         return self.data[mask]
 
     def show_subframe(self, ax=None, aspect='auto'):
+        fig = None
         if ax is None:
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=calc_4_3(8))
         ax.imshow(self.subframe, origin='upper', aspect=aspect)
+        if fig is not None:
+            return fig
 
     def plot_blotches(self, n=None, img=True, user_name=None, ax=None,
                       user_color=None, without_users=None, blotches=None):
         """Plotting blotches using Blotch class and self.subframe."""
+        fig = None
         if blotches is None:
             blotches = self.get_blotches(user_name, without_users)
         if ax is None:
-            _, ax = plt.subplots()
+            fig, ax = plt.subplots()
         if img:
-            self.show_subframe(ax)
+            self.show_subframe(ax, aspect='equal')
         if n is None:
             n = len(blotches)
-        for i, color in zip(xrange(len(blotches)), colors):
+        for i, color in zip(range(len(blotches)), colors):
             if user_color is not None:
                 color = user_color
             blotch = Blotch(blotches.iloc[i])
@@ -132,6 +146,8 @@ class ImageID(object):
             if i == n-1:
                 break
         set_subframe_size(ax)
+        if fig is not None:
+            return fig
 
     def plot_fans(self, n=None, img=True, user_name=None, ax=None,
                   user_color=None, without_users=None, fans=None):
@@ -144,7 +160,7 @@ class ImageID(object):
             self.show_subframe(ax)
         if n is None:
             n = len(fans)
-        for i, color in zip(xrange(len(fans)), colors):
+        for i, color in zip(range(len(fans)), colors):
             if user_color is not None:
                 color = user_color
             fan = Fan(fans.iloc[i])
