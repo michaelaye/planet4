@@ -65,6 +65,7 @@ def perform_dbscan(current_data, current_axis=None, eps=10, min_samples=3,
         if k > -0.5:
             el = get_mean_marking(current_data, label_members,
                                   fan=fans)
+            el.n_members = len(label_members)
             reduced_data.append(el)
             if current_axis:
                 el.set_color(color)

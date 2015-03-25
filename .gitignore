@@ -50,3 +50,5 @@ nosetests.xml
 *.hdf
 *.csv
 *.gif
+*/.DS_Store
+**/.DS_Store
