@@ -49,3 +49,4 @@ nosetests.xml
 *.mp4
 *.hdf
 *.csv
+*.gif
