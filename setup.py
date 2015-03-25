@@ -2,7 +2,7 @@ import sys
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
 
-pandas_version = '0.14.1'
+pandas_version = '0.15.2'
 
 class PyTest(TestCommand):
     def finalize_options(self):
@@ -19,7 +19,7 @@ class PyTest(TestCommand):
 
 setup(
     name = "Planet4",
-    version = "0.1beta2",
+    version = "0.2",
     packages = find_packages(),
 
     install_requires = ['pandas>='+pandas_version],

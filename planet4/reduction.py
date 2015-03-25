@@ -60,6 +60,54 @@ def scan_for_incomplete(df, marking):
     return pd.concat([marked, rest])
 
 
+def convert_times(df):
+    logging.info("Starting time conversion now.")
+    df.acquisition_date = pd.to_datetime(df.acquisition_date)
+    df.created_at = pd.to_datetime(df.created_at,
+                                   format='%Y-%m-%d %H:%M:%S %Z')
+    logging.info("Time conversions done.")
+    return
+
+
+def splitting_tutorials(rootpath, df):
+    logging.info("Splitting off tutorials now.")
+    tutorials = df[df.image_name == 'tutorial']
+    tutfpath = '{}_tutorials.h5'.format(rootpath)
+    tutorials = tutorials.drop(['image_id',
+                                'image_url',
+                                'image_name',
+                                'local_mars_time'],
+                                axis=1)
+    tutorials.to_hdf(tutfpath, 'df')
+    df = df[df.image_name != 'tutorial']
+
+    logging.info("Tutorial split done. Wrote "
+                 "{}. Scanning for and dropping empty lines now."
+                 .format(tutfpath))
+    return
+
+
+def produce_fast_read(rootpath, df):
+    logging.info("Now writing fixed format datafile for "
+                 "fast read-in of all data.")
+    newfpath = '{0}_fast_all_read.h5'.format(rootpath)
+    df.to_hdf(newfpath, 'df')
+    logging.info("Created {}.".format(newfpath))
+    return
+
+
+def convert_ellipse_angles(df):
+    def func(angle):
+        if angle < 0:
+            return angle+180
+        elif angle > 180:
+            return angle - 180
+        else:
+            return angle
+    df.loc[df.marking=='blotch', 'angle'].map(func)
+    return
+
+
 def main(fname, raw_times=False, keep_dirt=False, do_fastread=False):
     logging.info("Starting reduction.")
 
@@ -85,20 +133,11 @@ def main(fname, raw_times=False, keep_dirt=False, do_fastread=False):
 
     # convert times to datetime object
     if not raw_times:
-        logging.info("Starting time conversion now.")
-        df.acquisition_date = pd.to_datetime(df.acquisition_date)
-        df.created_at = pd.to_datetime(df.created_at,
-                                       format='%Y-%m-%d %H:%M:%S %Z')
-        logging.info("Time conversions done.")
-    logging.info("Splitting off tutorials now.")
-    tutorials = df[df.image_name == 'tutorial']
-    tutfpath = '{0}_tutorials.h5'.format(rootpath)
-    tutorials.to_hdf(tutfpath, 'df')
-    df = df[df.image_name != 'tutorial']
+        convert_times(df)
 
-    logging.info("Tutorial split done. Wrote "
-                 "{0}. Scanning for and dropping empty lines now."
-                 .format(tutfpath))
+    # split off tutorials
+    splitting_tutorials(rootpath, df)
+
     df = df.dropna(how='all')
     logging.info("Dropped empty lines.")
 
@@ -106,14 +145,12 @@ def main(fname, raw_times=False, keep_dirt=False, do_fastread=False):
         logging.info("Now scanning for incomplete marking data.")
         for marking in ['fan', 'blotch']:
             df = scan_for_incomplete(df, marking)
-    logging.info("Done removing incompletes.")
+        logging.info("Done removing incompletes.")
 
     if do_fastread:
-        logging.info("Now writing fixed format datafile for "
-                     "fast read-in of all data.")
-        newfpath = '{0}_fast_all_read.h5'.format(rootpath)
-        df.to_hdf(newfpath, 'df')
-        logging.info("Created {}.".format(newfpath))
+        produce_fast_read(rootpath, df)
+
+    convert_ellipse_angles(df)
 
     logging.info("Now writing query-able database file.")
     newfpath = '{0}_queryable.h5'.format(rootpath)
