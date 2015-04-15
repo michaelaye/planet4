@@ -25,6 +25,24 @@ else:
     data_root = os.path.join(HOME, 'data/planet4')
 done_path = os.path.join(data_root, 'done.h5')
 
+location_target_codes = {'giza': [850],
+                         'spider_evolution': [950],
+                         'ithaca': [945, 850, 950]}
+
+
+def get_image_name(image_name, feedback=False):
+    if feedback:
+        print("Getting current data for image_name {}".format(image_name))
+    return pd.read_hdf(get_current_database_fname(), 'df',
+                       where='image_name='+image_name)
+
+
+def get_list_of_image_names(image_names):
+    dfs = []
+    for image_name in image_names:
+        dfs.append(get_image_name(image_name))
+    return pd.concat(dfs)
+
 
 class ResultManager:
     resultpath = '/Users/klay6683/data/planet4/reduced/'
