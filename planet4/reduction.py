@@ -107,6 +107,14 @@ def convert_ellipse_angles(df):
     return
 
 
+def calculate_hirise_pixels(df):
+    xoffset = 740
+    yoffset = 548
+
+    def calc_x_hi(row):
+        pass
+
+
 def main(fname, raw_times=False, keep_dirt=False, do_fastread=False):
     logging.info("Starting reduction.")
 
