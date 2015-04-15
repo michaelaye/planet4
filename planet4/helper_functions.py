@@ -1,10 +1,9 @@
 import numpy as np
-import os
 from math import pi
 
-size_of_unique = lambda x: x.unique().size
-data_root = '/Users/maye/data/planet4'
-done_path = os.path.join(data_root, 'done.h5')
+
+def size_of_unique(x):
+    return x.unique().size
 
 
 def classification_counts_per_user(df):
@@ -23,15 +22,24 @@ def classification_counts_per_image(df):
                                         sort=False).agg(size_of_unique)
 
 
-def get_no_done(df, limit=30):
+def get_no_tiles_done(df, limit=30):
     counts = classification_counts_per_image(df)
     no_done = counts[counts >= limit].size
     return no_done
 
 
-def get_status(df, limit=30):
+def get_status_per_classifications(df, limit=30):
+    no_all = df.image_id.unique().size
+    sum_classifications = classification_counts_per_image(df).sum()
+    try:
+        return np.round(100.0 * sum_classifications / (limit*no_all), 1)
+    except ZeroDivisionError:
+        return np.nan
+
+
+def get_status_per_completed_tile(df, limit=30):
     no_all = len(df.image_id.unique())
-    no_done = get_no_done(df, limit)
+    no_done = get_no_tiles_done(df, limit)
     try:
         return np.round(100.0 * no_done / no_all, 1)
     except ZeroDivisionError:
@@ -55,7 +63,7 @@ def get_blotch_area(record):
 
 
 ###
-### Season related stuff
+# Season related stuff
 ###
 
 
