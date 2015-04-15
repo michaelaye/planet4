@@ -76,8 +76,7 @@ def splitting_tutorials(rootpath, df):
     tutorials = tutorials.drop(['image_id',
                                 'image_url',
                                 'image_name',
-                                'local_mars_time'],
-                                axis=1)
+                                'local_mars_time'], axis=1)
     tutorials.to_hdf(tutfpath, 'df')
     df = df[df.image_name != 'tutorial']
 
@@ -104,7 +103,7 @@ def convert_ellipse_angles(df):
             return angle - 180
         else:
             return angle
-    df.loc[df.marking=='blotch', 'angle'].map(func)
+    df.loc[df.marking == 'blotch', 'angle'].map(func)
     return
 
 
@@ -147,10 +146,11 @@ def main(fname, raw_times=False, keep_dirt=False, do_fastread=False):
             df = scan_for_incomplete(df, marking)
         logging.info("Done removing incompletes.")
 
+    convert_ellipse_angles(df)
+
     if do_fastread:
         produce_fast_read(rootpath, df)
 
-    convert_ellipse_angles(df)
 
     logging.info("Now writing query-able database file.")
     newfpath = '{0}_queryable.h5'.format(rootpath)
