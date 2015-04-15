@@ -16,7 +16,6 @@ import blaze as bz
 
 node_name = platform.node().split('.')[0]  # e.g. luna4[.diviner.ucla.edu]
 HOME = os.environ["HOME"]
-
 if os.environ['USER'] == 'gapo7695':
     data_root = '/Users/gapo7695/Dropbox/myPy/others/P4_sandbox/databaseP4'
 elif node_name.startswith('luna4'):
@@ -45,7 +44,7 @@ def get_list_of_image_names(image_names):
 
 
 class ResultManager:
-    resultpath = '/Users/klay6683/data/planet4/reduced/'
+    resultpath = os.path.join(data_root, 'reduced')
 
     def __init__(self, image_name):
         self.image_name = image_name
