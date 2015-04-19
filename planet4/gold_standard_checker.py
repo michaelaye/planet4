@@ -8,8 +8,8 @@ except ImportError:
     from html.parser import HTMLParser
 import pandas as pd
 import argparse
-import markings
-import get_data
+from . import markings
+from . import get_data
 
 
 class MyHTMLParser(HTMLParser):
