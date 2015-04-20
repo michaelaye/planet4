@@ -9,10 +9,10 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as lines
 import matplotlib.patches as mpatches
 from itertools import cycle
-from . import get_data
+from . import io
 import argparse
 
-data_root = get_data.data_root
+data_root = io.data_root
 
 img_x_size = 840
 img_y_size = 648
@@ -89,14 +89,14 @@ class ImageID(object):
             self.data = data
         else:
             if database_fname is None:
-                database_fname = get_data.get_current_database_fname()
+                database_fname = io.get_current_database_fname()
             self.data = pd.read_hdf(database_fname, 'df',
                                     where='image_id=='+imgid)
 
     @property
     def subframe(self):
         url = self.data.iloc[0].image_url
-        return get_data.get_subframe(url)
+        return io.get_subframe(url)
 
     def get_fans(self, user_name=None, without_users=None):
         """Return only data for fan markings."""

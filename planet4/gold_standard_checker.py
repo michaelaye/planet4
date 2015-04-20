@@ -9,7 +9,7 @@ except ImportError:
 import pandas as pd
 import argparse
 from . import markings
-from . import get_data
+from . import io
 
 
 class MyHTMLParser(HTMLParser):
@@ -31,7 +31,7 @@ def main(fname, user_name='michaelaye', datadir=None):
     with open(fname) as f:
         parser.feed(f.read())
 
-    dbname = get_data.get_current_database_fname(datadir)
+    dbname = io.get_current_database_fname(datadir)
     df = pd.read_hdf(dbname, 'df', where='user_name={0}'.format(user_name))
 
     check = pd.DataFrame(parser.container, columns=['ids_to_test'])

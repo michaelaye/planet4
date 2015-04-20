@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 from planet4 import markings
-from planet4 import get_data
+from planet4 import io
 from sklearn.cluster import DBSCAN
 import numpy as np
 import matplotlib
@@ -94,7 +94,7 @@ def gold_star_plotter(gold_id, axis, blotches=True, fans=False):
 
 
 def main():
-    gold_ids = get_data.common_gold_ids()
+    gold_ids = io.common_gold_ids()
 
     p4img = markings.ImageID(gold_ids[10])
     golddata = p4img.data[p4img.data.user_name.isin(markings.gold_members)]
