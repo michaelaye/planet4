@@ -1,3 +1,4 @@
+from __future__ import print_function, division
 import pandas as pd
 import os
 import sys
@@ -27,6 +28,11 @@ done_path = os.path.join(data_root, 'done.h5')
 location_target_codes = {'giza': [850],
                          'spider_evolution': [950],
                          'ithaca': [945, 850, 950]}
+
+
+def get_image_id(image_id, feedback=False):
+    return pd.read_hdf(get_current_database_fname(), 'df',
+                       where='image_id='+image_id)
 
 
 def get_image_name(image_name, feedback=False):
@@ -207,16 +213,9 @@ def get_and_save_done(df, limit=30):
 
 
 ###
-### general database stuff
+### general database helpers
 ###
 
-def clean_and_save_database(df):
-    df = df[df.image_id != 'APF0000x3t']
-    hf.define_season_column(df)
-    df.loc[:, 'marking'][df.marking.isnull()] = 'None'
-    df.to_hdf('Users/maye/data/planet4/current_cleaned.h5', 'df')
+def remove_tutorial(df):
+    return df[df.image_name != 'tutorial']
 
-
-def get_current_cleaned():
-    """docstring for get_current_cleaned"""
-    return pd.read_hdf('/Users/maye/data/planet4/current_cleaned.h5', 'df')
