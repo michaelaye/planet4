@@ -105,11 +105,12 @@ def convert_ellipse_angles(df):
 
 
 def calculate_hirise_pixels(df):
-    xoffset = 740
-    yoffset = 548
+    logging.info("Calculating and assigning hirise pixel coordinates")
+    df = df.assign(hirise_x=lambda row: (row.x + 740*(row.x_tile-1)).round(),
+                   hirise_y=lambda row: (row.y + 548*(row.y_tile-1)).round())
+    logging.info("Hirise pixels coords added.")
+    return df
 
-    def calc_x_hi(row):
-        pass
 
 
 def main(fname, raw_times=False, keep_dirt=False, do_fastread=False):
@@ -142,6 +143,7 @@ def main(fname, raw_times=False, keep_dirt=False, do_fastread=False):
     # split off tutorials
     splitting_tutorials(rootpath, df)
 
+    logging.info('Scanning for and dropping empty lines now.')
     df = df.dropna(how='all')
     logging.info("Dropped empty lines.")
 
@@ -153,6 +155,7 @@ def main(fname, raw_times=False, keep_dirt=False, do_fastread=False):
 
     convert_ellipse_angles(df)
 
+    df = calculate_hirise_pixels(df)
     if do_fastread:
         produce_fast_read(rootpath, df)
 
