@@ -2,7 +2,8 @@ import sys
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
 
-pandas_version = '0.15.2'
+pandas_version = '0.16.0'
+
 
 class PyTest(TestCommand):
     def finalize_options(self):
@@ -11,7 +12,7 @@ class PyTest(TestCommand):
         self.test_suite = True
 
     def run_tests(self):
-        #import here, cause outside the eggs aren't loaded
+        # import here, cause outside the eggs aren't loaded
         import pytest
         errno = pytest.main(self.test_args)
         sys.exit(errno)
@@ -19,7 +20,7 @@ class PyTest(TestCommand):
 
 setup(
     name = "Planet4",
-    version = "0.2",
+    version = "0.3",
     packages = find_packages(),
 
     install_requires = ['pandas>='+pandas_version],
