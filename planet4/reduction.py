@@ -112,6 +112,17 @@ def calculate_hirise_pixels(df):
     return df
 
 
+def remove_duplicates(df):
+    logging.info('Removing duplicates.')
+
+    def process_user_group(g):
+        c_id = g.sort('created_at').classification_id.iloc[0]
+        return g[g.classification_id == c_id]
+    df = df.groupby(['image_id', 'user_name']).apply(
+        process_user_group).reset_index(drop=True)
+    logging.info('Duplicates removal complete.')
+    return df
+
 
 def main(fname, raw_times=False, keep_dirt=False, do_fastread=False):
     logging.info("Starting reduction.")
@@ -156,9 +167,11 @@ def main(fname, raw_times=False, keep_dirt=False, do_fastread=False):
     convert_ellipse_angles(df)
 
     df = calculate_hirise_pixels(df)
+
+    df = remove_duplicates(df)
+
     if do_fastread:
         produce_fast_read(rootpath, df)
-
 
     logging.info("Now writing query-able database file.")
     newfpath = '{0}_queryable.h5'.format(rootpath)
