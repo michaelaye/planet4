@@ -124,7 +124,8 @@ def remove_duplicates(df):
     return df
 
 
-def main(fname, raw_times=False, keep_dirt=False, do_fastread=False):
+def main(fname, raw_times=False, keep_dirt=False, do_fastread=False,
+         test_n_rows=None):
     logging.info("Starting reduction.")
 
     # creating file paths
@@ -137,7 +138,7 @@ def main(fname, raw_times=False, keep_dirt=False, do_fastread=False):
     # doing this in chunks as its faster. Also, later will do a split
     # into multiple processes to do this.
     reader = pd.read_csv(fname, chunksize=1e6, na_values=['null'],
-                         usecols=analysis_cols)
+                         usecols=analysis_cols, nrows=test_n_rows)
 
     # read in data chunk by chunk and collect into python list
     data = [chunk for chunk in reader]
@@ -208,5 +209,8 @@ if __name__ == '__main__':
                         help='Produce the fast-read database file for'
                              ' complete read into memory.',
                         action='store_true')
+    parser.add_argument('--test_n_rows',
+                        help="Set this to do a test parse of n rows")
     args = parser.parse_args()
-    main(args.csv_fname, args.raw_times, args.keep_dirt, args.do_fastread)
+    main(args.csv_fname, args.raw_times, args.keep_dirt, args.do_fastread,
+         args.test_n_rows)
