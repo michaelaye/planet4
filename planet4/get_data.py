@@ -135,7 +135,11 @@ def get_dt_from_fname(fname):
 
 
 def get_latest_file(filenames):
-    retval = filenames[0]
+    try:
+        retval = filenames[0]
+    except IndexError:
+        print("No files found.")
+        return
     dtnow = get_dt_from_fname(retval)
     for fname in filenames[1:]:
         dt_to_check = get_dt_from_fname(fname)
