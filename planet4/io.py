@@ -192,7 +192,7 @@ def get_image_from_record(line):
     if not os.path.exists(targetpath):
         print("Did not find image in cache. Downloading ...")
         sys.stdout.flush()
-        path = urllib.urlretrieve(url)[0]
+        path = urlretrieve(url)[0]
         print("Done.")
         shutil.move(path, targetpath)
     else:
@@ -217,9 +217,8 @@ def get_and_save_done(df, limit=30):
 
 
 ###
-### general database helpers
+# general database helpers
 ###
 
 def remove_tutorial(df):
     return df[df.image_name != 'tutorial']
-
