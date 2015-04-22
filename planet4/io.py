@@ -206,10 +206,6 @@ def get_current_marked():
                        where='marking!=None')
 
 
-def get_current_done():
-    return pd.read_hdf(done_path, 'df')
-
-
 def get_and_save_done(df, limit=30):
     counts = hf.classification_counts_per_image(df)
     ids_done = counts[counts >= limit].index
