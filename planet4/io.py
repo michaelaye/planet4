@@ -153,7 +153,7 @@ def get_current_database_fname(datadir=None):
     if datadir is None:
         datadir = data_root
 
-    h5files = glob.glob(datadir + '/*_queryable.h5')
+    h5files = glob.glob(datadir + '/2015*_queryable.h5')
     return get_latest_file(h5files)
 
 
