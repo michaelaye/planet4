@@ -29,6 +29,7 @@ def get_no_tiles_done(df, limit=30):
 
 
 def get_status_per_classifications(df, limit=30):
+    "Returns status in percent of limit*n_unique_image_ids."
     no_all = df.image_id.unique().size
     sum_classifications = classification_counts_per_image(df).sum()
     try:
