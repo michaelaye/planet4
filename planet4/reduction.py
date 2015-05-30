@@ -5,6 +5,7 @@ import os
 import argparse
 import logging
 import sys
+from IPython.parallel import Client
 
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
@@ -113,19 +114,49 @@ def calculate_hirise_pixels(df):
 
 
 def remove_duplicates(df):
+    import time
+    t1 = time.time()
     logging.info('Removing duplicates.')
 
-    def process_user_group(g):
-        c_id = g.sort('created_at').classification_id.iloc[0]
-        return g[g.classification_id == c_id]
-    df = df.groupby(['image_id', 'user_name']).apply(
-        process_user_group).reset_index(drop=True)
+    image_names = df.image_name.unique()
+
+    def process_image_name(image_name):
+
+        def process_user_group(g):
+            c_id = g.sort('created_at').classification_id.iloc[0]
+            return g[g.classification_id == c_id]
+
+        data = df[df.image_name == image_name]
+        data = data.groupby(['user_name']).apply(
+            process_user_group).reset_index(drop=True)
+        fname = 'temp_' + image_name + '.h5'
+        data.to_hdf(fname, 'df')
+
+    # c = Client()
+    # lbview = c.load_balanced_view()
+    # lbview.map_sync(process_image_name, image_names)
+
+    for image_name in image_names:
+        process_image_name(image_name)
+
+    df = []
+    for image_name in image_names:
+        fname = 'temp_' + image_name + '.h5'
+        try:
+            df.append(pd.read_hdf(fname, 'df'))
+        except OSError:
+            continue
+        else:
+            os.remove(fname)
+    df = pd.concat(df, ignore_index=True)
     logging.info('Duplicates removal complete.')
+    t2 = time.time()
+    print(t2 - t1)
     return df
 
 
 def main(fname, raw_times=False, keep_dirt=False, do_fastread=False,
-         test_n_rows=None):
+         test_n_rows=None, remove_duplicates=False):
     logging.info("Starting reduction.")
 
     # creating file paths
@@ -165,11 +196,12 @@ def main(fname, raw_times=False, keep_dirt=False, do_fastread=False,
             df = scan_for_incomplete(df, marking)
         logging.info("Done removing incompletes.")
 
+    if remove_duplicates:
+        df = remove_duplicates(df)
+
     convert_ellipse_angles(df)
 
     df = calculate_hirise_pixels(df)
-
-    df = remove_duplicates(df)
 
     if do_fastread:
         produce_fast_read(rootpath, df)
@@ -209,8 +241,11 @@ if __name__ == '__main__':
                         help='Produce the fast-read database file for'
                              ' complete read into memory.',
                         action='store_true')
+    parser.add_argument('--remove_duplicates',
+                        help='Remove duplicates.',
+                        action='store_true')
     parser.add_argument('--test_n_rows',
                         help="Set this to do a test parse of n rows")
     args = parser.parse_args()
     main(args.csv_fname, args.raw_times, args.keep_dirt, args.do_fastread,
-         args.test_n_rows)
+         args.test_n_rows, args.remove_duplicates)
