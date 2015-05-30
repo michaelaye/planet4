@@ -30,22 +30,22 @@ location_target_codes = {'giza': [850],
                          'ithaca': [945, 850, 950]}
 
 
-def get_image_id(image_id, feedback=False):
+def get_image_id_data(image_id, feedback=False):
     return pd.read_hdf(get_current_database_fname(), 'df',
                        where='image_id='+image_id)
 
 
-def get_image_name(image_name, feedback=False):
+def get_image_name_data(image_name, feedback=False):
     if feedback:
         print("Getting current data for image_name {}".format(image_name))
     return pd.read_hdf(get_current_database_fname(), 'df',
                        where='image_name='+image_name)
 
 
-def get_list_of_image_names(image_names):
+def get_list_of_image_names_data(image_names):
     dfs = []
     for image_name in image_names:
-        dfs.append(get_image_name(image_name))
+        dfs.append(get_image_name_data(image_name))
     return pd.concat(dfs)
 
 
@@ -152,9 +152,14 @@ def get_latest_file(filenames):
 def get_current_database_fname(datadir=None):
     if datadir is None:
         datadir = data_root
-
     h5files = glob.glob(datadir + '/2015*_queryable.h5')
     return get_latest_file(h5files)
+
+
+def get_all_image_names():
+    fname = get_current_database_fname()
+    image_names = pd.read_hdf(fname, 'df', columns=['image_name'])
+    return image_names
 
 
 def get_latest_tutorial_data(datadir=None):
