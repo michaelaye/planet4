@@ -114,8 +114,6 @@ def calculate_hirise_pixels(df):
 
 
 def remove_duplicates(df):
-    import time
-    t1 = time.time()
     logging.info('Removing duplicates.')
 
     image_names = df.image_name.unique()
@@ -150,8 +148,6 @@ def remove_duplicates(df):
             os.remove(fname)
     df = pd.concat(df, ignore_index=True)
     logging.info('Duplicates removal complete.')
-    t2 = time.time()
-    print(t2 - t1)
     return df
 
 
