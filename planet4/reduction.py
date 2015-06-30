@@ -165,11 +165,18 @@ def main(fname, raw_times=False, keep_dirt=False, do_fastread=False,
     fname_no_ext = os.path.splitext(fname_base)[0]
     rootpath = os.path.join(root, fname_no_ext)
 
+    # as chunksize and nrows cannot be used together yet, i switch chunksize
+    # to None if I want test_n_rows for a small test database:
+    if test_n_rows:
+        chunks = None
+    else:
+        chunks = 1e6
     # creating reader object with pandas interface for csv parsing
     # doing this in chunks as its faster. Also, later will do a split
     # into multiple processes to do this.
-    reader = pd.read_csv(fname, chunksize=1e6, na_values=['null'],
-                         usecols=analysis_cols, nrows=test_n_rows)
+    reader = pd.read_csv(fname, chunksize=chunks, na_values=['null'],
+                         usecols=analysis_cols, nrows=test_n_rows,
+                         engine='c')
 
     # read in data chunk by chunk and collect into python list
     data = [chunk for chunk in reader]
