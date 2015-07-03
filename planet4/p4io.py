@@ -156,6 +156,11 @@ def get_current_database_fname(datadir=None):
     return get_latest_file(h5files)
 
 
+def get_test_database():
+    return pd.read_hdf(os.path.join(data_root, 'test_db_queryable.h5'),
+                       'df')
+
+
 def get_all_image_names():
     fname = get_current_database_fname()
     image_names = pd.read_hdf(fname, 'df', columns=['image_name'])
