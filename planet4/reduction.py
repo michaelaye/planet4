@@ -210,7 +210,11 @@ def merge_temp_files(dbname, image_names=None, do_odo=False):
         else:
             os.remove(get_temp_fname(image_name))
     df = pd.concat(df, ignore_index=True)
-    df.to_hdf(dbnamenew, 'df')
+    df.to_hdf(dbnamenew, 'df',
+              format='table',
+              data_columns=['classification_id', 'image_id',
+                            'image_name', 'user_name', 'marking',
+                            'acquisition_date', 'local_mars_time'])
     logging.info('Duplicates removal complete.')
     return dbnamenew
 
@@ -241,79 +245,7 @@ def remove_duplicates_from_file(dbname, do_odo=False):
     merge_temp_files(dbname, image_names, do_odo)
 
 
-def main(fname, raw_times=False, keep_dirt=False, do_fastread=False,
-         test_n_rows=None, b_remove_duplicates=True):
-    t0 = time.time()
-    logging.info("Starting reduction.")
-
-    # creating file paths
-    fname_base = os.path.basename(fname)
-    root = os.path.dirname(fname)
-    fname_no_ext = os.path.splitext(fname_base)[0]
-    rootpath = os.path.join(root, fname_no_ext)
-
-    # as chunksize and nrows cannot be used together yet, i switch chunksize
-    # to None if I want test_n_rows for a small test database:
-    if test_n_rows:
-        chunks = None
-    else:
-        chunks = 1e6
-    # creating reader object with pandas interface for csv parsing
-    # doing this in chunks as its faster. Also, later will do a split
-    # into multiple processes to do this.
-    reader = pd.read_csv(fname, chunksize=chunks, na_values=['null'],
-                         usecols=analysis_cols, nrows=test_n_rows,
-                         engine='c')
-
-    # read in data chunk by chunk and collect into python list
-    data = [chunk for chunk in reader]
-    logging.info("Data collected into list.")
-
-    # convert list into Pandas dataframe
-    df = pd.concat(data, ignore_index=True)
-    logging.info("Conversion to dataframe complete.")
-
-    # convert times to datetime object
-    if not raw_times:
-        convert_times(df)
-
-    # split off tutorials
-    splitting_tutorials(rootpath, df)
-
-    logging.info('Scanning for and dropping empty lines now.')
-    df = df.dropna(how='all')
-    logging.info("Dropped empty lines.")
-
-    if not keep_dirt:
-        logging.info("Now scanning for incomplete marking data.")
-        for marking in ['fan', 'blotch']:
-            df = scan_for_incomplete(df, marking)
-        logging.info("Done removing incompletes.")
-
-    convert_ellipse_angles(df)
-
-    df = calculate_hirise_pixels(df)
-
-    if do_fastread:
-        produce_fast_read(rootpath, df)
-
-    logging.info("Now writing query-able database file.")
-    newfpath = '{0}_queryable.h5'.format(rootpath)
-    df.to_hdf(newfpath, 'df',
-              format='table',
-              data_columns=['classification_id', 'image_id',
-                            'image_name', 'user_name', 'marking',
-                            'acquisition_date', 'local_mars_time'])
-    logging.info("Writing to HDF file finished. Created {}. "
-                 "Reduction complete.".format(newfpath))
-
-    if b_remove_duplicates:
-        df = remove_duplicates_from_file(newfpath)
-
-    dt = time.time() - t0
-    logging.info("Time taken: {} minutes.".format(dt/60.0))
-
-if __name__ == '__main__':
+def main():
     import imp
     try:
         imp.find_module('tables')
@@ -337,8 +269,84 @@ if __name__ == '__main__':
                         help='Produce the fast-read database file for'
                              ' complete read into memory.',
                         action='store_true')
+    parser.add_argument('--remove_dups',
+                        help='Remove duplicates from database',
+                        action='store_true')
     parser.add_argument('--test_n_rows',
-                        help="Set this to do a test parse of n rows")
+                        help="Set this to do a test parse of n rows",
+                        type=int, default=None)
     args = parser.parse_args()
-    main(args.csv_fname, args.raw_times, args.keep_dirt, args.do_fastread,
-         args.test_n_rows)
+
+    t0 = time.time()
+    logging.info("Starting reduction.")
+
+    # creating file paths
+    fname = os.path.abspath(args.csv_fname)
+    fname_base = os.path.basename(fname)
+    root = os.path.dirname(fname)
+    fname_no_ext = os.path.splitext(fname_base)[0]
+    rootpath = os.path.join(root, fname_no_ext)
+
+    # as chunksize and nrows cannot be used together yet, i switch chunksize
+    # to None if I want test_n_rows for a small test database:
+    if args.test_n_rows is not None:
+        chunks = None
+    else:
+        chunks = 1e6
+    # creating reader object with pandas interface for csv parsing
+    # doing this in chunks as its faster. Also, later will do a split
+    # into multiple processes to do this.
+    reader = pd.read_csv(fname, chunksize=chunks, na_values=['null'],
+                         usecols=analysis_cols, nrows=args.test_n_rows,
+                         engine='c')
+
+    # read in data chunk by chunk and collect into python list
+    data = [chunk for chunk in reader]
+    logging.info("Data collected into list.")
+
+    # convert list into Pandas dataframe
+    df = pd.concat(data, ignore_index=True)
+    logging.info("Conversion to dataframe complete.")
+
+    # convert times to datetime object
+    if not args.raw_times:
+        convert_times(df)
+
+    # split off tutorials
+    splitting_tutorials(rootpath, df)
+
+    logging.info('Scanning for and dropping empty lines now.')
+    df = df.dropna(how='all')
+    logging.info("Dropped empty lines.")
+
+    if not args.keep_dirt:
+        logging.info("Now scanning for incomplete marking data.")
+        for marking in ['fan', 'blotch']:
+            df = scan_for_incomplete(df, marking)
+        logging.info("Done removing incompletes.")
+
+    convert_ellipse_angles(df)
+
+    df = calculate_hirise_pixels(df)
+
+    if args.do_fastread:
+        produce_fast_read(rootpath, df)
+
+    logging.info("Now writing query-able database file.")
+    newfpath = '{0}_queryable.h5'.format(rootpath)
+    df.to_hdf(newfpath, 'df',
+              format='table',
+              data_columns=['classification_id', 'image_id',
+                            'image_name', 'user_name', 'marking',
+                            'acquisition_date', 'local_mars_time'])
+    logging.info("Writing to HDF file finished. Created {}. "
+                 "Reduction complete.".format(newfpath))
+
+    if args.remove_dups:
+        df = remove_duplicates_from_file(newfpath)
+
+    dt = time.time() - t0
+    logging.info("Time taken: {} minutes.".format(dt/60.0))
+
+if __name__ == '__main__':
+    main()
