@@ -8,6 +8,7 @@ import sys
 from IPython.parallel import Client
 from .p4io import data_root
 import time
+from odo import odo
 
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
@@ -138,19 +139,20 @@ def remove_duplicates_from_image_name_data(data):
         process_user_group).reset_index(drop=True)
 
 
+def get_temp_fname(image_name):
+    import os
+    return os.path.join(data_root, 'temp_' + image_name + '.h5')
+
+
 def remove_duplicates(df):
     logging.info('Removing duplicates.')
 
     image_names = df.image_name.unique()
 
-    def get_fname(image_name):
-        import os
-        return os.path.join(data_root, 'temp_' + image_name + '.h5')
-
     def process_image_name(image_name):
         data = df[df.image_name == image_name]
         data = remove_duplicates_from_image_name_data(data)
-        data.to_hdf(get_fname(image_name), 'df')
+        data.to_hdf(get_temp_fname(image_name), 'df')
 
     # parallel approach, u need to launch an ipcluster/controller for this work!
     c = Client()
@@ -161,20 +163,82 @@ def remove_duplicates(df):
     lbview = c.load_balanced_view()
     lbview.map_sync(process_image_name, image_names)
 
-    # for image_id in image_ids:
-    #     process_image_id(image_id)
-
     df = []
     for image_name in image_names:
         try:
-            df.append(pd.read_hdf(get_fname(image_name), 'df'))
+            df.append(pd.read_hdf(get_temp_fname(image_name), 'df'))
         except OSError:
             continue
         else:
-            os.remove(get_fname(image_name))
+            os.remove(get_temp_fname(image_name))
     df = pd.concat(df, ignore_index=True)
     logging.info('Duplicates removal complete.')
     return df
+
+
+def get_image_names(dbname):
+    logging.info('Reading image_names from disk.')
+    store = pd.HDFStore(dbname)
+    image_names = store.select_column('df', 'image_name').unique()
+    logging.info('Got image_names')
+    return image_names
+
+
+def merge_temp_files(dbname, image_names=None, do_odo=False):
+    if do_odo:
+        logging.info('Merging temp files with odo.')
+    else:
+        logging.info('Merging temp files manually.')
+
+    if image_names is None:
+        image_names = get_image_names(dbname)
+
+    dbname_base, ext = os.path.splitext(dbname)
+    dbnamenew = dbname_base + '_cleaned' + ext
+    logging.info('Creating concatenated db file {}'.format(dbnamenew))
+    if not do_odo:
+        df = []
+    for image_name in image_names:
+        try:
+            if do_odo:
+                odo('hdfstore://{}::df'.format(get_temp_fname(image_name)),
+                    'hdfstore://{}::df'.format(dbnamenew))
+            else:
+                df.append(pd.read_hdf(get_temp_fname(image_name), 'df'))
+        except OSError:
+            continue
+        else:
+            os.remove(get_temp_fname(image_name))
+    df = pd.concat(df, ignore_index=True)
+    df.to_hdf(dbnamenew, 'df')
+    logging.info('Duplicates removal complete.')
+    return dbnamenew
+
+
+def remove_duplicates_from_file(dbname, do_odo=False):
+    logging.info('Removing duplicates.')
+
+    image_names = get_image_names(dbname)
+
+    def process_image_name(image_name):
+        import pandas as pd
+        data = pd.read_hdf(dbname, 'df', where='image_name=='+image_name)
+        data = remove_duplicates_from_image_name_data(data)
+        data.to_hdf(get_temp_fname(image_name), 'df')
+
+    # parallel approach, u need to launch an ipcluster/controller for this work!
+    c = Client()
+    dview = c.direct_view()
+    dview.push({'remove_duplicates_from_image_name_data':
+                remove_duplicates_from_image_name_data,
+                'data_root': data_root,
+                'get_temp_fname': get_temp_fname})
+    lbview = c.load_balanced_view()
+    logging.info('Starting parallel processing.')
+    lbview.map_sync(process_image_name, image_names)
+    logging.info('Done clean up. Now concatenating results.')
+
+    merge_temp_files(dbname, image_names, do_odo)
 
 
 def main(fname, raw_times=False, keep_dirt=False, do_fastread=False,
@@ -226,9 +290,6 @@ def main(fname, raw_times=False, keep_dirt=False, do_fastread=False,
             df = scan_for_incomplete(df, marking)
         logging.info("Done removing incompletes.")
 
-    if b_remove_duplicates:
-        df = remove_duplicates(df)
-
     convert_ellipse_angles(df)
 
     df = calculate_hirise_pixels(df)
@@ -245,6 +306,10 @@ def main(fname, raw_times=False, keep_dirt=False, do_fastread=False,
                             'acquisition_date', 'local_mars_time'])
     logging.info("Writing to HDF file finished. Created {}. "
                  "Reduction complete.".format(newfpath))
+
+    if b_remove_duplicates:
+        df = remove_duplicates_from_file(newfpath)
+
     dt = time.time() - t0
     logging.info("Time taken: {} minutes.".format(dt/60.0))
 
