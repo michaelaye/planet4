@@ -6,6 +6,8 @@ import argparse
 import logging
 import sys
 from IPython.parallel import Client
+from .p4io import data_root
+import time
 
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
@@ -113,46 +115,71 @@ def calculate_hirise_pixels(df):
     return df
 
 
+def remove_duplicates_from_image_name_data(data):
+    """remove duplicates from this data.
+
+    Parameters
+    ==========
+    data: pd.DataFrame
+        already filtered for an image_id
+
+    Returns
+    =======
+    For each `user_name` and `image_id` found in `data` return only the data
+    for the first found classification_id. There *should* only be one
+    classification_id per user_name and image_id, but sometimes the queue
+    presented the same image_id more than once to the same users. This removes
+    any later in time classification_ids per user_name and image_id.
+    """
+    def process_user_group(g):
+        c_id = g.sort('created_at').classification_id.iloc[0]
+        return g[g.classification_id == c_id]
+    return data.groupby(['image_id', 'user_name']).apply(
+        process_user_group).reset_index(drop=True)
+
+
 def remove_duplicates(df):
     logging.info('Removing duplicates.')
 
     image_names = df.image_name.unique()
 
+    def get_fname(image_name):
+        import os
+        return os.path.join(data_root, 'temp_' + image_name + '.h5')
+
     def process_image_name(image_name):
-
-        def process_user_group(g):
-            c_id = g.sort('created_at').classification_id.iloc[0]
-            return g[g.classification_id == c_id]
-
         data = df[df.image_name == image_name]
-        data = data.groupby(['user_name']).apply(
-            process_user_group).reset_index(drop=True)
-        fname = 'temp_' + image_name + '.h5'
-        data.to_hdf(fname, 'df')
+        data = remove_duplicates_from_image_name_data(data)
+        data.to_hdf(get_fname(image_name), 'df')
 
-    # c = Client()
-    # lbview = c.load_balanced_view()
-    # lbview.map_sync(process_image_name, image_names)
+    # parallel approach, u need to launch an ipcluster/controller for this work!
+    c = Client()
+    dview = c.direct_view()
+    dview.push({'remove_duplicates_from_image_name_data':
+                remove_duplicates_from_image_name_data,
+                'data_root': data_root})
+    lbview = c.load_balanced_view()
+    lbview.map_sync(process_image_name, image_names)
 
-    for image_name in image_names:
-        process_image_name(image_name)
+    # for image_id in image_ids:
+    #     process_image_id(image_id)
 
     df = []
     for image_name in image_names:
-        fname = 'temp_' + image_name + '.h5'
         try:
-            df.append(pd.read_hdf(fname, 'df'))
+            df.append(pd.read_hdf(get_fname(image_name), 'df'))
         except OSError:
             continue
         else:
-            os.remove(fname)
+            os.remove(get_fname(image_name))
     df = pd.concat(df, ignore_index=True)
     logging.info('Duplicates removal complete.')
     return df
 
 
 def main(fname, raw_times=False, keep_dirt=False, do_fastread=False,
-         test_n_rows=None, remove_duplicates=False):
+         test_n_rows=None, b_remove_duplicates=True):
+    t0 = time.time()
     logging.info("Starting reduction.")
 
     # creating file paths
@@ -199,7 +226,7 @@ def main(fname, raw_times=False, keep_dirt=False, do_fastread=False,
             df = scan_for_incomplete(df, marking)
         logging.info("Done removing incompletes.")
 
-    if remove_duplicates:
+    if b_remove_duplicates:
         df = remove_duplicates(df)
 
     convert_ellipse_angles(df)
@@ -216,9 +243,10 @@ def main(fname, raw_times=False, keep_dirt=False, do_fastread=False,
               data_columns=['classification_id', 'image_id',
                             'image_name', 'user_name', 'marking',
                             'acquisition_date', 'local_mars_time'])
-
-    logging.info("Writing to HDF file finished. Reduction complete.")
-
+    logging.info("Writing to HDF file finished. Created {}. "
+                 "Reduction complete.".format(newfpath))
+    dt = time.time() - t0
+    logging.info("Time taken: {} minutes.".format(dt/60.0))
 
 if __name__ == '__main__':
     import imp
@@ -244,11 +272,8 @@ if __name__ == '__main__':
                         help='Produce the fast-read database file for'
                              ' complete read into memory.',
                         action='store_true')
-    parser.add_argument('--remove_duplicates',
-                        help='Remove duplicates.',
-                        action='store_true')
     parser.add_argument('--test_n_rows',
                         help="Set this to do a test parse of n rows")
     args = parser.parse_args()
     main(args.csv_fname, args.raw_times, args.keep_dirt, args.do_fastread,
-         args.test_n_rows, args.remove_duplicates)
+         args.test_n_rows)
