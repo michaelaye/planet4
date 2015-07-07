@@ -75,6 +75,8 @@ def unique_image_ids_per_season(df):
 def define_season_column(df):
     thousands = df.image_name.str[5:7].astype('int')
     df['season'] = 0
-    df.loc[:, 'season'][df.image_name.str.startswith('PSP')] = 1
-    df.loc[:, 'season'][(thousands > 10) & (thousands < 20)] = 2
-    df.loc[:, 'season'][thousands > 19] = 3
+    df.loc[df.image_name.str.startswith('PSP'), 'season'] = 1
+    df.loc[(thousands > 10) & (thousands < 15), 'season'] = 2
+    df.loc[(thousands > 15) & (thousands < 25), 'season'] = 3
+    df.loc[(thousands > 25) & (thousands < 35), 'season'] = 4
+    df.loc[(thousands > 35), 'season'] = 5

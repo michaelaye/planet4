@@ -152,7 +152,7 @@ def get_latest_file(filenames):
 def get_current_database_fname(datadir=None):
     if datadir is None:
         datadir = data_root
-    h5files = glob.glob(datadir + '/2015*_queryable.h5')
+    h5files = glob.glob(datadir + '/2015*_queryable_cleaned.h5')
     return get_latest_file(h5files)
 
 
@@ -210,6 +210,10 @@ def get_image_from_record(line):
     im = mplimg.imread(targetpath)
     return im
 
+
+def get_image_names_from_db(dbfname):
+    store = pd.HDFStore(dbfname)
+    return store.select_column('df', 'image_name').unique()
 
 def get_current_marked():
     return pd.read_hdf(get_current_database_fname(), 'df',

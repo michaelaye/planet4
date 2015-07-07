@@ -2,15 +2,17 @@
 from __future__ import print_function, division
 import pandas as pd
 import os
+import sys
 import argparse
 import logging
 import sys
 from IPython.parallel import Client
-from .p4io import data_root
+from .p4io import data_root, get_current_database_fname, get_image_names_from_db
 import time
 from odo import odo
+from .helper_functions import define_season_column
 
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
 # the split trick creates lists when u don't want to break ur fingers with
 # typing ',,'','',',,' all the time...
@@ -38,6 +40,10 @@ analysis_cols = ['classification_id',
                  'angle',
                  'spread',
                  'version']
+
+data_columns=['classification_id', 'image_id',
+              'image_name', 'user_name', 'marking',
+              'acquisition_date', 'local_mars_time']
 
 
 def scan_for_incomplete(df, marking):
@@ -81,9 +87,9 @@ def splitting_tutorials(rootpath, df):
                                 'image_name',
                                 'local_mars_time'], axis=1)
     tutorials.to_hdf(tutfpath, 'df')
-    df = df[df.image_name != 'tutorial']
 
     logging.info("Tutorial split done.\nCreated {}.".format(tutfpath))
+    return df[df.image_name != 'tutorial']
 
 
 def produce_fast_read(rootpath, df):
@@ -212,9 +218,7 @@ def merge_temp_files(dbname, image_names=None, do_odo=False):
     df = pd.concat(df, ignore_index=True)
     df.to_hdf(dbnamenew, 'df',
               format='table',
-              data_columns=['classification_id', 'image_id',
-                            'image_name', 'user_name', 'marking',
-                            'acquisition_date', 'local_mars_time'])
+              data_columns=data_columns)
     logging.info('Duplicates removal complete.')
     return dbnamenew
 
@@ -243,6 +247,42 @@ def remove_duplicates_from_file(dbname, do_odo=False):
     logging.info('Done clean up. Now concatenating results.')
 
     merge_temp_files(dbname, image_names, do_odo)
+
+
+def create_season2_and_3_database():
+    """Define season columns and write out seaon 2 and 3 database results.
+
+    Has to be executed after the main reduction has finished.
+    Installed as main command line script under name create_season2and3.
+    """
+    fname = get_current_database_fname()
+    image_names = get_image_names_from_db(fname)
+    metadf = pd.DataFrame(image_names[image_names!='tutorial'],
+                          columns=['image_name'])
+    logging.info('Found {} image_names'.format(len(metadf.image_name)))
+
+    define_season_column(metadf)
+
+    fname_base = os.path.basename(fname)
+    root = os.path.dirname(fname)
+    fname_no_ext = os.path.splitext(fname_base)[0]
+    rootpath = os.path.join(root, fname_no_ext)
+    newfname = '{}_seasons2and3.h5'.format(rootpath)
+    if os.path.exists(newfname):
+        os.remove(newfname)
+    logging.info('Starting production of season 2 and 3 database.')
+    all_images = metadf[(metadf.season>1) & (metadf.season<4)].image_name
+    for i, image_name in enumerate(all_images):
+        logging.info('Processing... {:.1f} %'.format(100*(i+1)/len(all_images)))
+        try:
+            df = pd.read_hdf(fname, 'df', where='image_name='+image_name)
+            df.to_hdf(newfname, 'df', mode='a', format='t', append=True,
+                      data_columns=data_columns,
+                      min_itemsize={'local_mars_time': 8})
+        except ValueError as e:
+            print(image_name, e)
+            sys.exit(-1)
+    logging.info('Finished. Produced {}.'.format(newfname))
 
 
 def main():
@@ -313,7 +353,7 @@ def main():
         convert_times(df)
 
     # split off tutorials
-    splitting_tutorials(rootpath, df)
+    df = splitting_tutorials(rootpath, df)
 
     logging.info('Scanning for and dropping empty lines now.')
     df = df.dropna(how='all')
@@ -336,9 +376,7 @@ def main():
     newfpath = '{0}_queryable.h5'.format(rootpath)
     df.to_hdf(newfpath, 'df',
               format='table',
-              data_columns=['classification_id', 'image_id',
-                            'image_name', 'user_name', 'marking',
-                            'acquisition_date', 'local_mars_time'])
+              data_columns=['image_name'])
     logging.info("Writing to HDF file finished. Created {}. "
                  "Reduction complete.".format(newfpath))
 
