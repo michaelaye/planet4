@@ -134,7 +134,7 @@ class Inca:
                'ESP_020748_0985',
                'ESP_020194_0985',
                'ESP_020128_0985',
-               'ESP_020049_0985'
+               'ESP_020049_0985',
                'ESP_021829_0985',
                'ESP_021684_0985',
                'ESP_021671_0985',
@@ -213,3 +213,15 @@ class Ithaca:
                'PSP_004891_0945']
     seasons = [season1, season2, season3]
 regions = [Giza, Inca, Ithaca, Manhattan, Manhattan2]
+
+def get_seasons(season):
+    result = []
+    for region in regions:
+        try:
+            result.extend(getattr(region, season))
+        except AttributeError:
+            pass
+    return result
+
+season2 = get_seasons('season2')
+season3 = get_seasons('season3')
