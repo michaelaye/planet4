@@ -48,7 +48,6 @@ nosetests.xml
 *.h5
 *.mp4
 *.hdf
-*.csv
 *.gif
 */.DS_Store
 **/.DS_Store
