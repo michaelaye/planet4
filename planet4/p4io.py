@@ -14,6 +14,7 @@ import platform
 import logging
 from . import helper_functions as hf
 import blaze as bz
+from .exceptions import *
 
 node_name = platform.node().split('.')[0]  # e.g. luna4[.diviner.ucla.edu]
 HOME = os.environ["HOME"]
@@ -50,7 +51,7 @@ def get_list_of_image_names_data(image_names):
 
 
 class ResultManager:
-    resultpath = os.path.join(data_root, 'reduced')
+    resultpath = os.path.join(data_root, 'catalog_2_and_3')
 
     def __init__(self, image_name):
         self.image_name = image_name
@@ -172,6 +173,9 @@ def get_latest_tutorial_data(datadir=None):
         datadir = data_root
 
     tut_files = glob.glob(datadir + '/*_tutorials.h5')
+    tut_files = [i for i in tut_files if os.path.basename(i)[:4].isdigit()]
+    if not tut_files:
+        raise NoFilesFoundError
     return pd.read_hdf(get_latest_file(tut_files), 'df')
 
 
