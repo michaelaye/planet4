@@ -258,15 +258,19 @@ class Fan(lines.Line2D):
         pointer.set_color(color)
         ax.add_line(pointer)
 
-    def calculate_midpoint(self):
-        midpoint = rotate_vector([0.5*(self.length + self.radius), 0],
-                                 self.data.angle)
+    @property
+    def midpoint(self):
+        return rotate_vector([0.5*(self.length + self.radius), 0],
+                             self.data.angle)
+
+    @property
+    def base_to_midpoint_vec(self):
         coords = np.vstack((self.base,
-                            self.base + midpoint))
+                            self.base + self.midpoint))
         return coords
 
     def add_midpoint_pointer(self, ax, color='b', ls='-'):
-        coords = self.calculate_midpoint()
+        coords = self.base_to_midpoint_vec
         pointer = lines.Line2D(coords[:, 0], coords[:, 1],
                                alpha=0.65, linewidth=3, linestyle=ls)
         pointer.set_color(color)
