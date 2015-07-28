@@ -17,6 +17,7 @@ data_root = p4io.data_root
 img_x_size = 840
 img_y_size = 648
 
+
 img_shape = (img_y_size, img_x_size)
 
 colors = cycle('rgbcym')
@@ -131,7 +132,7 @@ class ImageID(object):
         if blotches is None:
             blotches = self.get_blotches(user_name, without_users)
         if ax is None:
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=calc_fig_size(8))
         if img:
             self.show_subframe(ax, aspect='equal')
         if n is None:
@@ -146,8 +147,7 @@ class ImageID(object):
             if i == n-1:
                 break
         set_subframe_size(ax)
-        if fig is not None:
-            return fig
+        ax.set_axis_off()
 
     def plot_fans(self, n=None, img=True, user_name=None, ax=None,
                   user_color=None, without_users=None, fans=None):
@@ -155,7 +155,7 @@ class ImageID(object):
         if fans is None:
             fans = self.get_fans(user_name, without_users)
         if ax is None:
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=calc_fig_size(8))
         if img:
             self.show_subframe(ax)
         if n is None:
@@ -170,13 +170,17 @@ class ImageID(object):
             if i == n-1:
                 break
         set_subframe_size(ax)
+        ax.set_axis_off()
 
     def plot_all(self):
-        fig, axes = plt.subplots(2, 2)
-        self.show_subframe(ax=axes[0, 0])
-        self.show_subframe(ax=axes[1, 0])
-        self.plot_fans(ax=axes[0, 1])
-        self.plot_blotches(ax=axes[1, 1])
+        fig, axes = plt.subplots(2, 2, figsize=(10,8))
+        axes = axes.ravel()
+        self.show_subframe(ax=axes[0])
+        self.show_subframe(ax=axes[2])
+        self.plot_fans(ax=axes[1])
+        self.plot_blotches(ax=axes[3])
+        for ax in axes:
+            ax.set_axis_off()
         plt.show()
 
 
