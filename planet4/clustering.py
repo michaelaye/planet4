@@ -5,6 +5,7 @@ from sklearn.cluster import DBSCAN
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+from .exceptions import *
 
 matplotlib.style.use('bmh')
 
@@ -12,21 +13,51 @@ ellipse_cols = 'x y radius_1 radius_2 angle'.split()
 fan_cols = 'x y angle spread distance'.split()
 
 
-def get_mean_marking(data, label_members, fan=False):
-    if not fan:
-        ellipsedata = data[ellipse_cols].iloc[label_members]
+def get_mean_marking(data, label_members, kind='fans'):
+    if kind == 'blotches':
+        clusterdata = data[ellipse_cols].iloc[label_members]
+    elif kind == 'fans':
+        clusterdata = data[fan_cols].iloc[label_members]
     else:
-        ellipsedata = data[fan_cols].iloc[label_members]
-    meandata = ellipsedata.mean()
-    if not fan:
-        return markings.Blotch(meandata)
-    else:
-        return markings.Fan(meandata)
+        raise UnknownMarkingKindError(kind)
+    meandata = clusterdata.mean()
+    if kind == 'blotches':
+        val = markings.Blotch(meandata)
+    elif kind == 'fans':
+        val = markings.Fan(meandata)
+    return val
 
 
-def perform_dbscan(current_data, current_axis=None, eps=10, min_samples=3,
-                   fans=False, linestyle='-', quiet=True):
-    """took out axes as 2nd parameter"""
+def perform_dbscan(p4img, kind='fans', current_axis=None, eps=10, min_samples=3,
+                   linestyle='-', quiet=True):
+    """Cluster data for one P4 image id.
+
+    Parameters
+    ----------
+    p4img : planet4.ImageID
+        ImageID object for this clustering run.
+    kind : string
+        control flow parameter for kind of object to cluster
+    current_axis : matplotlib axis
+        when provided, plotting is done
+    eps : int
+        DBSCAN parameter, max distance in clustering space units for inclusion
+        into cluster
+    min_samples : int
+        Minimum number of cluster members to make up a cluster
+    linestyle : char
+        Matplotlib line style control character
+    quiet : boolean
+        Controlling if feedback is being printed to stdout.
+
+    """
+    if kind=='fans':
+        current_data = p4img.get_fans()
+    elif kind=='blotches':
+        current_data = p4img.get_blotches()
+    else:
+        raise UnknownMarkingKindError(kind)
+
     center_only = ['x', 'y']
     # center_and_radii = 'x y radius_1 radius_2'.split()
     current_X = current_data[center_only].values
@@ -63,13 +94,12 @@ def perform_dbscan(current_data, current_axis=None, eps=10, min_samples=3,
                                   markeredgecolor='k', markersize=markersize)
         # do this part always to get the mean ellipse data
         if k > -0.5:
-            el = get_mean_marking(current_data, label_members,
-                                  fan=fans)
+            el = get_mean_marking(current_data, label_members, kind=kind)
             el.n_members = len(label_members)
             reduced_data.append(el)
             if current_axis:
                 el.set_color(color)
-                if not fans:
+                if kind == 'blotches':
                     current_axis.add_artist(el)
                 else:
                     current_axis.add_line(el)
@@ -82,13 +112,13 @@ def perform_dbscan(current_data, current_axis=None, eps=10, min_samples=3,
     return reduced_data
 
 
-def gold_star_plotter(gold_id, axis, blotches=True, fans=False):
+def gold_star_plotter(gold_id, axis, blotches=True, kind='blotches'):
     for goldstar, color in zip(markings.gold_members,
                                markings.gold_plot_colors):
         if blotches:
             gold_id.plot_blotches(user_name=goldstar, ax=axis,
                                   user_color=color)
-        if fans:
+        if kind == 'fans':
             gold_id.plot_fans(user_name=goldstar, ax=axis, user_color=color)
         markings.gold_legend(axis)
 
