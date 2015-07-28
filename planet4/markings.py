@@ -229,21 +229,44 @@ class Fan(lines.Line2D):
         half = radians(self.inside_half)
         return self.data.distance / (cos(half) + sin(half))
 
+    @property
+    def circle_base(self):
+        return self.v1 - self.v2
+
+    @property
+    def center(self):
+        return self.base + self.v2 + 0.5*self.circle_base
+
+    @property
+    def radius(self):
+        return 0.5 * LA.norm(self.circle_base)
+
     def add_semicircle(self, ax, color='b'):
-        circle_base = self.v1 - self.v2
-        center = self.base + self.v2 + 0.5 * circle_base
-        radius = 0.5 * LA.norm(circle_base)
         # reverse order of arguments for arctan2 input requirements
-        theta1 = degrees(arctan2(*circle_base[::-1]))
+        theta1 = degrees(arctan2(*self.circle_base[::-1]))
         theta2 = theta1 + 180
-        wedge = mpatches.Wedge(center, radius, theta1, theta2,
-                               width=0.01*radius, color=color, alpha=0.65)
+        wedge = mpatches.Wedge(self.center, self.radius, theta1, theta2,
+                               width=0.01*self.radius, color=color, alpha=0.65)
         ax.add_patch(wedge)
 
     def add_mean_wind_pointer(self, ax, color='b', ls='-'):
         endpoint = rotate_vector([5*self.length, 0], self.data.angle)
         coords = np.vstack((self.base,
-                           self.base + endpoint))
+                            self.base + endpoint))
+        pointer = lines.Line2D(coords[:, 0], coords[:, 1],
+                               alpha=0.65, linewidth=3, linestyle=ls)
+        pointer.set_color(color)
+        ax.add_line(pointer)
+
+    def calculate_midpoint(self):
+        midpoint = rotate_vector([0.5*(self.length + self.radius), 0],
+                                 self.data.angle)
+        coords = np.vstack((self.base,
+                            self.base + midpoint))
+        return coords
+
+    def add_midpoint_pointer(self, ax, color='b', ls='-'):
+        coords = self.calculate_midpoint()
         pointer = lines.Line2D(coords[:, 0], coords[:, 1],
                                alpha=0.65, linewidth=3, linestyle=ls)
         pointer.set_color(color)
