@@ -33,14 +33,14 @@ location_target_codes = {'giza': [850],
 
 def get_image_id_data(image_id, feedback=False):
     return pd.read_hdf(get_current_database_fname(), 'df',
-                       where='image_id='+image_id)
+                       where='image_id=' + image_id)
 
 
 def get_image_name_data(image_name, feedback=False):
     if feedback:
         print("Getting current data for image_name {}".format(image_name))
     return pd.read_hdf(get_current_database_fname(), 'df',
-                       where='image_name='+image_name)
+                       where='image_name=' + image_name)
 
 
 def get_list_of_image_names_data(image_names):
@@ -74,7 +74,7 @@ class ResultManager:
 def is_catalog_production_good():
     from pandas.core.index import InvalidIndexError
     dbfile = get_current_database_fname()
-    p4data = bz.Data('hdfstore://'+dbfile+'::df')
+    p4data = bz.Data('hdfstore://' + dbfile + '::df')
     image_names = p4data.image_name.distinct()
 
     not_there = []

@@ -9,6 +9,7 @@ import logging
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
+
 @interactive
 def do_clustering(p4img, kind='fans'):
     from planet4 import clustering
@@ -38,12 +39,12 @@ def process_image_name(image_name):
     dirname = pjoin(HOME, 'data/planet4/catalog_2_and_3')
     if not os.path.exists(dirname):
         os.makedirs(dirname)
-    blotchfname = pjoin(dirname, image_name+'_reduced_blotches.hdf')
-    fanfname = pjoin(dirname, image_name+'_reduced_fans.hdf')
+    blotchfname = pjoin(dirname, image_name + '_reduced_blotches.hdf')
+    fanfname = pjoin(dirname, image_name + '_reduced_fans.hdf')
     if os.path.exists(blotchfname) and\
             os.path.exists(fanfname):
-        return image_name+' already done.'
-    data = pd.read_hdf(dbfile, 'df', where="image_name="+image_name)
+        return image_name + ' already done.'
+    data = pd.read_hdf(dbfile, 'df', where="image_name=" + image_name)
     img_ids = data.image_id.unique()
     blotches = []
     fans = []
@@ -80,7 +81,7 @@ def main():
     import os
     dirname = os.path.join(os.environ['HOME'], 'data/planet4/catalog_2_and_3')
     while not results.ready():
-        print("{:.1f} %".format(100*results.progress/len(image_names)))
+        print("{:.1f} %".format(100 * results.progress / len(image_names)))
         sys.stdout.flush()
         time.sleep(10)
     for res in results.result:

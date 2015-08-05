@@ -29,11 +29,11 @@ gold_plot_colors = list('cmyg')
 def calc_fig_size(width):
     """Calc figure height in ratio of subframes."""
     ratio = img_x_size / img_y_size
-    return (width, width/ratio)
+    return (width, width / ratio)
 
 
 def calc_4_3(width):
-    return (width, width/(4/3.0))
+    return (width, width / (4 / 3.0))
 
 
 def gold_legend(ax):
@@ -92,7 +92,7 @@ class ImageID(object):
             if database_fname is None:
                 database_fname = p4io.get_current_database_fname()
             self.data = pd.read_hdf(database_fname, 'df',
-                                    where='image_id=='+imgid)
+                                    where='image_id==' + imgid)
 
     @property
     def subframe(self):
@@ -144,7 +144,7 @@ class ImageID(object):
             blotch.set_color(color)
             ax.add_artist(blotch)
             # blotch.plot_center(ax, color=color)
-            if i == n-1:
+            if i == n - 1:
                 break
         set_subframe_size(ax)
         ax.set_axis_off()
@@ -167,13 +167,13 @@ class ImageID(object):
             fan.set_color(color)
             ax.add_line(fan)
             fan.add_semicircle(ax, color=color)
-            if i == n-1:
+            if i == n - 1:
                 break
         set_subframe_size(ax)
         ax.set_axis_off()
 
     def plot_all(self):
-        fig, axes = plt.subplots(2, 2, figsize=(10,8))
+        fig, axes = plt.subplots(2, 2, figsize=(10, 8))
         axes = axes.ravel()
         self.show_subframe(ax=axes[0])
         self.show_subframe(ax=axes[2])
@@ -195,7 +195,7 @@ class Blotch(Ellipse):
         self.data = data
 
     def plot_center(self, ax, color='b'):
-        ax.scatter(self.data.x, self.data.y, color=color,
+        ax.scatter(self.x, self.y, color=color,
                    s=20, c='b', marker='o')
 
 
@@ -235,7 +235,7 @@ class Fan(lines.Line2D):
 
     @property
     def center(self):
-        return self.base + self.v2 + 0.5*self.circle_base
+        return self.base + self.v2 + 0.5 * self.circle_base
 
     @property
     def radius(self):
@@ -246,11 +246,11 @@ class Fan(lines.Line2D):
         theta1 = degrees(arctan2(*self.circle_base[::-1]))
         theta2 = theta1 + 180
         wedge = mpatches.Wedge(self.center, self.radius, theta1, theta2,
-                               width=0.01*self.radius, color=color, alpha=0.65)
+                               width=0.01 * self.radius, color=color, alpha=0.65)
         ax.add_patch(wedge)
 
     def add_mean_wind_pointer(self, ax, color='b', ls='-'):
-        endpoint = rotate_vector([5*self.length, 0], self.data.angle)
+        endpoint = rotate_vector([5 * self.length, 0], self.data.angle)
         coords = np.vstack((self.base,
                             self.base + endpoint))
         pointer = lines.Line2D(coords[:, 0], coords[:, 1],
@@ -260,7 +260,7 @@ class Fan(lines.Line2D):
 
     @property
     def midpoint(self):
-        return rotate_vector([0.5*(self.length + self.radius), 0],
+        return rotate_vector([0.5 * (self.length + self.radius), 0],
                              self.data.angle)
 
     @property
