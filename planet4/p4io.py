@@ -1,20 +1,24 @@
-from __future__ import print_function, division
-import pandas as pd
+from __future__ import division, print_function
+
+import datetime as dt
+import glob
+import logging
 import os
+import platform
+import shutil
 import sys
+
+import blaze as bz
+import matplotlib.image as mplimg
+import pandas as pd
+
+from . import helper_functions as hf
+from .exceptions import NoFilesFoundError
+
 try:
     from urllib import urlretrieve
 except ImportError:
     from urllib.request import urlretrieve
-import shutil
-import glob
-import matplotlib.image as mplimg
-import datetime as dt
-import platform
-import logging
-from . import helper_functions as hf
-import blaze as bz
-from .exceptions import NoFilesFoundError
 
 node_name = platform.node().split('.')[0]  # e.g. luna4[.diviner.ucla.edu]
 HOME = os.environ["HOME"]

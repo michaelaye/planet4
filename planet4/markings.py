@@ -1,16 +1,18 @@
 #!/usr/bin/env python
-from matplotlib.patches import Ellipse
-import pandas as pd
-from math import sin, cos, radians, degrees
-import numpy as np
-from numpy import arctan2
-from numpy import linalg as LA
-import matplotlib.pyplot as plt
+import argparse
+from itertools import cycle
+from math import cos, degrees, radians, sin
+
 import matplotlib.lines as lines
 import matplotlib.patches as mpatches
-from itertools import cycle
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from matplotlib.patches import Ellipse
+from numpy import linalg as LA
+from numpy import arctan2
+
 from . import p4io
-import argparse
 
 data_root = p4io.data_root
 

@@ -1,11 +1,12 @@
-from __future__ import print_function, division
-from planet4 import markings
-from planet4 import p4io
-from sklearn.cluster import DBSCAN
-import numpy as np
+from __future__ import division, print_function
+
 import matplotlib
 import matplotlib.pyplot as plt
-from .exceptions import NoDataToClusterError
+import numpy as np
+from sklearn.cluster import DBSCAN
+
+from . import markings, p4io
+from .exceptions import NoDataToClusterError, UnknownClusteringScopeError
 
 matplotlib.style.use('bmh')
 
