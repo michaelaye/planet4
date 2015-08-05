@@ -14,7 +14,7 @@ import platform
 import logging
 from . import helper_functions as hf
 import blaze as bz
-from .exceptions import *
+from .exceptions import NoFilesFoundError
 
 node_name = platform.node().split('.')[0]  # e.g. luna4[.diviner.ucla.edu]
 HOME = os.environ["HOME"]
@@ -162,12 +162,6 @@ def get_test_database():
                        'df')
 
 
-def get_all_image_names():
-    fname = get_current_database_fname()
-    image_names = pd.read_hdf(fname, 'df', columns=['image_name'])
-    return image_names
-
-
 def get_latest_tutorial_data(datadir=None):
     if datadir is None:
         datadir = data_root
@@ -216,8 +210,9 @@ def get_image_from_record(line):
 
 
 def get_image_names_from_db(dbfname):
-    store = pd.HDFStore(dbfname)
-    return store.select_column('df', 'image_name').unique()
+    with pd.HDFStore(dbfname) as store:
+        return store.select_column('df', 'image_name').unique()
+
 
 def get_current_marked():
     return pd.read_hdf(get_current_database_fname(), 'df',
@@ -228,6 +223,62 @@ def get_and_save_done(df, limit=30):
     counts = hf.classification_counts_per_image(df)
     ids_done = counts[counts >= limit].index
     df[df.image_id.isin(ids_done)].to_hdf(done_path, 'df')
+
+
+class DBManager(object):
+    """Wrapper class for database file.
+
+    Provides easy access to often used data items.
+    """
+    def __init__(self, dbname=None):
+        """Initialize DBManager class.
+
+        Parameters
+        ----------
+        dbname : <str>
+            Filename of database file to use. Default: Latest produced full
+            database.
+        """
+        if dbname is None:
+            self.dbname = get_current_database_fname()
+        else:
+            self.dbname = dbname
+
+    @property
+    def image_names(self):
+        "Return list of unique obsids used in database."
+        return get_image_names_from_db(self.dbname)
+
+    @property
+    def image_ids(self):
+        "Return list of unique image_ids in database."
+        with pd.HDFStore(self.dbname) as store:
+            return store.select_column('df', 'image_id').unique()
+
+    @property
+    def n_image_ids(self):
+        return len(self.image_ids)
+
+    @property
+    def n_image_names(self):
+        return len(self.image_names)
+
+    @property
+    def obsids(self):
+        "Alias to self.image_ids."
+        return self.image_ids
+
+    def get_obsid_markings(self, obsid):
+        "Return marking data for given HiRISE obsid."
+        return pd.read_hdf(self.dbname, 'df', where='image_name=' + obsid)
+
+    def get_image_name_markings(self, image_name):
+        "Alias for get_obsid_markings."
+        return self.get_obsid_markings(image_name)
+
+    def get_image_id_markings(self, image_id):
+        "Return marking data for one Planet4 image_id"
+        return pd.read_hdf(self.dbname, 'df', where='image_id=' + image_id)
 
 
 ###
