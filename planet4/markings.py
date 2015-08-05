@@ -190,8 +190,15 @@ class Blotch(Ellipse):
     """Blotch management class for P4."""
     def __init__(self, json_row, color='b'):
         data = json_row
-        super(Blotch, self).__init__((data.x, data.y),
-                                     data.radius_1*2, data.radius_2*2,
+        try:
+            self.x = data.x
+            self.y = data.y
+        except AttributeError:
+            print("No x and y attributes in json_row:\n{}"
+                  .format(json_row))
+            raise AttributeError
+        super(Blotch, self).__init__((self.x, self.y),
+                                     data.radius_1 * 2, data.radius_2 * 2,
                                      data.angle, alpha=0.65,
                                      fill=False, linewidth=2, color=color)
         self.data = data
@@ -207,7 +214,11 @@ class Fan(lines.Line2D):
     def __init__(self, json_row, **kwargs):
         self.data = json_row
         # first coordinate is the base of fan
-        self.base = self.data[['x', 'y']].values
+        try:
+            self.base = self.data.loc[['x', 'y']].values
+        except KeyError:
+            print("No x and y in the json_row:\n{}".format(json_row))
+            raise KeyError
         # angles
         self.inside_half = self.data.spread / 2.0
         alpha = self.data.angle - self.inside_half

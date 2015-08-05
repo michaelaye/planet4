@@ -19,23 +19,29 @@ class DBScanner(object):
                     'blotch': markings.Blotch}
 
     def __init__(self, data, kind, eps=10, min_samples=3,
-                 coords=['x', 'y'],
+                 scope='planet4',
                  ax=None, linestyle='-', quiet=True):
         self.data = data
         self.kind = kind  # fans or blotches
         self.eps = eps
         self.min_samples = min_samples
-        self.coords = coords
+        if scope == 'planet4':
+            self.coords = ['x', 'y']
+        elif scope == 'hirise':
+            self.coords = ['hirise_x', 'hirise_y']
+        else:
+            raise UnknownClusteringScopeError
+        self.scope = scope
         self.ax = ax
         self.linestyle = linestyle
         self.quiet = quiet
 
+        # these lines execute the clustering
         self.get_current_X()
         self.run_DBSCAN()
         self.post_analysis()
 
     def get_current_X(self):
-        # defaults for DBSCAN
         current_X = self.data[self.coords].values
         if len(current_X) == 0:
             raise NoDataToClusterError
@@ -58,11 +64,11 @@ class DBScanner(object):
         n_rejected = 0
         for k, color in zip(self.unique_labels, colors):
             label_members = [i[0] for i in np.argwhere(self.labels == k)]
-            if k == -1:
+            if k == -1:  # i.e. if it's noise
                 n_rejected = len(label_members)
             if self.ax:
                 self.process_plotting(k, label_members)
-            if k > -0.5:  # == if not noise marking
+            if k > -0.5:  # i.e. if it's not noise marking
                 cluster = self.get_mean_marking(label_members)
                 cluster.n_members = len(label_members)
                 reduced_data.append(cluster)
@@ -83,11 +89,14 @@ class DBScanner(object):
         cols = self.coords + self.marking_cols[self.kind]
         clusterdata = self.data[cols].iloc[label_members]
         meandata = clusterdata.mean()
+        if self.scope == 'hirise':
+            meandata['x'] = meandata.hirise_x
+            meandata['y'] = meandata.hirise_y
         return self.MarkingClass[self.kind](meandata)
 
     def process_cluster_plotting(self, cluster, color):
         cluster.set_color(color)
-        if self.kind == 'blotches':
+        if self.kind == 'blotch':
             self.ax.add_artist(cluster)
         else:
             self.ax.add_line(cluster)

@@ -18,6 +18,17 @@ class NoDataToClusterError(PlanetFourError):
         return "No data to scan was found in obj: {}".format(self.obj)
 
 
+class UnknownClusteringScopeError(PlanetFourError):
+
+    def __init__(self, scope):
+        self.scope = scope
+
+    def __str__(self):
+        s = "Don't know how to deal with clustering scope {}"\
+            .format(self.scope)
+        return s
+
+
 class UnknownMarkingKindError(PlanetFourError):
 
     def __init__(self, kind):
