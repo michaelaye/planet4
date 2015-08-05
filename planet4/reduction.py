@@ -1,16 +1,20 @@
 #!/usr/bin/env python
-from __future__ import print_function, division
-import pandas as pd
-import os
-import sys
+from __future__ import division, print_function
+
 import argparse
 import logging
+import os
 import sys
-from IPython.parallel import Client
-from .p4io import data_root, get_current_database_fname, get_image_names_from_db
 import time
+
+import pandas as pd
+from IPython.parallel import Client
+
 from odo import odo
+
 from .helper_functions import define_season_column
+from .p4io import (data_root, get_current_database_fname,
+                   get_image_names_from_db)
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
@@ -41,9 +45,9 @@ analysis_cols = ['classification_id',
                  'spread',
                  'version']
 
-data_columns=['classification_id', 'image_id',
-              'image_name', 'user_name', 'marking',
-              'acquisition_date', 'local_mars_time']
+data_columns = ['classification_id', 'image_id',
+                'image_name', 'user_name', 'marking',
+                'acquisition_date', 'local_mars_time']
 
 
 def scan_for_incomplete(df, marking):
@@ -105,7 +109,7 @@ def convert_ellipse_angles(df):
 
     def func(angle):
         if angle < 0:
-            return angle+180
+            return angle + 180
         elif angle > 180:
             return angle - 180
         else:
@@ -116,8 +120,8 @@ def convert_ellipse_angles(df):
 
 def calculate_hirise_pixels(df):
     logging.info("Calculating and assigning hirise pixel coordinates")
-    df = df.assign(hirise_x=lambda row: (row.x + 740*(row.x_tile-1)).round(),
-                   hirise_y=lambda row: (row.y + 548*(row.y_tile-1)).round())
+    df = df.assign(hirise_x=lambda row: (row.x + 740 * (row.x_tile - 1)).round(),
+                   hirise_y=lambda row: (row.y + 548 * (row.y_tile - 1)).round())
     logging.info("Hirise pixels coords added.")
     return df
 
@@ -230,7 +234,7 @@ def remove_duplicates_from_file(dbname, do_odo=False):
 
     def process_image_name(image_name):
         import pandas as pd
-        data = pd.read_hdf(dbname, 'df', where='image_name=='+image_name)
+        data = pd.read_hdf(dbname, 'df', where='image_name==' + image_name)
         data = remove_duplicates_from_image_name_data(data)
         data.to_hdf(get_temp_fname(image_name), 'df')
 
@@ -257,7 +261,7 @@ def create_season2_and_3_database():
     """
     fname = get_current_database_fname()
     image_names = get_image_names_from_db(fname)
-    metadf = pd.DataFrame(image_names[image_names!='tutorial'],
+    metadf = pd.DataFrame(image_names[image_names != 'tutorial'],
                           columns=['image_name'])
     logging.info('Found {} image_names'.format(len(metadf.image_name)))
 
@@ -271,11 +275,12 @@ def create_season2_and_3_database():
     if os.path.exists(newfname):
         os.remove(newfname)
     logging.info('Starting production of season 2 and 3 database.')
-    all_images = metadf[(metadf.season>1) & (metadf.season<4)].image_name
+    all_images = metadf[(metadf.season > 1) & (metadf.season < 4)].image_name
     for i, image_name in enumerate(all_images):
-        logging.info('Processing... {:.1f} %'.format(100*(i+1)/len(all_images)))
+        logging.info('Processing... {:.1f} %'
+                     .format(100 * (i + 1) / len(all_images)))
         try:
-            df = pd.read_hdf(fname, 'df', where='image_name='+image_name)
+            df = pd.read_hdf(fname, 'df', where='image_name=' + image_name)
             df.to_hdf(newfname, 'df', mode='a', format='t', append=True,
                       data_columns=data_columns,
                       min_itemsize={'local_mars_time': 8})
@@ -384,7 +389,7 @@ def main():
         df = remove_duplicates_from_file(newfpath)
 
     dt = time.time() - t0
-    logging.info("Time taken: {} minutes.".format(dt/60.0))
+    logging.info("Time taken: {} minutes.".format(dt / 60.0))
 
 if __name__ == '__main__':
     main()
