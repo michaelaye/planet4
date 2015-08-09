@@ -2,6 +2,8 @@
 
 Software to support the analyis of planetfour data.
 
+[![Code Health](https://landscape.io/github/michaelaye/planet4/master/landscape.svg?style=flat)](https://landscape.io/github/michaelaye/planet4/master)
+
 See more on the Wiki [here](https://github.com/CitizenScienceInAstronomyWorkshop/P4_sandbox/wiki)
 
 Install:
