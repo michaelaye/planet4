@@ -9,7 +9,6 @@ import time
 
 import pandas as pd
 from IPython.parallel import Client
-
 from odo import odo
 
 from .helper_functions import define_season_column
@@ -386,7 +385,7 @@ def main():
                  "Reduction complete.".format(newfpath))
 
     if args.remove_dups:
-        df = remove_duplicates_from_file(newfpath)
+        remove_duplicates_from_file(newfpath)
 
     dt = time.time() - t0
     logging.info("Time taken: {} minutes.".format(dt / 60.0))
