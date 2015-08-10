@@ -5,15 +5,15 @@ Software to support the analyis of planetfour data.
 [![Build Status](https://travis-ci.org/michaelaye/planet4.svg?branch=master)](https://travis-ci.org/michaelaye/planet4)
 [![Code Health](https://landscape.io/github/michaelaye/planet4/master/landscape.svg?style=flat)](https://landscape.io/github/michaelaye/planet4/master)
 
-See more on the Wiki [here](https://github.com/CitizenScienceInAstronomyWorkshop/P4_sandbox/wiki)
+See more on the Wiki [here](https://github.com/michaelaye/planet4/wiki)
 
 Install:
 
 ```bash
 cd <where_u_store_software_from_others>
 # next command will create folder `P4_sandbox`
-git clone https://github.com/CitizenScienceInAstronomyWorkshop/P4_sandbox.git
-cd P4_sandbox
+git clone https://github.com/michaelaye/planet4.git
+cd planet4
 python setup.py install
 ```
 
