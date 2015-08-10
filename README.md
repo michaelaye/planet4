@@ -11,7 +11,7 @@ Install:
 
 ```bash
 cd <where_u_store_software_from_others>
-# next command will create folder `P4_sandbox`
+# next command will create folder `planet4`
 git clone https://github.com/michaelaye/planet4.git
 cd planet4
 python setup.py install
