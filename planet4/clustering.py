@@ -118,6 +118,55 @@ class DBScanner(object):
                          markedgecolor='k', markersize=markersize)
 
 
+class ClusteringManager(object):
+    def __init__(self, dbname, scope='hirise'):
+        self.db = p4io.DBManager(dbname)
+        self.dbname = dbname
+        self.scope = scope
+        self.confusion = []
+        self.dbscanners = []
+        self.clustered_fans = []
+        self.clustered_blotches = []
+
+    @property
+    def n_clustered_fans(self):
+        return len(self.clustered_fans)
+
+    @property
+    def n_clustered_blotches(self):
+        return len(self.clustered_blotches)
+
+    def cluster_data(self, data):
+        for kind in ['fan', 'blotch']:
+            markings = data[data.marking == kind]
+            dbscanner = DBScanner(markings, kind, scope=self.scope)
+            self.confusion.append((self.data_id, kind, len(markings),
+                                   dbscanner.n_reduced_data,
+                                   dbscanner.n_rejected))
+            if kind == 'fan':
+                self.clustered_fans.extend(dbscanner.reduced_data)
+            else:
+                self.clustered_blotches.extend(dbscanner.reduced_data)
+
+    def cluster_image_id(self, image_id):
+        self.data_id = image_id
+        self.p4id = markings.ImageID(image_id, self.dbname)
+        self.dbscan_data(self.p4id.data)
+
+    def cluster_image_name(self, image_name):
+        data = self.db.get_image_name_markings(image_name)
+        self.data_id = image_name
+        self.dbscan_data(data)
+
+    def cluster_all(self):
+        image_names = self.db.image_names
+        for i, image_name in enumerate(image_names):
+            print('{:.1f}'.format(100 * i / len(image_names)))
+            data = self.db.get_image_name_markings(image_name)
+            self.data_id = image_name
+            self.dbscan_data(data)
+
+
 def gold_star_plotter(gold_id, axis, blotches=True, kind='blotches'):
     for goldstar, color in zip(markings.gold_members,
                                markings.gold_plot_colors):
