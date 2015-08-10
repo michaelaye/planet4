@@ -151,12 +151,12 @@ class ClusteringManager(object):
     def cluster_image_id(self, image_id):
         self.data_id = image_id
         self.p4id = markings.ImageID(image_id, self.dbname)
-        self.dbscan_data(self.p4id.data)
+        self.cluster_data(self.p4id.data)
 
     def cluster_image_name(self, image_name):
         data = self.db.get_image_name_markings(image_name)
         self.data_id = image_name
-        self.dbscan_data(data)
+        self.cluster_data(data)
 
     def cluster_all(self):
         image_names = self.db.image_names
@@ -164,7 +164,7 @@ class ClusteringManager(object):
             print('{:.1f}'.format(100 * i / len(image_names)))
             data = self.db.get_image_name_markings(image_name)
             self.data_id = image_name
-            self.dbscan_data(data)
+            self.cluster_data(data)
 
 
 def gold_star_plotter(gold_id, axis, blotches=True, kind='blotches'):
