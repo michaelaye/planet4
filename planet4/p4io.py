@@ -28,6 +28,7 @@ elif node_name.startswith('luna4'):
     data_root = '/raid1/maye/planet4'
 else:
     data_root = os.path.join(HOME, 'data/planet4')
+
 done_path = os.path.join(data_root, 'done.h5')
 
 location_target_codes = {'giza': [850],
@@ -160,6 +161,13 @@ def get_current_database_fname(datadir=None):
     h5files = glob.glob(datadir + '/2015*_queryable_cleaned.h5')
     return get_latest_file(h5files)
 
+
+def get_current_season23_dbase(datadir=None):
+    if datadir is None:
+        datadir = data_root
+    h5files = glob.glob(datadir + '/2015*_seasons2and3.h5')
+    return get_latest_file(h5files)
+    
 
 def get_test_database():
     return pd.read_hdf(os.path.join(data_root, 'test_db_queryable.h5'),
