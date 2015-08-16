@@ -1,5 +1,7 @@
 # Planet Four
 
+[![Join the chat at https://gitter.im/michaelaye/planet4](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/michaelaye/planet4?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Software to support the analyis of planetfour data.
 
 [![Build Status](https://travis-ci.org/michaelaye/planet4.svg?branch=master)](https://travis-ci.org/michaelaye/planet4)
