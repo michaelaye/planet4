@@ -3,6 +3,7 @@ from __future__ import division, print_function
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from sklearn.cluster import DBSCAN
 
 from . import markings, p4io
@@ -165,6 +166,30 @@ class ClusteringManager(object):
             data = self.db.get_image_name_markings(image_name)
             self.data_id = image_name
             self.cluster_data(data)
+
+    def cluster_stats(self):
+        from numpy.linalg import norm
+
+        n_close = 0
+        for blotch in self.clustered_blotches:
+            for fan in self.clustered_fans:
+                delta = blotch.center - (fan.base + fan.midpoint)
+                if norm(delta) < 10:
+                    n_close += 1
+        self.n_close = n_close
+        print("n_close: {}\nn_clustered_blotches: {}\n"
+              "n_clustered_fans: {}".format(n_close, self.n_clustered_blotches,
+                                            self.n_clustered_fans))
+
+    @property
+    def confusion_data(self):
+        return pd.DataFrame(self.confusion, columns=['image_name', 'kind',
+                                                     'n_markings',
+                                                     'n_cluster_members',
+                                                     'n_rejected'])
+
+    def save_confusion_data(self, fname):
+        self.confusion_data.to_csv(fname)
 
 
 def gold_star_plotter(gold_id, axis, blotches=True, kind='blotches'):

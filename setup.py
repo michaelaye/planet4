@@ -1,5 +1,6 @@
 import sys
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 from setuptools.command.test import test as TestCommand
 
 pandas_version = '0.16.2'
@@ -19,14 +20,14 @@ class PyTest(TestCommand):
 
 
 setup(
-    name = "Planet4",
-    version = "0.4",
-    packages = find_packages(),
+    name="Planet4",
+    version="0.4",
+    packages=find_packages(),
 
-    install_requires = ['pandas>='+pandas_version],
-    tests_require = ['pytest'],
+    install_requires=['pandas>='+pandas_version],
+    tests_require=['pytest'],
 
-    cmdclass = {'test': PyTest},
+    cmdclass={'test': PyTest},
 
     entry_points={
         "console_scripts": [
@@ -38,11 +39,11 @@ setup(
             ]
     },
 
-    #metadata
-    author = "K.-Michael Aye",
-    author_email = "kmichael.aye@gmail.com",
-    description = "Software for the reduction and analysis of Planet4 data.",
-    license = "BSD 2-clause",
-    keywords = "Mars Planet4 Zooniverse",
-    url = "http:www.planetfour.org",
+    # metadata
+    author="K.-Michael Aye",
+    author_email="kmichael.aye@gmail.com",
+    description="Software for the reduction and analysis of Planet4 data.",
+    license="ISC",
+    keywords="Mars Planet4 Zooniverse",
+    url="http://www.planetfour.org",
 )
