@@ -8,7 +8,7 @@ import sys
 import time
 
 import pandas as pd
-from IPython.parallel import Client
+from ipyparallel import Client
 from odo import odo
 
 from .helper_functions import define_season_column
