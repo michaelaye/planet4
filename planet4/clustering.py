@@ -120,6 +120,7 @@ class DBScanner(object):
 
 
 class ClusteringManager(object):
+
     def __init__(self, dbname, scope='hirise'):
         self.db = p4io.DBManager(dbname)
         self.dbname = dbname
@@ -171,15 +172,42 @@ class ClusteringManager(object):
         from numpy.linalg import norm
 
         n_close = 0
+        fnotch_data = []
         for blotch in self.clustered_blotches:
             for fan in self.clustered_fans:
                 delta = blotch.center - (fan.base + fan.midpoint)
                 if norm(delta) < 10:
+                    mean_pos = get_mean_position(fan, blotch)
+                    fnotch_data.append([mean_pos.iloc[0],
+                                        mean_pos.iloc[1],
+                                        calc_fnotch(fan.n_members,
+                                                    blotch.n_members)])
+                    fan.appended = True
+                    blotch.appended = True
                     n_close += 1
+        for fan in self.clustered_fans:
+            try:
+                if fan.appended is True:
+                    continue
+            except AttributeError:
+                pass
+            fnotch_data.append([fan.data.hirise_x,
+                                fan.data.hirise_y,
+                                1])
+        for blotch in self.clustered_blotches:
+            try:
+                if blotch.appended is True:
+                    continue
+            except AttributeError:
+                pass
+            fnotch_data.append([blotch.data.hirise_x,
+                                blotch.data.hirise_y,
+                                -1])
         self.n_close = n_close
         print("n_close: {}\nn_clustered_blotches: {}\n"
               "n_clustered_fans: {}".format(n_close, self.n_clustered_blotches,
                                             self.n_clustered_fans))
+        return fnotch_data
 
     @property
     def confusion_data(self):
@@ -190,6 +218,20 @@ class ClusteringManager(object):
 
     def save_confusion_data(self, fname):
         self.confusion_data.to_csv(fname)
+
+
+def get_mean_position(fan, blotch, hirise=True):
+    if hirise:
+        columns = ['hirise_x', 'hirise_y']
+    else:
+        columns = ['x', 'y']
+
+    df = pd.DataFrame([fan.data[columns], blotch.data[columns]])
+    return df.mean()
+
+
+def calc_fnotch(nfans, nblotches):
+    return (nfans-nblotches)/(nfans+abs(nblotches))
 
 
 def gold_star_plotter(gold_id, axis, blotches=True, kind='blotches'):
