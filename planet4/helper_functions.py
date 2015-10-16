@@ -7,8 +7,9 @@ def size_of_unique(x):
 
 
 def classification_counts_per_user(df):
-    return df.classification_id.groupby(df.user_name,
-                                        sort=False).agg(size_of_unique)
+    res = df.classification_id.groupby(df.user_name,
+                                       sort=False).agg(size_of_unique).sort_values(ascending=False)
+    return res
 
 
 def get_top_ten_users(df):
