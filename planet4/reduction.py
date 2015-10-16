@@ -217,6 +217,13 @@ def merge_temp_files(dbname, image_names=None, do_odo=False):
         else:
             os.remove(get_temp_fname(image_name))
     df = pd.concat(df, ignore_index=True)
+
+    # change type to category
+    to_category = ['image_name', 'image_id', 'image_url',
+                   'user_name', 'marking', 'local_mars_time']
+    for col in to_category:
+        df[col] = df[col].astype('category')
+
     df.to_hdf(dbnamenew, 'df',
               format='table',
               data_columns=data_columns)
