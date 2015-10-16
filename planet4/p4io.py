@@ -167,7 +167,7 @@ def get_current_season23_dbase(datadir=None):
         datadir = data_root
     h5files = glob.glob(datadir + '/2015*_seasons2and3.h5')
     return get_latest_file(h5files)
-    
+
 
 def get_test_database():
     return pd.read_hdf(os.path.join(data_root, 'test_db_queryable.h5'),
@@ -238,10 +238,12 @@ def get_and_save_done(df, limit=30):
 
 
 class DBManager(object):
+
     """Wrapper class for database file.
 
     Provides easy access to often used data items.
     """
+
     def __init__(self, dbname=None):
         """Initialize DBManager class.
 
@@ -292,10 +294,15 @@ class DBManager(object):
         "Return marking data for one Planet4 image_id"
         return pd.read_hdf(self.dbname, 'df', where='image_id=' + image_id)
 
+    def get_classification_id_data(self, class_id):
+        "Return data for one classification_id"
+        return pd.read_hdf(self.dbname, 'df',
+                           where="classification_id=='{}'".format(class_id))
 
 ###
 # general database helpers
 ###
+
 
 def remove_tutorial(df):
     return df[df.image_name != 'tutorial']
