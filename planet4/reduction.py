@@ -379,13 +379,13 @@ def main():
 
     convert_ellipse_angles(df)
 
-    df = calculate_hirise_pixels(df)
+    # commented out for now as image_x and image_y are already in the data.
+    # df = calculate_hirise_pixels(df)
 
     if args.do_fastread:
         produce_fast_read(rootpath, df)
 
     logging.info("Now writing query-able database file.")
-    newfpath = '{0}_queryable.h5'.format(rootpath)
     df.to_hdf(newfpath, 'df',
               format='table',
               data_columns=['image_name'])
