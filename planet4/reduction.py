@@ -89,7 +89,7 @@ def splitting_tutorials(rootpath, df):
                                 'image_url',
                                 'image_name',
                                 'local_mars_time'], axis=1)
-    tutorials.to_hdf(tutfpath, 'df')
+    tutorials.to_hdf(tutfpath, 'df', format='t')
 
     logging.info("Tutorial split done.\nCreated {}.".format(tutfpath))
     return df[df.image_name != 'tutorial']
@@ -131,7 +131,7 @@ def remove_duplicates_from_image_name_data(data):
     Parameters
     ==========
     data: pd.DataFrame
-        already filtered for an image_id
+        data filtered for one image_name
 
     Returns
     =======
@@ -141,11 +141,9 @@ def remove_duplicates_from_image_name_data(data):
     presented the same image_id more than once to the same users. This removes
     any later in time classification_ids per user_name and image_id.
     """
-    def process_user_group(g):
-        c_id = g.sort('created_at').classification_id.iloc[0]
-        return g[g.classification_id == c_id]
-    return data.groupby(['image_id', 'user_name']).apply(
-        process_user_group).reset_index(drop=True)
+    group = data.groupby(['image_id', 'user_name'], sort=False)
+    good_class_ids = group['classification_id'].min()
+    return data[data['classification_id'].isin(good_class_ids)]
 
 
 def get_temp_fname(image_name):
@@ -313,12 +311,16 @@ def main():
                         help='Produce the fast-read database file for'
                              ' complete read into memory.',
                         action='store_true')
-    parser.add_argument('--remove_dups',
+    parser.add_argument('--keep_dups',
                         help='Remove duplicates from database',
                         action='store_true')
     parser.add_argument('--test_n_rows',
                         help="Set this to do a test parse of n rows",
                         type=int, default=None)
+    parser.add_argument('--only_dups',
+                        help="Only do the duplicate removal",
+                        action='store_true')
+
     args = parser.parse_args()
 
     t0 = time.time()
@@ -330,6 +332,12 @@ def main():
     root = os.path.dirname(fname)
     fname_no_ext = os.path.splitext(fname_base)[0]
     rootpath = os.path.join(root, fname_no_ext)
+    # path for database:
+    newfpath = '{0}_queryable.h5'.format(rootpath)
+
+    if args.only_dups is True:
+        remove_duplicates_from_file(newfpath)
+        return
 
     # as chunksize and nrows cannot be used together yet, i switch chunksize
     # to None if I want test_n_rows for a small test database:
@@ -384,7 +392,10 @@ def main():
     logging.info("Writing to HDF file finished. Created {}. "
                  "Reduction complete.".format(newfpath))
 
-    if args.remove_dups:
+    # free memory
+    df = 0
+
+    if not args.keep_dups:
         remove_duplicates_from_file(newfpath)
 
     dt = time.time() - t0
