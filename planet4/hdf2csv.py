@@ -8,8 +8,8 @@ import os
 import sys
 import time
 
-from IPython.parallel import Client
-from IPython.parallel.util import interactive
+from ipyparallel import Client
+from ipyparallel.util import interactive
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
