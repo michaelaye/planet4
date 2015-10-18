@@ -11,9 +11,7 @@ import pandas as pd
 from ipyparallel import Client
 from odo import odo
 
-from .helper_functions import define_season_column
-from .p4io import (data_root, get_current_database_fname,
-                   get_image_names_from_db)
+from .p4io import data_root, DBManager
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
@@ -263,34 +261,21 @@ def create_season2_and_3_database():
     Has to be executed after the main reduction has finished.
     Installed as main command line script under name create_season2and3.
     """
-    fname = get_current_database_fname()
-    image_names = get_image_names_from_db(fname)
-    metadf = pd.DataFrame(image_names[image_names != 'tutorial'],
-                          columns=['image_name'])
-    logging.info('Found {} image_names'.format(len(metadf.image_name)))
+    logging.info('Starting production of season 2 and 3 database.')
+    # read data for season2 and 3
+    db = DBManager()
+    season23_image_names = db.get_season2and3_image_names()
+    where = "image_name in {}".format(season23_image_names.values.tolist())
+    season23 = pd.read_hdf(db.dbname, 'df', where=where)
 
-    define_season_column(metadf)
-
-    fname_base = os.path.basename(fname)
-    root = os.path.dirname(fname)
+    fname_base = os.path.basename(db.dbname)
+    root = os.path.dirname(db.dbname)
     fname_no_ext = os.path.splitext(fname_base)[0]
     rootpath = os.path.join(root, fname_no_ext)
     newfname = '{}_seasons2and3.h5'.format(rootpath)
     if os.path.exists(newfname):
         os.remove(newfname)
-    logging.info('Starting production of season 2 and 3 database.')
-    all_images = metadf[(metadf.season > 1) & (metadf.season < 4)].image_name
-    for i, image_name in enumerate(all_images):
-        logging.info('Processing... {:.1f} %'
-                     .format(100 * (i + 1) / len(all_images)))
-        try:
-            df = pd.read_hdf(fname, 'df', where='image_name=' + image_name)
-            df.to_hdf(newfname, 'df', mode='a', format='t', append=True,
-                      data_columns=data_columns,
-                      min_itemsize={'local_mars_time': 8})
-        except ValueError as e:
-            print(image_name, e)
-            sys.exit(-1)
+    season23.to_hdf(newfname, 'df', format='t', data_columns=data_columns)
     logging.info('Finished. Produced {}.'.format(newfname))
 
 
