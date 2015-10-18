@@ -299,6 +299,14 @@ class DBManager(object):
         return pd.read_hdf(self.dbname, 'df',
                            where="classification_id=='{}'".format(class_id))
 
+    @property
+    def season2and3_image_names(self):
+        from .helper_functions import define_season_column
+        image_names = self.image_names
+        metadf = pd.DataFrame(pd.Series(image_names).astype('str'), columns=['image_name'])
+        define_season_column(metadf)
+        return metadf[(metadf.season > 1) & (metadf.season < 4)].image_name
+
 ###
 # general database helpers
 ###
