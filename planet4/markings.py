@@ -273,13 +273,18 @@ class Fan(lines.Line2D):
 
     @property
     def midpoint(self):
-        return rotate_vector([0.5 * (self.length + self.radius), 0],
-                             self.data.angle)
+        """Calculate vector to half total length.
+
+        As total length, I define the arm-length + the radius of the semi-circle
+        at the end.
+        """
+        mid_point_vec = rotate_vector([0.5 * (self.length + self.radius), 0],
+                                      self.data.angle)
+        return self.base + mid_point_vec
 
     @property
     def base_to_midpoint_vec(self):
-        coords = np.vstack((self.base,
-                            self.base + self.midpoint))
+        coords = np.vstack((self.base, self.midpoint))
         return coords
 
     def add_midpoint_pointer(self, ax, color='b', ls='-'):
