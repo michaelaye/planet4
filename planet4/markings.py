@@ -80,6 +80,7 @@ def set_subframe_size(ax):
 
 
 class ImageID(object):
+
     """Manage Planet 4 Image ids, getting data, plot stuff etc."""
     imgid_template = "APF0000000"
 
@@ -187,7 +188,21 @@ class ImageID(object):
 
 
 class Blotch(Ellipse):
-    """Blotch management class for P4."""
+
+    """Blotch management class for P4.
+
+    Parameters
+    ----------
+    json_row : object with blotch data attributes
+        object should provide attributes [`x`, `y`, `radius_1`, `radius_2`, `angle`]
+    color : str, optional
+        to control the color of the mpl.Ellipse object
+
+    Attributes
+    ----------
+    data : object with blotch data attributes, as provided by `json_row`
+    """
+
     def __init__(self, json_row, color='b'):
         data = json_row
         try:
@@ -209,7 +224,37 @@ class Blotch(Ellipse):
 
 
 class Fan(lines.Line2D):
-    """Fan management class for P4. """
+
+    """Fan management class for P4.
+
+    Parameters
+    ----------
+    json_row : object with fan data attributes
+        object has to provide [`x`, `y`, `angle`, `spread`, `distance`]
+    kwargs : dictionary, optional
+
+    Attributes
+    ----------
+    data : object with fan data attributes
+        as provided by `json_row`.
+    base : tuple
+        base coordinates `x` and `y`.
+    inside_half : float
+        `data` divided by 2.0.
+    length : float
+        length of the fan arms.
+    v1 : float[2]
+        vector of first arm of fan.
+    v2 : float[2]
+        vector of second arm of fan.
+    coords : float[3, 2]
+        Set of coords to draw for MPL.Line2D object: arm1->base->arm2
+    circle_base
+    center
+    radius
+    midpoint
+    base_to_midpoint_vec
+    """
 
     def __init__(self, json_row, **kwargs):
         self.data = json_row
@@ -244,17 +289,25 @@ class Fan(lines.Line2D):
 
     @property
     def circle_base(self):
+        "float[2] : Vector between end of first arm and second arm of fan."
         return self.v1 - self.v2
 
     @property
     def center(self):
+        """float[2] : vector from base to mid-point between arms.
+
+        This is used for the drawing of the semi-circle at the end of the
+        two fan arms.
+        """
         return self.base + self.v2 + 0.5 * self.circle_base
 
     @property
     def radius(self):
+        "float : for the semi-circle wedge drawing at the end of fan."
         return 0.5 * LA.norm(self.circle_base)
 
     def add_semicircle(self, ax, color='b'):
+        "Draw a semi-circle at end of fan arms using MPL.Wedge."
         # reverse order of arguments for arctan2 input requirements
         theta1 = degrees(arctan2(*self.circle_base[::-1]))
         theta2 = theta1 + 180
@@ -263,6 +316,7 @@ class Fan(lines.Line2D):
         ax.add_patch(wedge)
 
     def add_mean_wind_pointer(self, ax, color='b', ls='-'):
+        "Draw a thicker mean wind direction pointer for better visibility in plots."
         endpoint = rotate_vector([5 * self.length, 0], self.data.angle)
         coords = np.vstack((self.base,
                             self.base + endpoint))
@@ -305,6 +359,11 @@ class Fan(lines.Line2D):
         out = 'base: {0}\nlength: {1}\nv1: {2}\nv2: {3}'\
             .format(self.base, self.length, self.v1, self.v2)
         return out
+
+
+class Fnotch(object):
+
+    "Manage Fnotch by providing a cut during output."
 
 
 def main():
