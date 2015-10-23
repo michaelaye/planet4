@@ -1,11 +1,15 @@
 """This script requires to launch a local ipcontroller. If you execute this
 locally, do it with `ipcluster start`.
 """
-from IPython.parallel import Client
-from IPython.parallel.util import interactive
 import argparse
-from .p4io import get_image_names_from_db
 import logging
+
+from ipyparallel import Client
+from ipyparallel.util import interactive
+
+from .clustering import ClusteringManager
+from .p4io import DBManager
+from .p4io import get_image_names_from_db
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
