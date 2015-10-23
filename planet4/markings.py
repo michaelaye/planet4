@@ -363,7 +363,42 @@ class Fan(lines.Line2D):
 
 class Fnotch(object):
 
-    "Manage Fnotch by providing a cut during output."
+    """Manage Fnotch by providing a cut during output.
+
+    Parameters
+    ----------
+    value : float
+        Fnotch value (= 1 - blotchiness), as calculated in clustering.ClusterManager()
+    fandata : pandas.Series
+        data set containing all required for Fan object (see `Fan`)
+    blotchdata : pandas.Series
+        data set containing all required for Blotch object (see `Blotch`)
+    """
+
+    def __init__(self, value, fandata, blotchdata):
+        self.value = value
+        self.fandata = fandata
+        self.blotchdata = blotchdata
+
+    def get_marking(self, cut):
+        """Return the right marking, depending on cut value.
+
+        If the cut is at 0.8, the fnotch value has to be equal or better before
+        we assign the fan to the Fnotch object. Otherwise we return a blotch.
+
+        Parameters
+        ----------
+        cut : float
+            Level where we separate fan from blotch
+
+        Returns
+        -------
+        `Fan` or `Blotch` object, depending on `cut`
+        """
+        if cut > self.value:
+            return Blotch(self.blotchdata)
+        else:
+            return Fan(self.fandata)
 
 
 def main():
