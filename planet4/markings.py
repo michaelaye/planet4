@@ -380,6 +380,15 @@ class Fnotch(object):
         self.fandata = fandata
         self.blotchdata = blotchdata
 
+        fandf = pd.DataFrame(self.fandata).T
+        fandf.rename_axis(lambda x: 'fan_'+x, axis=1, inplace=True)
+        blotchdf = pd.DataFrame(self.blotchdata).T
+        blotchdf.rename_axis(lambda x: 'blotch_'+x, axis=1, inplace=True)
+        df = pd.concat([fandf, blotchdf], axis=1)
+        df['fnotch_value'] = self.value
+        self.df = df
+        self.data = df.squeeze()
+
     def get_marking(self, cut):
         """Return the right marking, depending on cut value.
 
