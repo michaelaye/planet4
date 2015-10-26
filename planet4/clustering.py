@@ -75,6 +75,8 @@ class DBScanner(object):
             if k > -0.5:  # i.e. if it's not noise marking
                 cluster = self.get_mean_marking(label_members)
                 cluster.n_members = len(label_members)
+                # storing this saved marker for later in ClusteringManager
+                cluster.saved = False
                 reduced_data.append(cluster)
                 if self.ax:
                     self.process_cluster_plotting(cluster, color)
@@ -125,6 +127,7 @@ class DBScanner(object):
 class ClusteringManager(object):
 
     "WRITE the effing docstring!"
+
     def __init__(self, dbname, scope='hirise', min_distance=10, output_dir=None):
         self.db = p4io.DBManager(dbname)
         self.dbname = dbname
@@ -176,7 +179,6 @@ class ClusteringManager(object):
         blotches = []
         fans = []
         for blotch in self.clustered_blotches:
-            blotch_applied = False
             for fan in self.clustered_fans:
                 delta = blotch.center - fan.midpoint
                 if norm(delta) < self.min_distance:
@@ -185,10 +187,12 @@ class ClusteringManager(object):
                                                     fan.data,
                                                     blotch.data))
                     n_close += 1
-                    blotch_applied = True
-                else:
+                    blotch.saved = True
+                    fan.saved = True
+                elif not fan.saved:
                     fans.append(fan)
-            if not blotch_applied:
+                    fan.saved = True
+            if not blotch.saved:
                 blotches.append(blotch)
         self.final_fnotches = fnotches
         self.final_blotches = blotches
@@ -212,8 +216,8 @@ class ClusteringManager(object):
         outblotch = image_name + '_blotches.hdf'
         outfan = image_name + '_fans.hdf'
         for outfname, outdata in zip([outfnotch, outblotch, outfan],
-                                    [self.final_fnotches, self.final_blotches,
-                                     self.final_fans]):
+                                     [self.final_fnotches, self.final_blotches,
+                                      self.final_fans]):
             outpath = self.output_dir / outfname
             series = [cluster.data for cluster in outdata]
             df = pd.DataFrame(series)
@@ -228,7 +232,6 @@ class ClusteringManager(object):
             # print('{:.1f}'.format())
             ft.value = round(perc, 1)
             self.cluster_image_name(image_name)
-
 
     def report(self):
         print("Fnotches:", len(self.final_fnotches))
