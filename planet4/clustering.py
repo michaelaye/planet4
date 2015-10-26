@@ -4,6 +4,9 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from IPython.display import display
+from ipywidgets import FloatText
+from pathlib import Path
 from sklearn.cluster import DBSCAN
 
 from . import markings, p4io
@@ -121,14 +124,24 @@ class DBScanner(object):
 
 class ClusteringManager(object):
 
-    def __init__(self, dbname, scope='hirise'):
+    "WRITE the effing docstring!"
+    def __init__(self, dbname, scope='hirise', min_distance=10, output_dir=None):
         self.db = p4io.DBManager(dbname)
         self.dbname = dbname
         self.scope = scope
+        self.min_distance = min_distance
         self.confusion = []
         self.dbscanners = []
-        self.clustered_fans = []
-        self.clustered_blotches = []
+        self.final_fans = []
+        self.final_blotches = []
+        self.final_fnotches = []
+        if output_dir is None:
+            output_dir = Path(p4io.data_root) / 'output'
+        self.output_dir = Path(output_dir)
+        try:
+            self.output_dir.mkdir()
+        except FileExistsError:
+            pass
 
     @property
     def n_clustered_fans(self):
@@ -139,6 +152,9 @@ class ClusteringManager(object):
         return len(self.clustered_blotches)
 
     def cluster_data(self, data):
+        "Basic clustering."
+        clustered_blotches = []
+        clustered_fans = []
         for kind in ['fan', 'blotch']:
             markings = data[data.marking == kind]
             dbscanner = DBScanner(markings, kind, scope=self.scope)
@@ -146,68 +162,78 @@ class ClusteringManager(object):
                                    dbscanner.n_reduced_data,
                                    dbscanner.n_rejected))
             if kind == 'fan':
-                self.clustered_fans.extend(dbscanner.reduced_data)
+                clustered_fans.extend(dbscanner.reduced_data)
             else:
-                self.clustered_blotches.extend(dbscanner.reduced_data)
+                clustered_blotches.extend(dbscanner.reduced_data)
+        self.clustered_fans = clustered_fans
+        self.clustered_blotches = clustered_blotches
+
+    def do_the_fnotch(self):
+        "Combine fans and blotches if necessary."
+        from numpy.linalg import norm
+        n_close = 0
+        fnotches = []
+        blotches = []
+        fans = []
+        for blotch in self.clustered_blotches:
+            blotch_applied = False
+            for fan in self.clustered_fans:
+                delta = blotch.center - fan.midpoint
+                if norm(delta) < self.min_distance:
+                    fnotch_value = calc_fnotch(fan.n_members, blotch.n_members)
+                    fnotches.append(markings.Fnotch(fnotch_value,
+                                                    fan.data,
+                                                    blotch.data))
+                    n_close += 1
+                    blotch_applied = True
+                else:
+                    fans.append(fan)
+            if not blotch_applied:
+                blotches.append(blotch)
+        self.final_fnotches = fnotches
+        self.final_blotches = blotches
+        self.final_fans = fans
 
     def cluster_image_id(self, image_id):
         self.data_id = image_id
         self.p4id = markings.ImageID(image_id, self.dbname)
         self.cluster_data(self.p4id.data)
+        self.do_the_fnotch()
 
     def cluster_image_name(self, image_name):
         data = self.db.get_image_name_markings(image_name)
         self.data_id = image_name
         self.cluster_data(data)
+        self.do_the_fnotch()
+        self.store_output(image_name)
+
+    def store_output(self, image_name):
+        outfnotch = image_name + '_fnotches.hdf'
+        outblotch = image_name + '_blotches.hdf'
+        outfan = image_name + '_fans.hdf'
+        for outfname, outdata in zip([outfnotch, outblotch, outfan],
+                                    [self.final_fnotches, self.final_blotches,
+                                     self.final_fans]):
+            outpath = self.output_dir / outfname
+            series = [cluster.data for cluster in outdata]
+            df = pd.DataFrame(series)
+            df.to_csv(outpath.with_suffix('.csv').as_posix())
 
     def cluster_all(self):
         image_names = self.db.image_names
+        ft = FloatText()
+        display(ft)
         for i, image_name in enumerate(image_names):
-            print('{:.1f}'.format(100 * i / len(image_names)))
-            data = self.db.get_image_name_markings(image_name)
-            self.data_id = image_name
-            self.cluster_data(data)
+            perc = 100 * i / len(image_names)
+            # print('{:.1f}'.format())
+            ft.value = round(perc, 1)
+            self.cluster_image_name(image_name)
 
-    def cluster_stats(self):
-        from numpy.linalg import norm
 
-        n_close = 0
-        fnotch_data = []
-        for blotch in self.clustered_blotches:
-            for fan in self.clustered_fans:
-                delta = blotch.center - (fan.base + fan.midpoint)
-                if norm(delta) < 10:
-                    mean_pos = get_mean_position(fan, blotch)
-                    fnotch_data.append([mean_pos.iloc[0],
-                                        mean_pos.iloc[1],
-                                        calc_fnotch(fan.n_members,
-                                                    blotch.n_members)])
-                    fan.appended = True
-                    blotch.appended = True
-                    n_close += 1
-        for fan in self.clustered_fans:
-            try:
-                if fan.appended is True:
-                    continue
-            except AttributeError:
-                pass
-            fnotch_data.append([fan.data.hirise_x,
-                                fan.data.hirise_y,
-                                1])
-        for blotch in self.clustered_blotches:
-            try:
-                if blotch.appended is True:
-                    continue
-            except AttributeError:
-                pass
-            fnotch_data.append([blotch.data.hirise_x,
-                                blotch.data.hirise_y,
-                                -1])
-        self.n_close = n_close
-        print("n_close: {}\nn_clustered_blotches: {}\n"
-              "n_clustered_fans: {}".format(n_close, self.n_clustered_blotches,
-                                            self.n_clustered_fans))
-        return fnotch_data
+    def report(self):
+        print("Fnotches:", len(self.final_fnotches))
+        print("Fans:", len(self.final_fans))
+        print("Blotches:", len(self.final_blotches))
 
     @property
     def confusion_data(self):
@@ -220,8 +246,8 @@ class ClusteringManager(object):
         self.confusion_data.to_csv(fname)
 
 
-def get_mean_position(fan, blotch, hirise=True):
-    if hirise:
+def get_mean_position(fan, blotch, scope):
+    if scope == 'hirise':
         columns = ['hirise_x', 'hirise_y']
     else:
         columns = ['x', 'y']
@@ -231,7 +257,7 @@ def get_mean_position(fan, blotch, hirise=True):
 
 
 def calc_fnotch(nfans, nblotches):
-    return (nfans-nblotches)/(nfans+abs(nblotches))
+    return (nfans)/(nfans+nblotches)
 
 
 def gold_star_plotter(gold_id, axis, blotches=True, kind='blotches'):
