@@ -48,7 +48,8 @@ def process_image_name(image_name):
     if os.path.exists(blotchfname) and\
             os.path.exists(fanfname):
         return image_name + ' already done.'
-    data = pd.read_hdf(dbfile, 'df', where="image_name=" + image_name)
+    # data = pd.read_hdf(dbfile, 'df', where="image_name=" + image_name)
+    dbmanager = DBManager(dbfile)
     img_ids = data.image_id.unique()
     blotches = []
     fans = []
