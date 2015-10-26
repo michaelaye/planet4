@@ -1,7 +1,6 @@
 from __future__ import division, print_function
 
 import datetime as dt
-import glob
 import logging
 import os
 import shutil
@@ -10,6 +9,7 @@ import sys
 import blaze as bz
 import matplotlib.image as mplimg
 import pandas as pd
+from pathlib import Path
 
 from . import helper_functions as hf
 from .exceptions import NoFilesFoundError
@@ -19,13 +19,13 @@ try:
 except ImportError:
     from urllib.request import urlretrieve
 
-HOME = os.environ["HOME"]
+HOME = Path(os.environ["HOME"])
 if os.environ['USER'] == 'gapo7695':
-    data_root = '/Users/gapo7695/Dropbox/myPy/others/P4_sandbox/databaseP4'
+    data_root = Path('/Users/gapo7695/Dropbox/myPy/others/P4_sandbox/databaseP4')
 else:
-    data_root = os.path.join(HOME, 'Dropbox/data/planet4')
+    data_root = HOME / 'Dropbox' / 'data' / 'planet4'
 
-done_path = os.path.join(data_root, 'done.h5')
+done_path = data_root / 'done.h5'
 
 location_target_codes = {'giza': [850],
                          'spider_evolution': [950],
@@ -52,24 +52,21 @@ def get_list_of_image_names_data(image_names):
 
 
 class ResultManager:
-    resultpath = os.path.join(data_root, 'catalog_2_and_3')
+    resultpath = data_root / 'catalog_2_and_3'
 
     def __init__(self, image_name):
         self.image_name = image_name
-        self.fanfname = os.path.join(self.resultpath,
-                                     image_name + '_reduced_fans.hdf')
-        self.blotchfname = os.path.join(self.resultpath,
-                                        image_name + '_reduced_blotches.hdf')
+        self.fanfname = self.resultpath / image_name + '_reduced_fans.hdf'
+        self.blotchfname = self.resultpath / image_name + '_reduced_blotches.hdf'
 
     def load_dataframes(self):
-        self.fans = pd.read_hdf(self.fanfname, 'df')
-        self.blotches = pd.read_hdf(self.blotchfname, 'df')
+        self.fans = pd.read_hdf(str(self.fanfname), 'df')
+        self.blotches = pd.read_hdf(str(self.blotchfname), 'df')
 
     def clean_up(self):
-        if os.path.exists(self.fanfname):
-            os.remove(self.fanfname)
-        if os.path.exists(self.blotchfname):
-            os.remove(self.blotchfname)
+        for markingpath in [self.fanfname, self.blotchfname]:
+            if markingpath.exists():
+                markingpath.unlink()
 
 
 def is_catalog_production_good():
@@ -106,76 +103,64 @@ def get_subframe(url):
     Then uses matplotlib.image to read the image into a numpy-array
     and finally returns it.
     """
-    targetpath = os.path.join(data_root, 'images', os.path.basename(url))
-    if not os.path.exists(os.path.dirname(targetpath)):
-        os.makedirs(os.path.dirname(targetpath))
-    if not os.path.exists(targetpath):
+    targetpath = data_root / 'images' / os.path.basename(url)
+    targetpath.parent.mkdir(exist_ok=True)
+    if not targetpath.exists():
         logging.info("Did not find image in cache. Downloading ...")
         sys.stdout.flush()
         path = urlretrieve(url)[0]
         logging.debug("Done.")
-        shutil.move(path, targetpath)
+        shutil.move(path, str(targetpath))
     else:
         logging.debug("Found image in cache.")
     im = mplimg.imread(targetpath)
     return im
 
 
-def split_date_from_fname(fname):
-    fname = os.path.basename(fname)
-    datestr = fname.split('_')[0]
-    return [int(i) for i in datestr.split('-')]
-
-
-def get_dt_from_fname(fname):
-    """Return date part of planet 4 database files.
-
-    These files are named yyyy-mm-dd_planet_four_classifications.[csv|h5].
-    Hence, this returns the date part for files named like that.
-    """
-    return dt.datetime(*split_date_from_fname(fname))
+class P4DBName(object):
+    def __init__(self, fname):
+        self.p = Path(fname)
+        self.name = self.p.name
+        self.parent = self.p.parent
+        date = str(self.name)[:10]
+        self.date = dt.datetime(*[int(i) for i in date.split('-')])
 
 
 def get_latest_file(filenames):
-    try:
-        retval = filenames[0]
-    except IndexError:
-        print("No files found.")
-        return
-    dtnow = get_dt_from_fname(retval)
+    retval = P4DBName(filenames[0])
+    dtnow = retval.date
     for fname in filenames[1:]:
-        dt_to_check = get_dt_from_fname(fname)
+        dt_to_check = P4DBName(fname).date
         if dt_to_check > dtnow:
             dtnow = dt_to_check
             retval = fname
-    return retval
+    return retval.p
 
 
 def get_current_database_fname(datadir=None):
     if datadir is None:
         datadir = data_root
-    h5files = glob.glob(datadir + '/2015*_queryable_cleaned.h5')
+    h5files = datadir.glob('/2015*_queryable_cleaned.h5')
     return get_latest_file(h5files)
 
 
 def get_current_season23_dbase(datadir=None):
     if datadir is None:
         datadir = data_root
-    h5files = glob.glob(datadir + '/2015*_seasons2and3.h5')
-    return get_latest_file(h5files)
+    h5files = list(datadir.glob('2015*_seasons2and3.h5'))
+    return DBManager(get_latest_file(h5files))
 
 
 def get_test_database():
-    return pd.read_hdf(os.path.join(data_root, 'test_db_queryable.h5'),
-                       'df')
+    return pd.read_hdf(str(data_root / 'test_db_queryable.h5'), 'df')
 
 
 def get_latest_tutorial_data(datadir=None):
     if datadir is None:
         datadir = data_root
 
-    tut_files = glob.glob(datadir + '/*_tutorials.h5')
-    tut_files = [i for i in tut_files if os.path.basename(i)[:4].isdigit()]
+    tut_files = datadir.glob('/*_tutorials.h5')
+    tut_files = [i for i in tut_files if i.parent[:4].isdigit()]
     if not tut_files:
         raise NoFilesFoundError
     return pd.read_hdf(get_latest_file(tut_files), 'df')
@@ -191,30 +176,7 @@ def common_gold_ids():
 
 
 def get_example_blotches():
-    return pd.read_hdf(os.path.join(data_root, 'blotch_data.h5'), 'df')
-
-
-def get_image_from_record(line):
-    """Download image if not there yet and return numpy array.
-
-    Takes a data record (called 'line'), picks out the image_url.
-    First checks if the name of that image is already stored in
-    the image path. If not, it grabs it from the server.
-    Then uses matplotlib.image to read the image into a numpy-array
-    and finally returns it.
-    """
-    url = line.image_url
-    targetpath = os.path.join(data_root, 'images', os.path.basename(url))
-    if not os.path.exists(targetpath):
-        print("Did not find image in cache. Downloading ...")
-        sys.stdout.flush()
-        path = urlretrieve(url)[0]
-        print("Done.")
-        shutil.move(path, targetpath)
-    else:
-        print("Found image in cache.")
-    im = mplimg.imread(targetpath)
-    return im
+    return pd.read_hdf(str(data_root / 'blotch_data.h5'), 'df')
 
 
 def get_image_names_from_db(dbfname):
