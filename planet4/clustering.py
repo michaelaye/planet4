@@ -29,7 +29,7 @@ class DBScanner(object):
         if scope == 'planet4':
             self.coords = ['x', 'y']
         elif scope == 'hirise':
-            self.coords = ['hirise_x', 'hirise_y']
+            self.coords = ['image_x', 'image_y']
         else:
             raise UnknownClusteringScopeError
         self.scope = scope
@@ -91,8 +91,8 @@ class DBScanner(object):
         clusterdata = self.data[cols].iloc[label_members]
         meandata = clusterdata.mean()
         if self.scope == 'hirise':
-            meandata['x'] = meandata.hirise_x
-            meandata['y'] = meandata.hirise_y
+            meandata['x'] = meandata.image_x
+            meandata['y'] = meandata.image_y
         return self.MarkingClass[self.kind](meandata)
 
     def process_cluster_plotting(self, cluster, color):
