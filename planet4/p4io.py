@@ -4,7 +4,6 @@ import datetime as dt
 import glob
 import logging
 import os
-import platform
 import shutil
 import sys
 
