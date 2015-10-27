@@ -6,7 +6,6 @@ import os
 import shutil
 import sys
 
-import blaze as bz
 import matplotlib.image as mplimg
 import pandas as pd
 from pathlib import Path
@@ -71,14 +70,11 @@ class ResultManager:
 
 def is_catalog_production_good():
     from pandas.core.index import InvalidIndexError
-    dbfile = get_current_database_fname()
-    p4data = bz.Data('hdfstore://' + dbfile + '::df')
-    image_names = p4data.image_name.distinct()
-
+    db = DBManager(get_current_database_fname())
     not_there = []
     invalid_index = []
     value_error = []
-    for image_name in image_names:
+    for image_name in db.image_names:
         try:
             ResultManager(image_name)
         except InvalidIndexError:
@@ -118,6 +114,7 @@ def get_subframe(url):
 
 
 class P4DBName(object):
+
     def __init__(self, fname):
         self.p = Path(fname)
         self.name = self.p.name
@@ -180,7 +177,7 @@ def get_example_blotches():
 
 
 def get_image_names_from_db(dbfname):
-    with pd.HDFStore(dbfname) as store:
+    with pd.HDFStore(str(dbfname)) as store:
         return store.select_column('df', 'image_name').unique()
 
 
