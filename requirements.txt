@@ -1,7 +1,5 @@
-pip
 numpy
 scipy
-pytest
 pandas
-blaze
 matplotlib
+ipyparallel
