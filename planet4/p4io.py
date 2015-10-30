@@ -31,6 +31,11 @@ location_target_codes = {'giza': [850],
                          'ithaca': [945, 850, 950]}
 
 
+def dropbox():
+    home = Path.home()
+    return home / 'Dropbox' / 'data' / 'planet4'
+
+
 def get_image_id_data(image_id, feedback=False):
     return pd.read_hdf(get_current_database_fname(), 'df',
                        where='image_id=' + image_id)
