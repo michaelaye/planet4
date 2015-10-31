@@ -211,17 +211,17 @@ class ClusteringManager(object):
         self.do_the_fnotch()
         self.store_output(image_name)
 
-    def store_output(self, image_name):
-        outfnotch = image_name + '_fnotches.hdf'
-        outblotch = image_name + '_blotches.hdf'
-        outfan = image_name + '_fans.hdf'
+    def store_output(self, image_name, suffix='.hdf'):
+        outfnotch = image_name + '_fnotches'
+        outblotch = image_name + '_blotches'
+        outfan = image_name + '_fans'
         for outfname, outdata in zip([outfnotch, outblotch, outfan],
                                      [self.final_fnotches, self.final_blotches,
                                       self.final_fans]):
             outpath = self.output_dir / outfname
             series = [cluster.data for cluster in outdata]
             df = pd.DataFrame(series)
-            df.to_csv(outpath.with_suffix('.csv').as_posix())
+            df.to_csv(outpath.with_suffix(suffix).as_posix())
 
     def cluster_all(self):
         image_names = self.db.image_names
