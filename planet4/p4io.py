@@ -129,9 +129,10 @@ class P4DBName(object):
 
 
 def get_latest_file(filenames):
-    retval = P4DBName(filenames[0])
+    fnames = list(filenames)
+    retval = P4DBName(fnames[0])
     dtnow = retval.date
-    for fname in filenames[1:]:
+    for fname in fnames[1:]:
         dt_to_check = P4DBName(fname).date
         if dt_to_check > dtnow:
             dtnow = dt_to_check
@@ -142,7 +143,7 @@ def get_latest_file(filenames):
 def get_current_database_fname(datadir=None):
     if datadir is None:
         datadir = data_root
-    h5files = datadir.glob('/2015*_queryable_cleaned.h5')
+    h5files = datadir.glob('2015*_queryable_cleaned.h5')
     return get_latest_file(h5files)
 
 
@@ -214,9 +215,9 @@ class DBManager(object):
             database.
         """
         if dbname is None:
-            self.dbname = get_current_database_fname()
+            self.dbname = str(get_current_database_fname())
         else:
-            self.dbname = dbname
+            self.dbname = str(dbname)
 
     @property
     def image_names(self):
