@@ -28,6 +28,9 @@ gold_members = ['michaelaye', 'mschwamb', 'Portyankina', 'CJ-DPI']
 gold_plot_colors = list('cmyg')
 
 
+import math
+
+
 def example_p4id():
     db = io.DBManager()
     return ImageID('APF00002rq', data=db.get_image_id_markings('APF00002rq'))
@@ -235,9 +238,49 @@ class Blotch(Ellipse):
                                      fill=False, linewidth=2, color=color)
         self.data = data
 
+    @property
+    def x1(self):
+        return math.cos(math.radians(self.angle)) * self.data.radius_1
+
+    @property
+    def y1(self):
+        return math.sin(self.angle) * self.data.radius_1
+
+    @property
+    def p1(self):
+        return np.array(self.center) + np.array([self.x1, self.y1])
+
+    @property
+    def p2(self):
+        return np.array(self.center) - np.array([self.x1, self.y1])
+
+    @property
+    def x2(self):
+        return math.cos(math.radians(self.angle+90)) * self.data.radius_2
+
+    @property
+    def y2(self):
+        return math.sin(math.radians(self.angle+90)) * self.data.radius_2
+
+    @property
+    def p3(self):
+        return np.array(self.center) + np.array([self.x2, self.y2])
+
+    @property
+    def p4(self):
+        return np.array(self.center) - np.array([self.x2, self.y2])
+
+    @property
+    def limit_points(self):
+        return [self.p1, self.p2, self.p3, self.p4]
+
     def plot_center(self, ax, color='b'):
         ax.scatter(self.x, self.y, color=color,
                    s=20, c='b', marker='o')
+
+    def plot_limit_points(self, ax, color='b'):
+        for x, y in self.limit_points:
+            ax.scatter(x, y, color=color, s=20, c='b', marker='o')
 
 
 class Fan(lines.Line2D):
