@@ -149,7 +149,6 @@ class ImageID(object):
     def plot_blotches(self, n=None, img=True, user_name=None, ax=None,
                       user_color=None, without_users=None, blotches=None):
         """Plotting blotches using Blotch class and self.subframe."""
-        fig = None
         if blotches is None:
             blotches = self.get_blotches(user_name, without_users)
         if ax is None:
