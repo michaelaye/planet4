@@ -12,9 +12,9 @@ from matplotlib.patches import Ellipse
 from numpy import linalg as LA
 from numpy import arctan2
 
-from . import p4io
+from . import p4io as io
 
-data_root = p4io.data_root
+data_root = io.data_root
 
 img_x_size = 840
 img_y_size = 648
@@ -26,6 +26,11 @@ colors = cycle('rgbcym')
 
 gold_members = ['michaelaye', 'mschwamb', 'Portyankina', 'CJ-DPI']
 gold_plot_colors = list('cmyg')
+
+
+def example_p4id():
+    db = io.DBManager()
+    return ImageID('APF00002rq', data=db.get_image_id_markings('APF00002rq'))
 
 
 def calc_fig_size(width):
@@ -81,11 +86,23 @@ def set_subframe_size(ax):
 
 class ImageID(object):
 
-    """Manage Planet 4 Image ids, getting data, plot stuff etc."""
+    """Manage Planet 4 Image ids, getting data, plot stuff etc.
+
+    At init this class will get the data for the given `imgid` using either the latest
+    found database file or the optionally provided one.
+    Parameters
+    ----------
+    imgid : str
+        Planet4 image_id
+    database_fname : str, optional
+        Filepath to database name. The marking data for `imgid` will be extracted.
+        Default: Latest one.
+    data : pd.DataFrame, optional
+        If the data was already extracted before init, it can be provided here.
+    """
     imgid_template = "APF0000000"
 
     def __init__(self, imgid, database_fname=None, data=None):
-        super(ImageID, self).__init__()
         if len(imgid) < len(self.imgid_template):
             imgid = self.imgid_template[:-len(imgid)] + imgid
         self.imgid = imgid
@@ -93,14 +110,15 @@ class ImageID(object):
             self.data = data
         else:
             if database_fname is None:
-                database_fname = p4io.get_current_database_fname()
+                database_fname = str(io.get_current_database_fname())
             self.data = pd.read_hdf(database_fname, 'df',
-                                    where='image_id==' + imgid)
+                                    where='image_id=' + imgid)
 
     @property
     def subframe(self):
+        "np.array : Get tile url and return image tile using p4io funciton."
         url = self.data.iloc[0].image_url
-        return p4io.get_subframe(url)
+        return io.get_subframe(url)
 
     def get_fans(self, user_name=None, without_users=None):
         """Return only data for fan markings."""
@@ -374,6 +392,12 @@ class Fnotch(object):
     blotchdata : pandas.Series
         data set containing all required for Blotch object (see `Blotch`)
     """
+
+    @classmethod
+    def from_dataframe(cls, dataframe):
+
+        # TODO
+        pass
 
     def __init__(self, value, fandata, blotchdata):
         self.value = value
