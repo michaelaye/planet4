@@ -96,8 +96,9 @@ class DBScanner(object):
         clusterdata = self.data[cols].iloc[label_members]
         meandata = clusterdata.mean()
         if self.scope == 'hirise':
-            meandata['x'] = meandata.image_x
-            meandata['y'] = meandata.image_y
+            meandata.rename(index={'image_x': 'x', 'image_y': 'y'}, inplace=True)
+            # meandata['x'] = meandata.image_x
+            # meandata['y'] = meandata.image_y
         return self.MarkingClass[self.kind](meandata)
 
     def process_cluster_plotting(self, cluster, color):
