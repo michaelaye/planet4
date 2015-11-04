@@ -153,7 +153,8 @@ class ImageID(object):
                       user_color=None, without_users=None, blotches=None):
         """Plotting blotches using Blotch class and self.subframe."""
         if blotches is None:
-            blotches = self.get_blotches(user_name, without_users)
+            blotches = [Blotch(i) for _, i in
+                        self.get_blotches(user_name, without_users).iterrows()]
         if ax is None:
             fig, ax = plt.subplots(figsize=calc_fig_size(8))
         if img:
@@ -163,10 +164,9 @@ class ImageID(object):
         for i, color in zip(range(len(blotches)), colors):
             if user_color is not None:
                 color = user_color
-            blotch = Blotch(blotches.iloc[i])
+            blotch = blotches[i]
             blotch.set_color(color)
             ax.add_artist(blotch)
-            # blotch.plot_center(ax, color=color)
             if i == n - 1:
                 break
         set_subframe_size(ax)
