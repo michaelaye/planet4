@@ -22,9 +22,8 @@ class DBScanner(object):
     MarkingClass = {'fan': markings.Fan,
                     'blotch': markings.Blotch}
 
-    def __init__(self, data, kind, eps=10, min_samples=3,
-                 scope='planet4',
-                 ax=None, linestyle='-', quiet=True):
+    def __init__(self, data, kind, eps=10, min_samples=3, ax=None,
+                 scope='hirise', linestyle='-', quiet=True):
         self.data = data
         self.kind = kind  # fans or blotches
         self.eps = eps
@@ -129,11 +128,13 @@ class ClusteringManager(object):
 
     "WRITE the effing docstring!"
 
-    def __init__(self, dbname, scope='hirise', min_distance=10, output_dir=None):
+    def __init__(self, dbname=None, scope='hirise', min_distance=10, eps=10,
+                 output_dir=None, output_format='.hdf'):
         self.db = p4io.DBManager(dbname)
         self.dbname = dbname
         self.scope = scope
         self.min_distance = min_distance
+        self.eps = eps
         self.confusion = []
         self.dbscanners = []
         self.final_fans = []
@@ -142,10 +143,8 @@ class ClusteringManager(object):
         if output_dir is None:
             output_dir = Path(p4io.data_root) / 'output'
         self.output_dir = Path(output_dir)
-        try:
-            self.output_dir.mkdir()
-        except FileExistsError:
-            pass
+        self.output_dir.mkdir(exist_ok=True)
+        self.output_format = output_format
 
     @property
     def n_clustered_fans(self):
@@ -161,7 +160,7 @@ class ClusteringManager(object):
         clustered_fans = []
         for kind in ['fan', 'blotch']:
             markings = data[data.marking == kind]
-            dbscanner = DBScanner(markings, kind, scope=self.scope)
+            dbscanner = DBScanner(markings, kind, eps=self.eps, scope=self.scope)
             self.confusion.append((self.data_id, kind, len(markings),
                                    dbscanner.n_reduced_data,
                                    dbscanner.n_rejected))
@@ -213,7 +212,7 @@ class ClusteringManager(object):
         self.do_the_fnotch()
         self.store_output(image_name)
 
-    def store_output(self, image_name, suffix='.hdf'):
+    def store_output(self, image_name):
         outfnotch = image_name + '_fnotches'
         outblotch = image_name + '_blotches'
         outfan = image_name + '_fans'
@@ -223,7 +222,7 @@ class ClusteringManager(object):
             outpath = self.output_dir / outfname
             series = [cluster.store() for cluster in outdata]
             df = pd.DataFrame(series)
-            df.to_csv(outpath.with_suffix(suffix).as_posix())
+            df.to_csv(outpath.with_suffix(self.output_format).as_posix())
 
     def cluster_all(self):
         image_names = self.db.image_names
@@ -249,6 +248,11 @@ class ClusteringManager(object):
 
     def save_confusion_data(self, fname):
         self.confusion_data.to_csv(fname)
+
+    def plot_image_id_blotches(self):
+        "Works only for image_ids!"
+        p4id = markings.ImageID(self.data_id)
+        p4id.plot_blotches(blotches=self.final_blotches)
 
 
 def get_mean_position(fan, blotch, scope):
