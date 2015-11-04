@@ -282,6 +282,24 @@ class Blotch(Ellipse):
         for x, y in self.limit_points:
             ax.scatter(x, y, color=color, s=20, c='b', marker='o')
 
+    def store(self, fpath=None):
+        out = self.data
+        for p in range(1, 5):
+            attr = 'p'+str(p)
+            point = getattr(self, attr)
+            out[attr+'_x'] = point[0]
+            out[attr+'_y'] = point[1]
+        out['n_members'] = self.n_members
+        if fpath is not None:
+            out.to_hdf(str(fpath.with_suffix('.hdf')), 'df')
+        return out
+
+    def __str__(self):
+        return self.data.__str__()
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class Fan(lines.Line2D):
 
@@ -301,7 +319,7 @@ class Fan(lines.Line2D):
         base coordinates `x` and `y`.
     inside_half : float
         `data` divided by 2.0.
-    length : float
+    armlength : float
         length of the fan arms.
     v1 : float[2]
         vector of first arm of fan.
@@ -329,11 +347,11 @@ class Fan(lines.Line2D):
         alpha = self.data.angle - self.inside_half
         beta = self.data.angle + self.inside_half
         # length of arms
-        self.length = self.get_arm_length()
+        self.armlength = self.get_arm_length()
         # first arm
-        self.v1 = rotate_vector([self.length, 0], alpha)
+        self.v1 = rotate_vector([self.armlength, 0], alpha)
         # second arm
-        self.v2 = rotate_vector([self.length, 0], beta)
+        self.v2 = rotate_vector([self.armlength, 0], beta)
         # vector matrix, stows the 1D vectors row-wise
         self.coords = np.vstack((self.base + self.v1,
                                  self.base,
@@ -377,7 +395,7 @@ class Fan(lines.Line2D):
 
     def add_mean_wind_pointer(self, ax, color='b', ls='-'):
         "Draw a thicker mean wind direction pointer for better visibility in plots."
-        endpoint = rotate_vector([5 * self.length, 0], self.data.angle)
+        endpoint = rotate_vector([5 * self.armlength, 0], self.data.angle)
         coords = np.vstack((self.base,
                             self.base + endpoint))
         pointer = lines.Line2D(coords[:, 0], coords[:, 1],
@@ -389,10 +407,10 @@ class Fan(lines.Line2D):
     def midpoint(self):
         """Calculate vector to half total length.
 
-        As total length, I define the arm-length + the radius of the semi-circle
+        As total length, I define the armlength + the radius of the semi-circle
         at the end.
         """
-        mid_point_vec = rotate_vector([0.5 * (self.length + self.radius), 0],
+        mid_point_vec = rotate_vector([0.5 * (self.armlength + self.radius), 0],
                                       self.data.angle)
         return self.base + mid_point_vec
 
@@ -416,8 +434,22 @@ class Fan(lines.Line2D):
         plt.show()
 
     def __str__(self):
-        out = 'base: {0}\nlength: {1}\nv1: {2}\nv2: {3}'\
-            .format(self.base, self.length, self.v1, self.v2)
+        out = 'base: {0}\narmlength: {1}\narm1: {2}\narm2: {3}'\
+            .format(self.base, self.armlength, self.base+self.v1,
+                    self.base+self.v2)
+        return out
+
+    def __repr__(self):
+        return self.__str__()
+
+    def store(self, fpath=None):
+        out = self.data
+        for i, arm in enumerate([self.v1, self.v2]):
+            out['arm{}_x'.format(i+1)] = (self.base + arm)[0]
+            out['arm{}_y'.format(i+1)] = (self.base + arm)[1]
+        out['n_members'] = self.n_members
+        if fpath is not None:
+            out.to_hdf(str(fpath.with_suffix('.hdf')), 'df')
         return out
 
 
@@ -436,24 +468,27 @@ class Fnotch(object):
     """
 
     @classmethod
-    def from_dataframe(cls, dataframe):
+    def from_dataframe(cls, series):
+        "Create Fnotch instance from series with fan_ and blotch_ indices."
+        fan = series.filter(regex='fan_').rename(lambda x: x[4:])
+        blotch = series.filter(regex='blotch_').rename(lambda x: x[7:])
+        return cls(series.fnotch_value, fan, blotch)
 
-        # TODO
-        pass
-
-    def __init__(self, value, fandata, blotchdata):
+    def __init__(self, value, fan, blotch):
         self.value = value
-        self.fandata = fandata
-        self.blotchdata = blotchdata
+        self.fandata = fan.data
+        self.blotchdata = blotch.data
 
-        fandf = pd.DataFrame(self.fandata).T
-        fandf.rename_axis(lambda x: 'fan_'+x, axis=1, inplace=True)
-        blotchdf = pd.DataFrame(self.blotchdata).T
-        blotchdf.rename_axis(lambda x: 'blotch_'+x, axis=1, inplace=True)
-        df = pd.concat([fandf, blotchdf], axis=1)
+        fanstore = fan.store().copy()  # copy(),otherwise renaming original
+        fanstore.rename_axis(lambda x: 'fan_'+x, inplace=True)
+        blotchstore = blotch.store().copy()  # copy(),otherwise renaming original
+        blotchstore.rename_axis(lambda x: 'blotch_'+x, inplace=True)
+        df = pd.concat([fan.data, blotch.data])
         df['fnotch_value'] = self.value
-        self.df = df
-        self.data = df.squeeze()
+        self.fan = fan
+        self.fanstore = fanstore
+        self.blotch = blotch
+        self.blotchstore = blotchstore
 
     def get_marking(self, cut):
         """Return the right marking, depending on cut value.
@@ -474,6 +509,22 @@ class Fnotch(object):
             return Blotch(self.blotchdata)
         else:
             return Fan(self.fandata)
+
+    def __str__(self):
+        out = "Fnotch value: {:.2f}\n\n".format(self.value)
+        out += "Fan:\n{}\n\n".format(self.fandata.__str__())
+        out += "Blotch:\n{}".format(self.blotchdata.__str__())
+        return out
+
+    def __repr__(self):
+        return self.__str__()
+
+    def store(self, fpath=None):
+        out = pd.concat([self.fanstore, self.blotchstore])
+        out['fnotch_value'] = self.value
+        if fpath is not None:
+            out.to_hdf(str(fpath.with_suffix('.hdf')), 'df')
+        return out
 
 
 def main():

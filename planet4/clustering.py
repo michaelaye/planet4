@@ -184,9 +184,10 @@ class ClusteringManager(object):
                 delta = blotch.center - fan.midpoint
                 if norm(delta) < self.min_distance:
                     fnotch_value = calc_fnotch(fan.n_members, blotch.n_members)
-                    fnotches.append(markings.Fnotch(fnotch_value,
-                                                    fan.data,
-                                                    blotch.data))
+                    fnotch = markings.Fnotch(fnotch_value, fan, blotch)
+                    fnotch.n_fan_members = fan.n_members
+                    fnotch.n_blotch_members = blotch.n_members
+                    fnotches.append(fnotch)
                     n_close += 1
                     blotch.saved = True
                     fan.saved = True
@@ -220,7 +221,7 @@ class ClusteringManager(object):
                                      [self.final_fnotches, self.final_blotches,
                                       self.final_fans]):
             outpath = self.output_dir / outfname
-            series = [cluster.data for cluster in outdata]
+            series = [cluster.store() for cluster in outdata]
             df = pd.DataFrame(series)
             df.to_csv(outpath.with_suffix(suffix).as_posix())
 
