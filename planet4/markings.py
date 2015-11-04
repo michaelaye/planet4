@@ -477,6 +477,7 @@ class Fnotch(object):
 
 
 def main():
+    plt.switch_backend('Qt4Agg')
     parser = argparse.ArgumentParser()
     parser.add_argument('imgid',
                         help='zooniverse image id to plot')
