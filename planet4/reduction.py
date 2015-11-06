@@ -10,8 +10,9 @@ import time
 import pandas as pd
 from ipyparallel import Client
 from odo import odo
+from pathlib import Path
 
-from .p4io import data_root, DBManager
+from .p4io import DBManager, data_root
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
@@ -145,8 +146,7 @@ def remove_duplicates_from_image_name_data(data):
 
 
 def get_temp_fname(image_name):
-    import os
-    return os.path.join(data_root, 'temp_' + image_name + '.h5')
+    return str(data_root / ('temp_' + image_name + '.h5'))
 
 
 def remove_duplicates(df):
@@ -198,8 +198,9 @@ def merge_temp_files(dbname, image_names=None, do_odo=False):
     if image_names is None:
         image_names = get_image_names(dbname)
 
-    dbname_base, ext = os.path.splitext(dbname)
-    dbnamenew = dbname_base + '_cleaned' + ext
+    dbname = Path(dbname)
+    newname = dbname.stem + '_cleaned' + dbname.suffix
+    dbnamenew = dbname.with_name(newname)
     logging.info('Creating concatenated db file {}'.format(dbnamenew))
     if not do_odo:
         df = []
@@ -222,7 +223,7 @@ def merge_temp_files(dbname, image_names=None, do_odo=False):
     for col in to_category:
         df[col] = df[col].astype('category')
 
-    df.to_hdf(dbnamenew, 'df',
+    df.to_hdf(str(dbnamenew), 'df',
               format='table',
               data_columns=data_columns)
     logging.info('Duplicates removal complete.')
@@ -319,11 +320,9 @@ def main():
     logging.info("Starting reduction.")
 
     # creating file paths
-    fname = os.path.abspath(args.csv_fname)
-    fname_base = os.path.basename(fname)
-    root = os.path.dirname(fname)
-    fname_no_ext = os.path.splitext(fname_base)[0]
-    rootpath = os.path.join(root, fname_no_ext)
+    csvfpath = Path(args.csv_fname)
+    fname = csvfpath.absolute()
+    rootpath = fname.parent / fname.stem
     # path for database:
     newfpath = '{0}_queryable.h5'.format(rootpath)
 
@@ -351,6 +350,7 @@ def main():
     # convert list into Pandas dataframe
     df = pd.concat(data, ignore_index=True)
     logging.info("Conversion to dataframe complete.")
+    data = 0
 
     # convert times to datetime object
     if not args.raw_times:
