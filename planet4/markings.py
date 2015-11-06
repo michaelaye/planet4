@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+import math
 from itertools import cycle
 from math import cos, degrees, radians, sin
 
@@ -26,9 +27,6 @@ colors = cycle('rgbcym')
 
 gold_members = ['michaelaye', 'mschwamb', 'Portyankina', 'CJ-DPI']
 gold_plot_colors = list('cmyg')
-
-
-import math
 
 
 def example_p4id():
