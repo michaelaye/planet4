@@ -1,5 +1,8 @@
 from __future__ import division, print_function
 
+import logging
+
+# import importlib
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,6 +14,12 @@ from sklearn.cluster import DBSCAN
 
 from . import markings, p4io
 from .exceptions import NoDataToClusterError, UnknownClusteringScopeError
+
+# importlib.reload(logging)
+# logpath = Path.home() / 'p4reduction.log'
+# logging.basicConfig(filename=str(logpath), filemode='w', level=logging.DEBUG,
+#                     format='%(asctime)s %(levelname)s: %(message)s',
+#                     datefmt='%Y-%m-%d %H:%M:%S')
 
 matplotlib.style.use('bmh')
 
@@ -51,6 +60,7 @@ class DBScanner(object):
         self.current_X = current_X
 
     def run_DBSCAN(self):
+        logging.debug("Running DBSCAN")
         db = DBSCAN(self.eps, self.min_samples).fit(self.current_X)
         labels = db.labels_.astype('int')
         self.core_samples = db.core_sample_indices_
@@ -83,6 +93,8 @@ class DBScanner(object):
                 markings.set_subframe_size(self.ax)
         self.reduced_data = reduced_data
         self.n_rejected = n_rejected
+        logging.debug("Reduced data to {} {}(e)s."
+                      .format(self.n_reduced_data, self.kind))
 
     @property
     def n_reduced_data(self):
@@ -156,6 +168,7 @@ class ClusteringManager(object):
 
     def cluster_data(self, data):
         "Basic clustering."
+        logging.debug('ClusterManager: cluster_data()')
         clustered_blotches = []
         clustered_fans = []
         for kind in ['fan', 'blotch']:
@@ -173,6 +186,7 @@ class ClusteringManager(object):
 
     def do_the_fnotch(self):
         "Combine fans and blotches if necessary."
+        logging.debug("CM: do_the_fnotch")
         from numpy.linalg import norm
         n_close = 0
         fnotches = []
@@ -200,19 +214,23 @@ class ClusteringManager(object):
         self.final_fans = fans
 
     def cluster_image_id(self, image_id):
+        logging.info("Clustering data for {}".format(image_id))
         self.data_id = image_id
         self.p4id = markings.ImageID(image_id, self.dbname)
         self.cluster_data(self.p4id.data)
         self.do_the_fnotch()
 
     def cluster_image_name(self, image_name):
+        logging.info("Clustering data for {}".format(image_name))
         data = self.db.get_image_name_markings(image_name)
         self.data_id = image_name
         self.cluster_data(data)
         self.do_the_fnotch()
+        logging.debug("clustering and fnotching completed.")
         self.store_output(image_name)
 
     def store_output(self, image_name):
+        logging.debug('CM: Writing output files.')
         outfnotch = image_name + '_fnotches'
         outblotch = image_name + '_blotches'
         outfan = image_name + '_fans'
