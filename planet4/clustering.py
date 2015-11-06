@@ -141,7 +141,7 @@ class ClusteringManager(object):
     "WRITE the effing docstring!"
 
     def __init__(self, dbname=None, scope='hirise', min_distance=10, eps=10,
-                 output_dir=None, output_format='.hdf'):
+                 output_dir=None, output_format='hdf'):
         self.db = p4io.DBManager(dbname)
         self.dbname = dbname
         self.scope = scope
@@ -237,10 +237,15 @@ class ClusteringManager(object):
         for outfname, outdata in zip([outfnotch, outblotch, outfan],
                                      [self.final_fnotches, self.final_blotches,
                                       self.final_fans]):
+            if len(outdata) == 0:
+                continue
             outpath = self.output_dir / outfname
             series = [cluster.store() for cluster in outdata]
             df = pd.DataFrame(series)
-            df.to_csv(outpath.with_suffix(self.output_format).as_posix())
+            if self.output_format in ['both', 'csv']:
+                df.to_csv(outpath.with_suffix('.csv').as_posix())
+            if self.output_format in ['both', 'hdf']:
+                df.to_hdf(outpath.with_suffix('.hdf').as_posix(), 'df')
 
     def cluster_all(self):
         image_names = self.db.image_names
