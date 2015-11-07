@@ -287,7 +287,6 @@ class Blotch(Ellipse):
             point = getattr(self, attr)
             out[attr+'_x'] = point[0]
             out[attr+'_y'] = point[1]
-        out['n_members'] = self.n_members
         if fpath is not None:
             out.to_hdf(str(fpath.with_suffix('.hdf')), 'df')
         return out
@@ -445,7 +444,6 @@ class Fan(lines.Line2D):
         for i, arm in enumerate([self.v1, self.v2]):
             out['arm{}_x'.format(i+1)] = (self.base + arm)[0]
             out['arm{}_y'.format(i+1)] = (self.base + arm)[1]
-        out['n_members'] = self.n_members
         if fpath is not None:
             out.to_hdf(str(fpath.with_suffix('.hdf')), 'df')
         return out
@@ -468,8 +466,8 @@ class Fnotch(object):
     @classmethod
     def from_dataframe(cls, series):
         "Create Fnotch instance from series with fan_ and blotch_ indices."
-        fan = series.filter(regex='fan_').rename(lambda x: x[4:])
-        blotch = series.filter(regex='blotch_').rename(lambda x: x[7:])
+        fan = Fan(series.filter(regex='fan_').rename(lambda x: x[4:]))
+        blotch = Blotch(series.filter(regex='blotch_').rename(lambda x: x[7:]))
         return cls(series.fnotch_value, fan, blotch)
 
     def __init__(self, value, fan, blotch):
