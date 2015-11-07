@@ -56,21 +56,36 @@ def get_list_of_image_names_data(image_names):
 
 
 class ResultManager:
-    resultpath = data_root / 'catalog_2_and_3'
 
-    def __init__(self, image_name):
-        self.image_name = image_name
-        self.fanfname = self.resultpath / image_name + '_reduced_fans.hdf'
-        self.blotchfname = self.resultpath / image_name + '_reduced_blotches.hdf'
+    def __init__(self, inputpath):
+        self.inpath = Path(inputpath)
+        self.obsid = '_'.join(self.inpath.name.split('_')[:3])
+        self.inkind = self.inpath.stem.split('_')[-1]
 
-    def load_dataframes(self):
-        self.fans = pd.read_hdf(str(self.fanfname), 'df')
-        self.blotches = pd.read_hdf(str(self.blotchfname), 'df')
+    @property
+    def fanfile(self):
+        return self.inpath.with_name(self.obsid + '_fans' + self.inpath.suffix)
 
-    def clean_up(self):
-        for markingpath in [self.fanfname, self.blotchfname]:
-            if markingpath.exists():
-                markingpath.unlink()
+    @property
+    def fandf(self):
+        return pd.read_hdf(str(self.fanfile))
+
+    @property
+    def blotchfile(self):
+        return self.inpath.with_name(self.obsid + '_blotches' + self.inpath.suffix)
+
+    @property
+    def blotchdf(self):
+        return pd.read_hdf(str(self.blotchfile))
+
+    @property
+    def fnotchfile(self):
+        return self.inpath.with_name(self.obsid + '_fnotches' + self.inpath.suffix)
+
+    @property
+    def fnotchdf(self):
+        return pd.read_hdf(str(self.fnotchfile))
+
 
 
 def is_catalog_production_good():
@@ -126,6 +141,7 @@ class P4DBName(object):
         self.parent = self.p.parent
         date = str(self.name)[:10]
         self.date = dt.datetime(*[int(i) for i in date.split('-')])
+
 
 
 def get_latest_file(filenames):
