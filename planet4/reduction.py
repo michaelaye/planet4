@@ -112,7 +112,8 @@ def convert_ellipse_angles(df):
             return angle - 180
         else:
             return angle
-    df.loc[df.marking == 'blotch', 'angle'].map(func)
+    rowindex = (df.marking == 'blotch')
+    df.loc[rowindex, 'angle'] = df.loc[rowindex, 'angle'].map(func)
     logging.info("Conversion of ellipse angles done.")
 
 
@@ -305,7 +306,8 @@ def main():
                              ' complete read into memory.',
                         action='store_true')
     parser.add_argument('--keep_dups',
-                        help='Remove duplicates from database',
+                        help='Do not remove duplicates from database now '
+                             ' (saves time).',
                         action='store_true')
     parser.add_argument('--test_n_rows',
                         help="Set this to do a test parse of n rows",
