@@ -59,8 +59,10 @@ class ResultManager:
 
     def __init__(self, inputpath):
         self.inpath = Path(inputpath)
-        self.obsid = '_'.join(self.inpath.name.split('_')[:3])
-        self.inkind = self.inpath.stem.split('_')[-1]
+        if self.inpath.stem.startswith('APF'):
+            self.obsid = self.inpath.stem.split('_')[0]
+        else:
+            self.obsid = '_'.join(self.inpath.name.split('_')[:3])
 
     @property
     def fanfile(self):
@@ -85,7 +87,6 @@ class ResultManager:
     @property
     def fnotchdf(self):
         return pd.read_hdf(str(self.fnotchfile))
-
 
 
 def is_catalog_production_good():
@@ -141,7 +142,6 @@ class P4DBName(object):
         self.parent = self.p.parent
         date = str(self.name)[:10]
         self.date = dt.datetime(*[int(i) for i in date.split('-')])
-
 
 
 def get_latest_file(filenames):
