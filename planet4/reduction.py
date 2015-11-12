@@ -263,10 +263,14 @@ def create_season2_and_3_database():
     Has to be executed after the main reduction has finished.
     Installed as main command line script under name create_season2and3.
     """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("db_fname",
+                        help="path to database to be used.")
+    args = parser.parse_args()
     logging.info('Starting production of season 2 and 3 database.')
     # read data for season2 and 3
-    db = DBManager()
-    season23_image_names = db.get_season2and3_image_names()
+    db = DBManager(args.db_fname)
+    season23_image_names = db.season2and3_image_names
     where = "image_name in {}".format(season23_image_names.values.tolist())
     season23 = pd.read_hdf(db.dbname, 'df', where=where)
 
