@@ -204,11 +204,13 @@ class ClusteringManager(object):
                     n_close += 1
                     blotch.saved = True
                     fan.saved = True
-                elif not fan.saved:
-                    fans.append(fan)
-                    fan.saved = True
             if not blotch.saved:
                 blotches.append(blotch)
+        for fan in self.clustered_fans:
+            if not fan.saved:
+                fans.append(fan)
+                fan.saved = True
+
         self.final_fnotches = fnotches
         self.final_blotches = blotches
         self.final_fans = fans
@@ -219,6 +221,7 @@ class ClusteringManager(object):
         self.p4id = markings.ImageID(image_id, self.dbname)
         self.cluster_data(self.p4id.data)
         self.do_the_fnotch()
+        self.store_output(image_id)
 
     def cluster_image_name(self, image_name):
         logging.info("Clustering data for {}".format(image_name))
