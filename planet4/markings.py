@@ -156,7 +156,7 @@ class ImageID(object):
         if ax is None:
             fig, ax = plt.subplots(figsize=calc_fig_size(8))
         if img:
-            self.show_subframe(ax, aspect='equal')
+            self.show_subframe(ax)
         if n is None:
             n = len(blotches)
         for i, color in zip(range(len(blotches)), colors):
@@ -164,7 +164,8 @@ class ImageID(object):
                 color = user_color
             blotch = blotches[i]
             blotch.set_color(color)
-            ax.add_artist(blotch)
+            ax.add_patch(blotch)
+            blotch.plot_center(ax, color=color)
             if i == n - 1:
                 break
         set_subframe_size(ax)
@@ -174,7 +175,8 @@ class ImageID(object):
                   user_color=None, without_users=None, fans=None):
         """Plotting fans using Fans class and self.subframe."""
         if fans is None:
-            fans = self.get_fans(user_name, without_users)
+            fans = [Fan(i) for _, i in
+                    self.get_fans(user_name, without_users).iterrows()]
         if ax is None:
             fig, ax = plt.subplots(figsize=calc_fig_size(8))
         if img:
@@ -184,10 +186,11 @@ class ImageID(object):
         for i, color in zip(range(len(fans)), colors):
             if user_color is not None:
                 color = user_color
-            fan = Fan(fans.iloc[i])
+            fan = fans[i]
             fan.set_color(color)
             ax.add_line(fan)
             fan.add_semicircle(ax, color=color)
+            fan.plot_center(ax, color=color)
             if i == n - 1:
                 break
         set_subframe_size(ax)
@@ -410,6 +413,10 @@ class Fan(lines.Line2D):
         mid_point_vec = rotate_vector([0.5 * (self.armlength + self.radius), 0],
                                       self.data.angle)
         return self.base + mid_point_vec
+
+    def plot_center(self, ax, color='b'):
+        ax.scatter(self.midpoint[0], self.midpoint[1], color=color,
+                   s=20, c='b', marker='o')
 
     @property
     def base_to_midpoint_vec(self):
