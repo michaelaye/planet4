@@ -291,6 +291,8 @@ class Blotch(Ellipse):
             point = getattr(self, attr)
             out[attr+'_x'] = point[0]
             out[attr+'_y'] = point[1]
+        if 'image_id' not in out.index:
+            out['image_id'] = self.image_id
         if fpath is not None:
             out.to_hdf(str(fpath.with_suffix('.hdf')), 'df')
         return out
@@ -452,6 +454,8 @@ class Fan(lines.Line2D):
         for i, arm in enumerate([self.v1, self.v2]):
             out['arm{}_x'.format(i+1)] = (self.base + arm)[0]
             out['arm{}_y'.format(i+1)] = (self.base + arm)[1]
+        if 'image_id' not in out.index:
+            out['image_id'] = self.image_id
         if fpath is not None:
             out.to_hdf(str(fpath.with_suffix('.hdf')), 'df')
         return out
