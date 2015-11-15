@@ -111,7 +111,7 @@ class DBScanner(object):
             # meandata['x'] = meandata.image_x
             # meandata['y'] = meandata.image_y
         obj = self.MarkingClass[self.kind](meandata)
-        obj.image_id = self.data]'image_id'].iloc[label_members].iloc[0]
+        obj.image_id = self.data[['image_id']].iloc[label_members].iloc[0]
         return obj
 
     def process_cluster_plotting(self, cluster, color):
@@ -267,7 +267,7 @@ class ClusteringManager(object):
             series = [cluster.store() for cluster in outdata]
             df = pd.DataFrame(series)
             if self.output_format in ['both', 'csv']:
-                df.to_csv(outpath.with_suffix('.hdf').as_posix(), 'df')
+                df.to_csv(str(outpath.with_suffix('.csv')))
             if self.output_format in ['both', 'hdf']:
                 df.to_hdf(str(outpath.with_suffix('.hdf')), 'df')
 
