@@ -110,7 +110,9 @@ class DBScanner(object):
             meandata.rename(index={'image_x': 'x', 'image_y': 'y'}, inplace=True)
             # meandata['x'] = meandata.image_x
             # meandata['y'] = meandata.image_y
-        return self.MarkingClass[self.kind](meandata)
+        obj = self.MarkingClass[self.kind](meandata)
+        obj.image_id = self.data]'image_id'].iloc[label_members].iloc[0]
+        return obj
 
     def process_cluster_plotting(self, cluster, color):
         cluster.set_color(color)
