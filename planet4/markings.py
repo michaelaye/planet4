@@ -144,6 +144,7 @@ class ImageID(object):
         if ax is None:
             fig, ax = plt.subplots(figsize=calc_4_3(8))
         ax.imshow(self.subframe, origin='upper', aspect=aspect)
+        ax.set_axis_off()
         if fig is not None:
             return fig
 
@@ -236,7 +237,7 @@ class Blotch(Ellipse):
         super(Blotch, self).__init__((self.x, self.y),
                                      data.radius_1 * 2, data.radius_2 * 2,
                                      data.angle, alpha=0.65,
-                                     fill=False, linewidth=2, color=color)
+                                     fill=False, linewidth=1, color=color)
         self.data = data
 
     @property
@@ -277,7 +278,7 @@ class Blotch(Ellipse):
 
     def plot_center(self, ax, color='b'):
         ax.scatter(self.x, self.y, color=color,
-                   s=20, c='b', marker='o')
+                   s=20, c='b', marker='.')
 
     def plot_limit_points(self, ax, color='b'):
         for x, y in self.limit_points:
@@ -358,7 +359,7 @@ class Fan(lines.Line2D):
                                  self.base + self.v2))
         # init fan line, first column are the x-components of the row-vectors
         lines.Line2D.__init__(self, self.coords[:, 0], self.coords[:, 1],
-                              alpha=0.65, linewidth=2, color='white',
+                              alpha=0.65, linewidth=0.5, color='white',
                               **kwargs)
 
     def get_arm_length(self):
@@ -416,7 +417,7 @@ class Fan(lines.Line2D):
 
     def plot_center(self, ax, color='b'):
         ax.scatter(self.midpoint[0], self.midpoint[1], color=color,
-                   s=20, c='b', marker='o')
+                   s=20, c='b', marker='.')
 
     @property
     def base_to_midpoint_vec(self):

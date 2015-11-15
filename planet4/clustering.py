@@ -156,6 +156,10 @@ class ClusteringManager(object):
             output_dir = Path(p4io.data_root) / 'output'
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
+        output_dir_unfnotched = self.output_dir.with_name(
+                                    self.output_dir.stem+'_unfnotched')
+        output_dir_unfnotched.mkdir(exist_ok=True)
+        self.output_dir_unfnotched = output_dir_unfnotched
         self.output_format = output_format
 
     @property
@@ -173,6 +177,8 @@ class ClusteringManager(object):
         clustered_fans = []
         for kind in ['fan', 'blotch']:
             markings = data[data.marking == kind]
+            if len(markings) == 0:
+                continue
             dbscanner = DBScanner(markings, kind, eps=self.eps, scope=self.scope)
             self.confusion.append((self.data_id, kind, len(markings),
                                    dbscanner.n_reduced_data,
@@ -248,7 +254,20 @@ class ClusteringManager(object):
             if self.output_format in ['both', 'csv']:
                 df.to_csv(outpath.with_suffix('.csv').as_posix())
             if self.output_format in ['both', 'hdf']:
-                df.to_hdf(outpath.with_suffix('.hdf').as_posix(), 'df')
+                df.to_hdf(str(outpath.with_suffix('.hdf')), 'df')
+        # store the unfnotched data as well:
+        for outfname, outdata in zip([outblotch, outfan],
+                                     [self.clustered_blotches,
+                                      self.clustered_fans]):
+            if len(outdata) == 0:
+                continue
+            outpath = self.output_dir_unfnotched / outfname
+            series = [cluster.store() for cluster in outdata]
+            df = pd.DataFrame(series)
+            if self.output_format in ['both', 'csv']:
+                df.to_csv(outpath.with_suffix('.hdf').as_posix(), 'df')
+            if self.output_format in ['both', 'hdf']:
+                df.to_hdf(str(outpath.with_suffix('.hdf')), 'df')
 
     def cluster_all(self):
         image_names = self.db.image_names

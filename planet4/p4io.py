@@ -55,40 +55,6 @@ def get_list_of_image_names_data(image_names):
     return pd.concat(dfs)
 
 
-class ResultManager:
-
-    def __init__(self, inputpath):
-        self.inpath = Path(inputpath)
-        if self.inpath.stem.startswith('APF'):
-            self.obsid = self.inpath.stem.split('_')[0]
-        else:
-            self.obsid = '_'.join(self.inpath.name.split('_')[:3])
-
-    @property
-    def fanfile(self):
-        return self.inpath.with_name(self.obsid + '_fans' + self.inpath.suffix)
-
-    @property
-    def fandf(self):
-        return pd.read_hdf(str(self.fanfile))
-
-    @property
-    def blotchfile(self):
-        return self.inpath.with_name(self.obsid + '_blotches' + self.inpath.suffix)
-
-    @property
-    def blotchdf(self):
-        return pd.read_hdf(str(self.blotchfile))
-
-    @property
-    def fnotchfile(self):
-        return self.inpath.with_name(self.obsid + '_fnotches' + self.inpath.suffix)
-
-    @property
-    def fnotchdf(self):
-        return pd.read_hdf(str(self.fnotchfile))
-
-
 def is_catalog_production_good():
     from pandas.core.index import InvalidIndexError
     db = DBManager(get_current_database_fname())
