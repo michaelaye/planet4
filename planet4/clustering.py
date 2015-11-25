@@ -2,7 +2,7 @@ from __future__ import division, print_function
 
 import logging
 
-# import importlib
+import importlib
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,14 +12,14 @@ from ipywidgets import FloatText
 from pathlib import Path
 from sklearn.cluster import DBSCAN
 
-from . import markings, p4io
+from . import markings, p4io, plotting
 from .exceptions import NoDataToClusterError, UnknownClusteringScopeError
 
-# importlib.reload(logging)
-# logpath = Path.home() / 'p4reduction.log'
-# logging.basicConfig(filename=str(logpath), filemode='w', level=logging.DEBUG,
-#                     format='%(asctime)s %(levelname)s: %(message)s',
-#                     datefmt='%Y-%m-%d %H:%M:%S')
+importlib.reload(logging)
+logpath = Path.home() / 'p4reduction.log'
+logging.basicConfig(filename=str(logpath), filemode='w', level=logging.DEBUG,
+                    format='%(asctime)s %(levelname)s: %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
 
 matplotlib.style.use('bmh')
 
@@ -140,15 +140,36 @@ class DBScanner(object):
 
 class ClusteringManager(object):
 
-    "WRITE the effing docstring!"
+    """Control class to manage the clustering pipeline.
+
+    Parameters
+    ----------
+    dbname : str or pathlib.Path, optional
+        Path to the database used by DBManager. If not provided, DBManager will find
+        the most recent one and use that.
+    scope : {'hirise', 'planet4'}
+        Switch to control in what coordinates the clustering is happening. 'hirise' is
+        required to automatically take care of tile overlaps, while 'planet4' is required
+        to be able to check the quality of single Planet4 tiles.
+    min_distance : int
+        Parameter to control the distance below which fans and blotches are determined
+        to be 2 markings of the same thing, creating a FNOTCH chimera. The ratio between
+        blotch and fan marks determines a fnotch value that can be used as a discriminator
+        for the final object catalog.
+    eps : int
+        Parameter to control the exclusion distance for the DBSCAN
+
+
+    """
 
     def __init__(self, dbname=None, scope='hirise', min_distance=10, eps=10,
-                 output_dir=None, output_format='hdf'):
+                 output_dir=None, output_format='hdf', cut=0.5):
         self.db = p4io.DBManager(dbname)
         self.dbname = dbname
         self.scope = scope
         self.min_distance = min_distance
         self.eps = eps
+        self.cut = cut
         self.confusion = []
         self.dbscanners = []
         self.final_fans = []
@@ -242,6 +263,7 @@ class ClusteringManager(object):
 
     def store_output(self, image_name):
         logging.debug('CM: Writing output files.')
+        logging.debug('CM: Output dir: {}'.format(self.output_dir))
         outfnotch = image_name + '_fnotches'
         outblotch = image_name + '_blotches'
         outfan = image_name + '_fans'
@@ -296,10 +318,54 @@ class ClusteringManager(object):
     def save_confusion_data(self, fname):
         self.confusion_data.to_csv(fname)
 
-    def plot_image_id_blotches(self):
-        "Works only for image_ids!"
-        p4id = markings.ImageID(self.data_id)
-        p4id.plot_blotches(blotches=self.final_blotches)
+    def get_newfans_newblotches(self, fname):
+        df = self.resman.fnotchdf
+        final_clusters = df.apply(markings.Fnotch.from_dataframe, axis=1).\
+            apply(lambda x: x.get_marking(self.cut))
+
+        def filter_for_fans(x):
+            if isinstance(x, markings.Fan):
+                return x
+
+        def filter_for_blotches(x):
+            if isinstance(x, markings.Blotch):
+                return x
+
+        self.newfans = final_clusters[
+            final_clusters.apply(filter_for_fans).notnull()]
+        self.newblotches = final_clusters[
+            final_clusters.apply(filter_for_blotches).notnull()]
+
+    def apply_fnotch_cut(self, fname):
+        input_dir = self.output_dir
+        outpath = input_dir.with_name(
+            input_dir.stem + '_fnotched_{:.1f}'.format(self.cut))
+        outpath.mkdir(exist_ok=True)
+
+        self.resman = plotting.ResultManager(fname, self.output_dir)
+
+        self.get_newfans_newblotches(fname)
+
+        if len(self.newfans) > 0:
+            newfans = self.newfans.apply(lambda x: x.store())
+            try:
+                completefans = pd.DataFrame(
+                    self.resman.fandf()).append(newfans, ignore_index=True)
+            except OSError:
+                completefans = newfans
+        else:
+            completefans = self.resman.fandf()
+        if len(self.newblotches) > 0:
+            newblotches = self.newblotches.apply(lambda x: x.store())
+            try:
+                completeblotches = pd.DataFrame(
+                    self.resman.blotchdf()).append(newblotches, ignore_index=True)
+            except OSError:
+                completeblotches = newblotches
+        else:
+            completeblotches = self.resman.blotchdf()
+        completefans.to_hdf(str(outpath / self.resman.fanfile().name), 'df')
+        completeblotches.to_hdf(str(outpath / self.resman.blotchfile().name), 'df')
 
 
 def get_mean_position(fan, blotch, scope):
