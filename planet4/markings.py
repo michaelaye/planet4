@@ -476,7 +476,7 @@ class Fnotch(object):
     """
 
     @classmethod
-    def from_dataframe(cls, series):
+    def from_series(cls, series):
         "Create Fnotch instance from series with fan_ and blotch_ indices."
         fan = Fan(series.filter(regex='fan_').rename(lambda x: x[4:]))
         blotch = Blotch(series.filter(regex='blotch_').rename(lambda x: x[7:]))
