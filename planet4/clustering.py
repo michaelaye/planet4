@@ -12,7 +12,8 @@ from ipywidgets import FloatText
 from pathlib import Path
 from sklearn.cluster import DBSCAN
 
-from . import markings, p4io, plotting
+from . import io
+from . import markings, plotting
 from .exceptions import NoDataToClusterError, UnknownClusteringScopeError
 
 importlib.reload(logging)

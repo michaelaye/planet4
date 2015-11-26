@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from planet4 import markings
 import os
 import sys
-import p4io
+import io
 
 
 def gold_star_plotter(gold_id, axis, blotches=True, fans=False):
@@ -18,7 +18,7 @@ def gold_star_plotter(gold_id, axis, blotches=True, fans=False):
 
 def main():
 
-    gold_ids = p4io.common_gold_ids()
+    gold_ids = io.common_gold_ids()
     try:
         start = int(sys.argv[1])
         end = int(sys.argv[2])

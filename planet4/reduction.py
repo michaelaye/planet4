@@ -12,7 +12,7 @@ from ipyparallel import Client
 from odo import odo
 from pathlib import Path
 
-from .p4io import DBManager, data_root
+from .io import DBManager, data_root
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 

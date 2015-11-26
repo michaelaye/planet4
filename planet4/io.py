@@ -55,28 +55,6 @@ def get_list_of_image_names_data(image_names):
     return pd.concat(dfs)
 
 
-def is_catalog_production_good():
-    from pandas.core.index import InvalidIndexError
-    db = DBManager(get_current_database_fname())
-    not_there = []
-    invalid_index = []
-    value_error = []
-    for image_name in db.image_names:
-        try:
-            ResultManager(image_name)
-        except InvalidIndexError:
-            invalid_index.append(image_name)
-        except ValueError:
-            value_error.append(image_name)
-        except:
-            not_there.append(image_name)
-    if len(value_error) == 0 and len(not_there) == 0 and\
-            len(invalid_index) == 0:
-        return True
-    else:
-        return False
-
-
 def get_subframe(url):
     """Download image if not there yet and return numpy array.
 

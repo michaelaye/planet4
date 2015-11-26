@@ -13,7 +13,7 @@ from matplotlib.patches import Ellipse
 from numpy import linalg as LA
 from numpy import arctan2
 
-from . import p4io as io
+from . import io
 
 data_root = io.data_root
 
@@ -117,7 +117,7 @@ class ImageID(object):
 
     @property
     def subframe(self):
-        "np.array : Get tile url and return image tile using p4io funciton."
+        "np.array : Get tile url and return image tile using io funciton."
         url = self.data.iloc[0].image_url
         return io.get_subframe(url)
 

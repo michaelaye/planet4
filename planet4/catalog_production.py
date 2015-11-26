@@ -8,8 +8,8 @@ from ipyparallel import Client
 from ipyparallel.util import interactive
 
 from .clustering import ClusteringManager
-from .p4io import DBManager
-from .p4io import get_image_names_from_db
+from .io import DBManager
+from .io import get_image_names_from_db
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
