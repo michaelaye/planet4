@@ -535,6 +535,31 @@ class Fnotch(object):
         return out
 
 
+class Container(object):
+    @classmethod
+    def from_df(cls, df):
+        rows = [i for _, i in df.iterrows()]
+        return cls(rows)
+
+    def __init__(self, iterable, cls):
+        self.content = [cls(i) for i in iterable]
+
+
+class FanContainer(Container):
+    def __init__(self, iterable):
+        super().__init__(iterable, Fan)
+
+
+class BlotchContainer(Container):
+    def __init__(self, iterable):
+        super().__init__(iterable, Blotch)
+
+
+class FnotchContainer(Container):
+    def __init__(self, iterable):
+        super().__init__(iterable, Fnotch.from_series)
+
+
 def main():
     plt.switch_backend('Qt4Agg')
     parser = argparse.ArgumentParser()
