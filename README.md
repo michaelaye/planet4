@@ -12,7 +12,11 @@ See more on the Wiki [here](https://github.com/michaelaye/planet4/wiki)
 Poster at the DPS 2015 conference:
 [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.34114.svg)](http://dx.doi.org/10.5281/zenodo.34114)
 
-Install:
+## Requirements
+
+I develop now exclusively on Python 3.5. If you are still on Python 2, you really should upgrade. Ana/Miniconda from continuum.io makes it easy to have both versions though, in case you need it.
+
+## Install:
 
 ```bash
 cd <where_u_store_software_from_others>
