@@ -143,8 +143,24 @@ def get_example_blotches():
 
 
 def get_image_names_from_db(dbfname):
-    with pd.HDFStore(str(dbfname)) as store:
-        return store.select_column('df', 'image_name').unique()
+    """Return arrary of HiRISE image_names from database file.
+
+    Parameters
+    ----------
+    dbfname : pathlib.Path or str
+        Path to database file to be used.
+
+    Returns
+    -------
+    numpy.ndarray
+        Array of unique image names.
+    """
+    path = Path(dbfname)
+    if path.suffix in ['.hdf', 'h5']:
+        with pd.HDFStore(str(dbfname)) as store:
+            return store.select_column('df', 'image_name').unique()
+    elif path.suffix == '.csv':
+        return pd.read_csv(dbfname).image_id.unique()
 
 
 def get_current_marked():
