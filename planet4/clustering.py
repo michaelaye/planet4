@@ -26,6 +26,7 @@ matplotlib.style.use('bmh')
 
 
 class DBScanner(object):
+
     """Execute clustering and create mean cluster markings.
 
     The instantiated object will execute:
@@ -116,7 +117,7 @@ class DBScanner(object):
     def _post_analysis(self):
         """Use clustering results to create mean markings."""
         colors = plt.cm.Spectral(np.linspace(0, 1, len(self.unique_labels)))
-        reduced_data = [] # list of `kind` cluster average objects
+        reduced_data = []  # list of `kind` cluster average objects
         n_rejected = 0
         # loop over unique labels.
         for k, color in zip(self.unique_labels, colors):
@@ -336,8 +337,8 @@ class ClusteringManager(object):
         See Also
         --------
         markings.Fnotch : The Fnotch object with a `get_marking` method for a `cut` value.
-
         """
+
         logging.debug("CM: do_the_fnotch")
         from numpy.linalg import norm
         n_close = 0
@@ -481,8 +482,8 @@ class ClusteringManager(object):
             final_clusters.apply(filter_for_blotches).notnull()]
 
     def save(self, obj, path):
-        obj.to_hdf(path.with_suffix('.hdf'), 'df')
-        obj.to_csv(path.with_suffix('.csv'))
+        obj.to_hdf(str(path.with_suffix('.hdf')), 'df')
+        obj.to_csv(str(path.with_suffix('.csv')))
 
     def apply_fnotch_cut(self, id_):
         self.resman = plotting.ResultManager(id_, self.fnotched_dir)
