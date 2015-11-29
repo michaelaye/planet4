@@ -179,6 +179,22 @@ class DBManager(object):
     """Wrapper class for database file.
 
     Provides easy access to often used data items.
+
+    Parameters
+    ----------
+    dbname : str, optional
+        Path to database file to be used. Default: use get_current_database_fname() to
+        find it.
+
+    Attributes
+    ----------
+    image_names
+    image_ids
+    n_image_ids
+    n_image_names
+    obsids : Alias to image_ids
+    season2and3_image_names
+
     """
 
     def __init__(self, dbname=None):
@@ -197,7 +213,12 @@ class DBManager(object):
 
     @property
     def image_names(self):
-        "Return list of unique obsids used in database."
+        """Return list of unique obsids used in database.
+
+        See also
+        --------
+        get_image_names_from_db
+        """
         return get_image_names_from_db(self.dbname)
 
     @property
@@ -238,11 +259,12 @@ class DBManager(object):
 
     @property
     def season2and3_image_names(self):
+        "numpy.array : List of image_names for season 2 and 3."
         from .helper_functions import define_season_column
         image_names = self.image_names
         metadf = pd.DataFrame(pd.Series(image_names).astype('str'), columns=['image_name'])
         define_season_column(metadf)
-        return metadf[(metadf.season > 1) & (metadf.season < 4)].image_name
+        return metadf[(metadf.season > 1) & (metadf.season < 4)].image_name.unique()
 
 ###
 # general database helpers
