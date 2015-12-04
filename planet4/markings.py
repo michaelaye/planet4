@@ -59,14 +59,6 @@ def set_upper_left_corner(ul_x, ul_y):
     mngr.window.setGeometry(ul_x, ul_y, dx, dy)
 
 
-def rotate_vector(v, angle):
-    """Rotate vector by angle given in degrees."""
-    rangle = radians(angle)
-    rotmat = np.array([[cos(rangle), -sin(rangle)],
-                       [sin(rangle), cos(rangle)]])
-    return rotmat.dot(v)
-
-
 def diffangle(v1, v2, rads=True):
     """ Returns the angle in radians between vectors 'v1' and 'v2'."""
     cosang = np.dot(v1, v2)
@@ -348,9 +340,9 @@ class Fan(lines.Line2D):
         # length of arms
         self.armlength = self.get_arm_length()
         # first arm
-        self.v1 = rotate_vector([self.armlength, 0], alpha)
+        self.v1 = self.rotate_vector([self.armlength, 0], alpha)
         # second arm
-        self.v2 = rotate_vector([self.armlength, 0], beta)
+        self.v2 = self.rotate_vector([self.armlength, 0], beta)
         # vector matrix, stows the 1D vectors row-wise
         self.coords = np.vstack((self.base + self.v1,
                                  self.base,
@@ -359,6 +351,13 @@ class Fan(lines.Line2D):
         lines.Line2D.__init__(self, self.coords[:, 0], self.coords[:, 1],
                               alpha=0.65, linewidth=0.5, color='white',
                               **kwargs)
+
+    def rotate_vector(self, v, angle):
+        """Rotate vector by angle given in degrees."""
+        rangle = radians(angle)
+        rotmat = np.array([[cos(rangle), -sin(rangle)],
+                           [sin(rangle), cos(rangle)]])
+        return rotmat.dot(v)
 
     def get_arm_length(self):
         half = radians(self.inside_half)
@@ -394,7 +393,7 @@ class Fan(lines.Line2D):
 
     def add_mean_wind_pointer(self, ax, color='b', ls='-'):
         "Draw a thicker mean wind direction pointer for better visibility in plots."
-        endpoint = rotate_vector([5 * self.armlength, 0], self.data.angle)
+        endpoint = self.rotate_vector([5 * self.armlength, 0], self.data.angle)
         coords = np.vstack((self.base,
                             self.base + endpoint))
         pointer = lines.Line2D(coords[:, 0], coords[:, 1],
@@ -409,8 +408,9 @@ class Fan(lines.Line2D):
         As total length, I define the armlength + the radius of the semi-circle
         at the end.
         """
-        mid_point_vec = rotate_vector([0.5 * (self.armlength + self.radius), 0],
-                                      self.data.angle)
+        mid_point_vec = self.rotate_vector([0.5 * (self.armlength + self.radius),
+                                            0],
+                                           self.data.angle)
         return self.base + mid_point_vec
 
     def plot_center(self, ax, color='b'):
@@ -532,6 +532,7 @@ class Fnotch(object):
 
 
 class Container(object):
+
     @classmethod
     def from_df(cls, df):
         rows = [i for _, i in df.iterrows()]
@@ -542,16 +543,19 @@ class Container(object):
 
 
 class FanContainer(Container):
+
     def __init__(self, iterable):
         super().__init__(iterable, Fan)
 
 
 class BlotchContainer(Container):
+
     def __init__(self, iterable):
         super().__init__(iterable, Blotch)
 
 
 class FnotchContainer(Container):
+
     def __init__(self, iterable):
         super().__init__(iterable, Fnotch.from_series)
 
