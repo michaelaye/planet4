@@ -40,10 +40,6 @@ def calc_fig_size(width):
     return (width, width / ratio)
 
 
-def calc_4_3(width):
-    return (width, width / (4 / 3.0))
-
-
 def gold_legend(ax):
     colors = list('cmyg')
     line1 = plt.Line2D(range(10), range(10), marker='o', color=colors[0])
@@ -142,7 +138,7 @@ class ImageID(object):
     def show_subframe(self, ax=None, aspect='auto'):
         fig = None
         if ax is None:
-            fig, ax = plt.subplots(figsize=calc_4_3(8))
+            fig, ax = plt.subplots(figsize=calc_fig_size(8))
         ax.imshow(self.subframe, origin='upper', aspect=aspect)
         ax.set_axis_off()
         if fig is not None:
