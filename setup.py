@@ -3,10 +3,11 @@ import sys
 from setuptools import find_packages, setup
 from setuptools.command.test import test as TestCommand
 
-pandas_version = '0.16.2'
+pandas_version = '0.17.0'
 
 
 class PyTest(TestCommand):
+
     def finalize_options(self):
         TestCommand.finalize_options(self)
         self.test_args = ['-v']
@@ -21,8 +22,13 @@ class PyTest(TestCommand):
 
 setup(
     name="Planet4",
-    version="0.4",
-    packages=find_packages(),
+    version="0.5",
+    packages=find_packages('planet4'),
+
+    package_data={
+        # Add small test database for tests
+        'planet4': ['data/*']
+    },
 
     install_requires=['pandas>='+pandas_version],
     tests_require=['pytest'],
