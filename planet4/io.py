@@ -101,8 +101,7 @@ def get_latest_file(filenames):
 
 
 def get_current_database_fname(datadir=None):
-    if datadir is None:
-        datadir = data_root
+    datadir = data_root if datadir is None else Path(datadir)
     h5files = datadir.glob('2015*_queryable_cleaned.h5')
     return get_latest_file(h5files)
 
