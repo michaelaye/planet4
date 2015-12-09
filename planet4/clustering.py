@@ -38,69 +38,23 @@ class DBScanner(object):
 
     Parameters
     ----------
-    data : pandas.DataFrame
-        dataframe holding the data to be clustered.
-    kind : {'fan', 'blotch'}
-        String switch indicating the kind of markings to be clustered.
+    current_X : numpy.array
+        array holding the data to be clustered.
     eps : int, optional
         Distance criterion for DBSCAN algorithm. Samples further away than this value don't
         become members of the currently considered cluster. Default: 10
     min_samples : int, optional
         Mininum number of samples required for a cluster to be created. Default: 3
-    ax : matplotlib.axes, optional
-        If provided, plots will be produced on that axes.
-    scope : {'hirise', 'planet4'}
-        String switch to decide on which coordinates to cluster. 'planet4' means that the
-        original planet4 image_id coordinates will be used. This means that `data` should only
-        contain data for one image_id. Respectively, if given as 'hirise', the clustering will
-        be performed on the image_x,image_y HiRISE image coordinates. This would work as well
-        for data only for one planet4 image_id, but makes more sense for all data for one
-        HiRISE image_name.
-    linestyle : str
-        matplotlib linestyle character symbol.
-
-    Attributes
-    ----------
-    marking_cols : dict
-        Dictionary with the column names that describe each kind of marking, minus their
-        clustering coordinates
-    MarkingClass : dict
-        Dictionary with the class handles for the marking objects, chosen by the `kind`
-        switch.
-    n_reduced_data
     """
-    marking_cols = {'fan': 'angle spread distance'.split(),
-                    'blotch': 'angle radius_1 radius_2'.split()}
-    MarkingClass = {'fan': markings.Fan,
-                    'blotch': markings.Blotch}
 
-    def __init__(self, data, kind, eps=10, min_samples=3, ax=None,
-                 scope='hirise', linestyle='-'):
-        self.data = data
-        self.kind = kind  # fans or blotches
+    def __init__(self, current_X, eps=10, min_samples=3):
+        self.current_X = current_X
         self.eps = eps
         self.min_samples = min_samples
-        if scope == 'planet4':
-            self.coords = ['x', 'y']
-        elif scope == 'hirise':
-            self.coords = ['image_x', 'image_y']
-        else:
-            raise UnknownClusteringScopeError
-        self.scope = scope
-        self.ax = ax
-        self.linestyle = linestyle
 
         # these lines execute the clustering
-        self._get_current_X()
         self._run_DBSCAN()
         self._post_analysis()
-
-    def _get_current_X(self):
-        """Determine the clustering input matrix."""
-        current_X = self.data[self.coords].values
-        if len(current_X) == 0:
-            raise NoDataToClusterError
-        self.current_X = current_X
 
     def _run_DBSCAN(self):
         """Perform the DBSCAN clustering."""
@@ -112,94 +66,24 @@ class DBScanner(object):
         self.n_clusters = len(unique_labels) - (1 if -1 in labels else 0)
         self.labels = labels
         self.unique_labels = unique_labels
-        logging.debug("Estimated number of clusters:", self.n_clusters)
+        logging.debug("Estimated number of clusters: {}"
+                      .format(self.n_clusters))
 
     def _post_analysis(self):
         """Use clustering results to create mean markings."""
-        colors = plt.cm.Spectral(np.linspace(0, 1, len(self.unique_labels)))
-        reduced_data = []  # list of `kind` cluster average objects
-        n_rejected = 0
+        self.reduced_data = []  # list of `kind` cluster average objects
+        self.n_rejected = 0
         # loop over unique labels.
-        for k, color in zip(self.unique_labels, colors):
-            label_members = [i[0] for i in np.argwhere(self.labels == k)]
-            if k == -1:  # i.e. if it's noise, rejected from any cluster
-                n_rejected = len(label_members)
-            if self.ax:
-                self.process_plotting(k, label_members)
-            if k > -0.5:  # i.e. if it's a member of a cluster
-                # `cluster` will be a Fan or Blotch object.
-                cluster = self.get_mean_marking(label_members)
-                # storing n_members into the object for later.
-                cluster.n_members = len(label_members)
-                # storing this saved marker for later in ClusteringManager
-                cluster.saved = False
-                reduced_data.append(cluster)
-                if self.ax:
-                    self.process_cluster_plotting(cluster, color)
-            if self.ax:
-                markings.set_subframe_size(self.ax)
-        self.reduced_data = reduced_data
-        self.n_rejected = n_rejected
-        logging.debug("Reduced data to {} {}(e)s."
-                      .format(self.n_reduced_data, self.kind))
+        for label in self.unique_labels:
+            # get indices for members of this cluster
+            cluster_members = [i[0] for i in np.argwhere(self.labels == label)]
 
-    @property
-    def n_reduced_data(self):
-        "int : Length of list of average cluster objects."
-        return len(self.reduced_data)
-
-    def get_mean_marking(self, label_members):
-        """Create a mean object out of cluster label members.
-
-        The `marking_cols` are used to determine which data columns need to be averaged for the
-        `kind`marking object.
-
-        Note that I take the image_id of the marking of the first member of the cluster as
-        image_id for the whole cluster. In very rare circumstances, this could be wrong for
-        clusters in the overlap region.
-
-        Parameters
-        ----------
-        label_members : list
-            list of indices that belong to the current cluster label
-
-        Returns
-        -------
-        markings.Fan or markings.Blotch
-            As determined by `MarkingClass`.
-        """
-        cols = self.coords + self.marking_cols[self.kind]
-        clusterdata = self.data[cols].iloc[label_members]
-        meandata = clusterdata.mean()
-        if self.scope == 'hirise':
-            meandata.rename(index={'image_x': 'x', 'image_y': 'y'}, inplace=True)
-        obj = self.MarkingClass[self.kind](meandata)
-        # store the image_id from first cluster member for whole cluster
-        obj.image_id = self.data[['image_id']].iloc[label_members].iloc[0]
-        return obj
-
-    def process_cluster_plotting(self, cluster, color):
-        cluster.set_color(color)
-        if self.kind == 'blotch':
-            self.ax.add_artist(cluster)
-        else:
-            self.ax.add_line(cluster)
-            cluster.add_semicircle(self.ax, color=color)
-            cluster.add_mean_wind_pointer(self.ax, color=color,
-                                          ls=self.linestyle)
-
-    def process_plotting(self, k, label_members):
-        if k == -1:  # process noise markers
-            color = 'w'
-            markersize = 5
-        for i in label_members:
-            x = self.current_X[i]
-            if i in self.core_samples and k != -1:
-                markersize = 8
+            # treat noise
+            if label == -1:
+                self.n_rejected = len(cluster_members)
+            # if label is a cluster member:
             else:
-                markersize = 5
-            self.ax.plot(x[0], x[1], 'o', markerfacecolor=color,
-                         markedgecolor='k', markersize=markersize)
+                self.reduced_data.append(cluster_members)
 
 
 class ClusteringManager(object):
@@ -288,12 +172,77 @@ class ClusteringManager(object):
     @property
     def n_clustered_fans(self):
         "int : Number of clustered fans."
-        return len(self.clustered_fans)
+        return len(self.clustered_data['fan'])
 
     @property
     def n_clustered_blotches(self):
         "int : Number of clustered blotches."
-        return len(self.clustered_blotches)
+        return len(self.clustered_data['blotch'])
+
+    def prepare_DBSCAN_input(self, data, kind):
+        # filter for the marking for `kind`
+        markings = data[data.marking == kind]
+        if len(markings) == 0:
+            return None
+
+        if self.scope == 'planet4':
+            coords = ['x', 'y']
+        elif self.scope == 'hirise':
+            coords = ['image_x', 'image_y']
+        else:
+            raise UnknownClusteringScopeError
+
+        # Determine the clustering input matrix
+        current_X = markings[coords].values
+        self.current_markings = markings
+        return current_X
+
+    def post_processing(self, dbscanner, kind):
+        """Create a mean object out of cluster label members.
+
+        The `marking_cols` are used to determine which data columns need to
+        be averaged for the `kind`marking object.
+
+        Note that I take the image_id of the marking of the first member of
+        the cluster as image_id for the whole cluster. In very rare
+        circumstances, this could be wrong for clusters in the overlap region.
+
+        Parameters
+        ----------
+        cluster_members : list
+            list of indices that belong to the current cluster label
+
+        Returns
+        -------
+        markings.Fan or markings.Blotch
+            As determined by `MarkingClass`.
+        """
+        if kind == 'fan':
+            cols = markings.Fan.to_average
+            Marking = markings.Fan
+        elif kind == 'blotch':
+            cols = markings.Blotch.to_average
+            Marking = markings.Blotch
+
+        reduced_data = []
+        data = self.current_markings
+        for cluster_members in dbscanner.reduced_data:
+            clusterdata = data[cols].iloc[cluster_members]
+            meandata = clusterdata.mean()
+            cluster = Marking(meandata)
+            # storing n_members into the object for later.
+            cluster.n_members = len(cluster_members)
+            # storing this saved marker for later in ClusteringManager
+            cluster.saved = False
+            # store the image_id from first cluster member for whole cluster
+            image_id = data['image_id'].iloc[cluster_members].values[0]
+            cluster.image_id = image_id
+
+            reduced_data.append(cluster)
+
+        self.reduced_data[kind] = reduced_data
+        logging.debug("Reduced data to {} {}(e)s.".format(len(reduced_data),
+                                                          kind))
 
     def cluster_data(self, data):
         """Basic clustering.
@@ -308,23 +257,17 @@ class ClusteringManager(object):
             containing both fan and blotch data to be clustered.
         """
         logging.debug('ClusterManager: cluster_data()')
-        clustered_blotches = []
-        clustered_fans = []
+        # reset stored clustered data
+        self.reduced_data = {}
         for kind in ['fan', 'blotch']:
-            # filter for the marking for `kind`
-            markings = data[data.marking == kind]
-            if len(markings) == 0:
-                continue
-            dbscanner = DBScanner(markings, kind, eps=self.eps, scope=self.scope)
-            self.confusion.append((self.data_id, kind, len(markings),
-                                   dbscanner.n_reduced_data,
+            current_X = self.prepare_DBSCAN_input(data, kind)
+            dbscanner = DBScanner(current_X, eps=self.eps)
+            # storing of clustered data happens in here:
+            self.post_processing(dbscanner, kind)
+            self.confusion.append((self.data_id, kind,
+                                   len(self.current_markings),
+                                   len(self.reduced_data[kind]),
                                    dbscanner.n_rejected))
-            if kind == 'fan':
-                clustered_fans.extend(dbscanner.reduced_data)
-            else:
-                clustered_blotches.extend(dbscanner.reduced_data)
-        self.clustered_fans = clustered_fans
-        self.clustered_blotches = clustered_blotches
 
     def do_the_fnotch(self):
         """Combine fans and blotches if necessary.
