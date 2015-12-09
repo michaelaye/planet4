@@ -93,17 +93,18 @@ class ClusteringManager(object):
     Parameters
     ----------
     dbname : str or pathlib.Path, optional
-        Path to the database used by DBManager. If not provided, DBManager will find
-        the most recent one and use that.
+        Path to the database used by DBManager. If not provided, DBManager
+        will find the most recent one and use that.
     scope : {'hirise', 'planet4'}
-        Switch to control in what coordinates the clustering is happening. 'hirise' is
-        required to automatically take care of tile overlaps, while 'planet4' is required
-        to be able to check the quality of single Planet4 tiles.
+        Switch to control in what coordinates the clustering is happening.
+        'hirise' is required to automatically take care of tile overlaps, while
+        'planet4' is required to be able to check the quality of single
+        Planet4 tiles.
     min_distance : int
-        Parameter to control the distance below which fans and blotches are determined
-        to be 2 markings of the same thing, creating a FNOTCH chimera. The ratio between
-        blotch and fan marks determines a fnotch value that can be used as a discriminator
-        for the final object catalog.
+        Parameter to control the distance below which fans and blotches are
+        determined to be 2 markings of the same thing, creating a FNOTCH
+        chimera. The ratio between blotch and fan marks determines a fnotch
+        value that can be used as a discriminator for the final object catalog.
     eps : int
         Parameter to control the exclusion distance for the DBSCAN
     fnotched_dir : str or pathlib.Path
@@ -247,9 +248,10 @@ class ClusteringManager(object):
     def cluster_data(self, data):
         """Basic clustering.
 
-        For each fan and blotch markings in `data` a DBScanner object is created
-        that executes the actual clustering. Depending on `scope`, this could be over
-        marking data for one image_id only, or for all data for one HiRISE image_name.
+        For each fan and blotch markings in `data` a DBScanner object is
+        created that executes the actual clustering. Depending on `scope`, this
+        could be over marking data for one image_id only, or for all data for
+        one HiRISE image_name.
 
         Parameters
         ----------
@@ -272,14 +274,16 @@ class ClusteringManager(object):
     def do_the_fnotch(self):
         """Combine fans and blotches if necessary.
 
-        Use `min_distance` as criterion for linear algebraic distance between average cluster
-        markings to determine if they belong to a Fnotch, a chimera object of indecision
-        between a Fan and a Blotch, to be decided later in the process by applying a `cut`
-        on the resulting Fnotch objects.
+        Use `min_distance` as criterion for linear algebraic distance between
+        average cluster markings to determine if they belong to a Fnotch, a
+        chimera object of indecision between a Fan and a Blotch, to be decided
+        later in the process by applying a `cut` on the resulting Fnotch
+        objects.
 
         See Also
         --------
-        markings.Fnotch : The Fnotch object with a `get_marking` method for a `cut` value.
+        markings.Fnotch : The Fnotch object with a `get_marking` method for a
+            `cut` value.
         """
 
         logging.debug("CM: do_the_fnotch")
