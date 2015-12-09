@@ -203,24 +203,29 @@ class Blotch(Ellipse):
 
     Parameters
     ----------
-    json_row : object with blotch data attributes
+    data : object with blotch data attributes
         object should provide attributes [`x`, `y`, `radius_1`, `radius_2`, `angle`]
     color : str, optional
         to control the color of the mpl.Ellipse object
 
     Attributes
     ----------
-    data : object with blotch data attributes, as provided by `json_row`
+    to_average : list
+        List of cols to be averaged after clustering
+    data : object with blotch data attributes, as provided by `data`
+    center : tuple (inherited from matplotlib.Ellipse)
+        Coordinates of center, i.e. self.x, self.y
     """
 
-    def __init__(self, json_row, color='b'):
-        data = json_row
+    to_average = 'x y image_x image_y angle radius_1 radius_2'.split()
+
+    def __init__(self, data, color='b'):
         try:
             self.x = data.x
             self.y = data.y
         except AttributeError:
-            print("No x and y attributes in json_row:\n{}"
-                  .format(json_row))
+            print("No x and y attributes in data:\n{}"
+                  .format(data))
             raise AttributeError
         super(Blotch, self).__init__((self.x, self.y),
                                      data.radius_1 * 2, data.radius_2 * 2,
@@ -298,14 +303,16 @@ class Fan(lines.Line2D):
 
     Parameters
     ----------
-    json_row : object with fan data attributes
+    data : object with fan data attributes
         object has to provide [`x`, `y`, `angle`, `spread`, `distance`]
     kwargs : dictionary, optional
 
     Attributes
     ----------
+    to_average : list
+        List of columns to average after clustering
     data : object with fan data attributes
-        as provided by `json_row`.
+        as provided by `data`.
     base : tuple
         base coordinates `x` and `y`.
     inside_half : float
@@ -325,13 +332,15 @@ class Fan(lines.Line2D):
     base_to_midpoint_vec
     """
 
-    def __init__(self, json_row, **kwargs):
-        self.data = json_row
+    to_average = 'x y image_x image_y angle spread distance'.split()
+
+    def __init__(self, data, **kwargs):
+        self.data = data
         # first coordinate is the base of fan
         try:
-            self.base = self.data.loc[['x', 'y']].values
+            self.base = self.data.loc[['x', 'y']].values.astype('float')
         except KeyError:
-            print("No x and y in the json_row:\n{}".format(json_row))
+            print("No x and y in the data:\n{}".format(data))
             raise KeyError
         # angles
         self.inside_half = self.data.spread / 2.0
@@ -539,7 +548,7 @@ class Container(object):
         return cls(rows)
 
     def __init__(self, iterable, cls):
-        self.content = [cls(i) for i in iterable]
+        self.content = [cls(item) for item in iterable]
 
 
 class FanContainer(Container):
