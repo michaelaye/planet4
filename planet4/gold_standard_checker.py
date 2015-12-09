@@ -32,7 +32,7 @@ def main(fname, user_name='michaelaye', datadir=None):
         parser.feed(f.read())
 
     dbname = io.get_current_database_fname(datadir)
-    df = pd.read_hdf(dbname, 'df', where='user_name={0}'.format(user_name))
+    df = pd.read_hdf(str(dbname), 'df', where='user_name={0}'.format(user_name))
 
     check = pd.DataFrame(parser.container, columns=['ids_to_test'])
 
