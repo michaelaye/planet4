@@ -173,6 +173,62 @@ def get_and_save_done(df, limit=30):
     df[df.image_id.isin(ids_done)].to_hdf(done_path, 'df')
 
 
+class PathManager:
+
+    def __init__(self, datapath, id_=None, suffix='.hdf'):
+        self.id_ = id_
+        self.inpath = datapath
+        self.suffix = suffix
+
+        if suffix in ['.hdf', '.h5']:
+            self.reader = pd.read_hdf
+        elif suffix == '.csv':
+            self.reader = pd.read_csv
+
+    def setup_folders(self):
+        "Setup folder paths and create them if required."
+        fnotched_dir = self.inpath
+        if fnotched_dir is None:
+            fnotched_dir = Path(data_root) / 'cluster_manager_output'
+        else:
+            fnotched_dir = Path(fnotched_dir)
+        fnotched_dir.mkdir(exist_ok=True)
+        self.fnotched_dir = self.inpath = fnotched_dir
+
+        # storage path for the clustered data before fnotching
+        output_dir_clustered = fnotched_dir / 'just_clustering'
+        output_dir_clustered.mkdir(exist_ok=True)
+        self.output_dir_clustered = output_dir_clustered
+
+    def fanfile(self, unfnotched=False):
+        if self.id_ is None:
+            raise TypeError("self.id_ needs to be set first")
+        path = self.inpath
+        return path / (self.id_ + '_fans' + self.suffix)
+
+    def fandf(self, unfnotched=False):
+        return self.reader(str(self.fanfile(unfnotched)))
+
+    def blotchfile(self, unfnotched=False):
+        if self.id_ is None:
+            raise TypeError("self.id_ needs to be set first")
+        path = self.inpath
+        return path / (self.id_ + '_blotches' + self.suffix)
+
+    def blotchdf(self, unfnotched=False):
+        return self.reader(str(self.blotchfile(unfnotched)))
+
+    @property
+    def fnotchfile(self):
+        if self.id_ is None:
+            raise TypeError("self.id_ needs to be set first")
+        return self.inpath / (self.id_ + '_fnotches' + self.suffix)
+
+    @property
+    def fnotchdf(self):
+        return self.reader(str(self.fnotchfile))
+
+
 class DBManager(object):
 
     """Wrapper class for database file.

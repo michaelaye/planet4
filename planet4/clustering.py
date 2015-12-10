@@ -5,16 +5,13 @@ import logging
 import importlib
 import matplotlib
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 from IPython.display import display
 from ipywidgets import FloatText
 from pathlib import Path
-from sklearn.cluster import DBSCAN
 
-from . import io
-from . import markings, plotting
-from .exceptions import NoDataToClusterError, UnknownClusteringScopeError
+from . import io, markings, plotting
+from .dbscan import DBScanner
 
 importlib.reload(logging)
 logpath = Path.home() / 'p4reduction.log'
@@ -23,67 +20,6 @@ logging.basicConfig(filename=str(logpath), filemode='w', level=logging.DEBUG,
                     datefmt='%Y-%m-%d %H:%M:%S')
 
 matplotlib.style.use('bmh')
-
-
-class DBScanner(object):
-
-    """Execute clustering and create mean cluster markings.
-
-    The instantiated object will execute:
-
-        * _get_current_X() to split off the clustering input from `data`
-        * _run_DBSCAN() to perform the clustering itself
-        * _post_analysis() to create mean markings from the clustering results
-
-
-    Parameters
-    ----------
-    current_X : numpy.array
-        array holding the data to be clustered.
-    eps : int, optional
-        Distance criterion for DBSCAN algorithm. Samples further away than this value don't
-        become members of the currently considered cluster. Default: 10
-    min_samples : int, optional
-        Mininum number of samples required for a cluster to be created. Default: 3
-    """
-
-    def __init__(self, current_X, eps=10, min_samples=3):
-        self.current_X = current_X
-        self.eps = eps
-        self.min_samples = min_samples
-
-        # these lines execute the clustering
-        self._run_DBSCAN()
-        self._post_analysis()
-
-    def _run_DBSCAN(self):
-        """Perform the DBSCAN clustering."""
-        logging.debug("Running DBSCAN")
-        db = DBSCAN(self.eps, self.min_samples).fit(self.current_X)
-        labels = db.labels_.astype('int')
-        self.core_samples = db.core_sample_indices_
-        unique_labels = set(labels)
-        self.n_clusters = len(unique_labels) - (1 if -1 in labels else 0)
-        self.labels = labels
-        self.unique_labels = unique_labels
-        logging.debug("Estimated number of clusters: {}"
-                      .format(self.n_clusters))
-
-    def _post_analysis(self):
-        """Use clustering results to create mean markings."""
-        self.reduced_data = []  # list of `kind` cluster average objects
-        self.n_rejected = 0
-        # loop over unique labels.
-        for label in self.unique_labels:
-            # get indices for members of this cluster
-            cluster_members = [i[0] for i in np.argwhere(self.labels == label)]
-
-            # treat noise
-            if label == -1:
-                self.n_rejected = len(cluster_members)
-            # if label is a cluster member:
-            else:
-                self.reduced_data.append(cluster_members)
 
 
 class ClusteringManager(object):
@@ -144,31 +80,14 @@ class ClusteringManager(object):
         self.min_distance = min_distance
         self.eps = eps
         self.cut = cut
-        self.fnotched_dir = fnotched_dir
         self.confusion = []
         self.output_format = output_format
 
-        self.setup_folders()
+        self.pm = io.PathManager(fnotched_dir)
+        self.pm.setup_folders()
 
-    def setup_folders(self):
-        "Setup folder paths and create them if required."
-        fnotched_dir = self.fnotched_dir
-        if self.fnotched_dir is None:
-            fnotched_dir = Path(io.data_root) / 'output'
-        self.fnotched_dir = Path(fnotched_dir)
-        self.fnotched_dir.mkdir(exist_ok=True)
-
-        # storage path for the clustered data before fnotching
-        output_dir_clustered = self.fnotched_dir.with_name(
-                                    self.fnotched_dir.stem+'_clustered')
-        output_dir_clustered.mkdir(exist_ok=True)
-        self.output_dir_clustered = output_dir_clustered
-
-        # storage path for the final catalog after applying `cut`
-        cut_dir = fnotched_dir.with_name(
-            fnotched_dir.stem + '_cut_{:.1f}'.format(self.cut))
-        cut_dir.mkdir(exist_ok=True)
-        self.cut_dir = cut_dir
+    def __getattr__(self, name):
+        return getattr(self.pm, name)
 
     @property
     def n_clustered_fans(self):
@@ -190,8 +109,6 @@ class ClusteringManager(object):
             coords = ['x', 'y']
         elif self.scope == 'hirise':
             coords = ['image_x', 'image_y']
-        else:
-            raise UnknownClusteringScopeError
 
         # Determine the clustering input matrix
         current_X = markings[coords].values
@@ -199,24 +116,21 @@ class ClusteringManager(object):
         return current_X
 
     def post_processing(self, dbscanner, kind):
-        """Create a mean object out of cluster label members.
+        """Create mean objects out of cluster label members.
 
-        The `marking_cols` are used to determine which data columns need to
-        be averaged for the `kind`marking object.
+        Note: I take the image_id of the marking of the first member of
+        the cluster as image_id for the whole cluster. In rare circumstances,
+        this could be wrong for clusters in the overlap region.
 
-        Note that I take the image_id of the marking of the first member of
-        the cluster as image_id for the whole cluster. In very rare
-        circumstances, this could be wrong for clusters in the overlap region.
+        Stores output in self.reduced_data dictionary
 
         Parameters
         ----------
-        cluster_members : list
-            list of indices that belong to the current cluster label
+        dbscanner : DBScanner
+            DBScanner object
+        kind : {'fan', 'blotch'}
+            current kind of marking to post-process.
 
-        Returns
-        -------
-        markings.Fan or markings.Blotch
-            As determined by `MarkingClass`.
         """
         if kind == 'fan':
             cols = markings.Fan.to_average
@@ -292,8 +206,8 @@ class ClusteringManager(object):
         fnotches = []
         blotches = []
         fans = []
-        for blotch in self.clustered_blotches:
-            for fan in self.clustered_fans:
+        for blotch in self.reduced_data['blotch']:
+            for fan in self.reduced_data['fan']:
                 delta = blotch.center - fan.midpoint
                 if norm(delta) < self.min_distance:
                     fnotch_value = calc_fnotch(fan.n_members, blotch.n_members)
@@ -310,7 +224,7 @@ class ClusteringManager(object):
                 blotches.append(blotch)
         # I have to wait until the loop over blotches is over, before I know that a fan really
         # never was matched with a blotch, before I store it as an unfnotched Fan.
-        for fan in self.clustered_fans:
+        for fan in self.reduced_data['fan']:
             if not fan.saved:
                 fans.append(fan)
                 fan.saved = True
@@ -333,7 +247,7 @@ class ClusteringManager(object):
         self.store_output()
         self.apply_fnotch_cut()
 
-    def cluster_image_id(self, image_id):
+    def cluster_image_id(self, image_id, data=None):
         """Process the clustering for one image_id.
 
         Parameters
@@ -343,13 +257,16 @@ class ClusteringManager(object):
         """
         logging.info("Clustering data for {}".format(image_id))
         self.data_id = image_id
-        self.p4id = markings.ImageID(image_id, self.dbname)
-        self.execute_pipeline(self.p4id.data)
+        if data is None:
+            self.p4id = markings.ImageID(image_id, self.dbname)
+            data = self.p4id.data
+        self.execute_pipeline(data)
 
-    def cluster_image_name(self, image_name):
+    def cluster_image_name(self, image_name, data=None):
         """Process the clustering and fnoching pipeline for a HiRISE image_name."""
         logging.info("Clustering data for {}".format(image_name))
-        data = self.db.get_image_name_markings(image_name)
+        if data is None:
+            data = self.db.get_image_name_markings(image_name)
         self.data_id = image_name
         self.execute_pipeline(data)
 
@@ -361,23 +278,27 @@ class ClusteringManager(object):
         outfnotch = self.data_id + '_fnotches'
         outblotch = self.data_id + '_blotches'
         outfan = self.data_id + '_fans'
+        outdir = self.fnotched_dir
+        outdir.mkdir(exist_ok=True)
         # first write the fnotched data
         for outfname, outdata in zip([outfnotch, outblotch, outfan],
                                      [self.fnotches, self.fnotched_blotches,
                                       self.fnotched_fans]):
             if len(outdata) == 0:
                 continue
-            outpath = self.fnotched_dir / outfname
+            outpath = outdir / outfname
             series = [cluster.store() for cluster in outdata]
             df = pd.DataFrame(series)
             self.save(df, outpath)
         # store the unfnotched data as well:
+        outdir = self.output_dir_clustered
+        outdir.mkdir(exist_ok=True)
         for outfname, outdata in zip([outblotch, outfan],
-                                     [self.clustered_blotches,
-                                      self.clustered_fans]):
+                                     [self.reduced_data['blotch'],
+                                      self.reduced_data['fan']]):
             if len(outdata) == 0:
                 continue
-            outpath = self.output_dir_clustered / outfname
+            outpath = outdir / outfname
             series = [cluster.store() for cluster in outdata]
             df = pd.DataFrame(series)
             self.save(df, outpath)
@@ -408,7 +329,7 @@ class ClusteringManager(object):
         self.confusion_data.to_csv(fname)
 
     def get_newfans_newblotches(self):
-        df = self.resman.fnotchdf
+        df = self.pm.fnotchdf
 
         # apply Fnotch method `get_marking` with given cut.
         final_clusters = df.apply(markings.Fnotch.from_series, axis=1).\
@@ -432,8 +353,15 @@ class ClusteringManager(object):
         obj.to_hdf(str(path.with_suffix('.hdf')), 'df')
         obj.to_csv(str(path.with_suffix('.csv')))
 
-    def apply_fnotch_cut(self, id_):
-        self.resman = plotting.ResultManager(id_, self.fnotched_dir)
+    def apply_fnotch_cut(self, cut=None):
+        if cut is None:
+            cut = self.cut
+        # storage path for the final catalog after applying `cut`
+        cut_dir = self.fnotched_dir / 'applied_cut_{:.1f}'.format(cut)
+        cut_dir.mkdir(exist_ok=True)
+        self.cut_dir = cut_dir
+
+        self.pm.id_ = self.data_id
 
         self.get_newfans_newblotches()
 
@@ -441,23 +369,24 @@ class ClusteringManager(object):
             newfans = self.newfans.apply(lambda x: x.store())
             try:
                 completefans = pd.DataFrame(
-                    self.resman.fandf()).append(newfans, ignore_index=True)
+                    self.pm.fandf()).append(newfans, ignore_index=True)
             except OSError:
                 completefans = newfans
         else:
-            completefans = self.resman.fandf()
+            completefans = self.pm.fandf()
         if len(self.newblotches) > 0:
             newblotches = self.newblotches.apply(lambda x: x.store())
             try:
                 completeblotches = pd.DataFrame(
-                    self.resman.blotchdf()).append(newblotches, ignore_index=True)
+                    self.pm.blotchdf()).append(newblotches, ignore_index=True)
             except OSError:
                 completeblotches = newblotches
         else:
-            completeblotches = self.resman.blotchdf()
-        outpath = self.cut_dir
-        self.save(completefans, str(outpath / self.resman.fanfile().name))
-        self.save(completeblotches, str(outpath / self.resman.blotchfile().name))
+            completeblotches = self.pm.blotchdf()
+        self.finalfanfname = cut_dir / self.pm.fanfile().name
+        self.finalblotchfname = cut_dir / self.pm.blotchfile().name
+        self.save(completefans, self.finalfanfname)
+        self.save(completeblotches, self.finalblotchfname)
 
 
 def get_mean_position(fan, blotch, scope):

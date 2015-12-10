@@ -547,6 +547,11 @@ class Container(object):
         rows = [i for _, i in df.iterrows()]
         return cls(rows)
 
+    @classmethod
+    def from_fname(cls, fname):
+        df = pd.read_hdf(str(fname))
+        return cls.from_df(df)
+
     def __init__(self, iterable, cls):
         self.content = [cls(item) for item in iterable]
 
