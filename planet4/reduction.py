@@ -271,7 +271,7 @@ def create_season2_and_3_database():
     # read data for season2 and 3
     db = DBManager(args.db_fname)
     season23_image_names = db.season2and3_image_names
-    where = "image_name in {}".format(season23_image_names.values.tolist())
+    where = "image_name in {}".format(list(season23_image_names))
     season23 = pd.read_hdf(db.dbname, 'df', where=where)
 
     fname_base = os.path.basename(db.dbname)
