@@ -155,7 +155,7 @@ def get_image_names_from_db(dbfname):
         Array of unique image names.
     """
     path = Path(dbfname)
-    if path.suffix in ['.hdf', 'h5']:
+    if path.suffix in ['.hdf', '.h5']:
         with pd.HDFStore(str(dbfname)) as store:
             return store.select_column('df', 'image_name').unique()
     elif path.suffix == '.csv':
