@@ -150,7 +150,11 @@ class ClusteringManager(object):
             # storing this saved marker for later in ClusteringManager
             cluster.saved = False
             # store the image_id from first cluster member for whole cluster
-            image_id = data['image_id'].iloc[cluster_members].values[0]
+            try:
+                image_id = data['image_id'].iloc[cluster_members][0]
+            # inelegant fudge to account for Categories not having iloc.
+            except KeyError:
+                image_id = data['image_id'].iloc[cluster_members].values[0]
             cluster.image_id = image_id
 
             reduced_data.append(cluster)
