@@ -335,6 +335,11 @@ class ClusteringManager(object):
     def get_newfans_newblotches(self):
         df = self.pm.fnotchdf
 
+        # check if we got a fnotch dataframe. If not, we assume none were found.
+        if df is None:
+            self.newfans = self.newblotches = []
+            return
+
         # apply Fnotch method `get_marking` with given cut.
         final_clusters = df.apply(markings.Fnotch.from_series, axis=1).\
             apply(lambda x: x.get_marking(self.cut))

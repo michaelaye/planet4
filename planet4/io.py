@@ -226,7 +226,10 @@ class PathManager:
 
     @property
     def fnotchdf(self):
-        return self.reader(str(self.fnotchfile))
+        try:
+            return self.reader(str(self.fnotchfile))
+        except OSError:
+            return None
 
 
 class DBManager(object):
