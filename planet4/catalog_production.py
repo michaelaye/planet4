@@ -7,8 +7,6 @@ import logging
 from ipyparallel import Client
 from ipyparallel.util import interactive
 
-from .clustering import ClusteringManager
-from .io import DBManager
 from .io import get_image_names_from_db
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
@@ -49,7 +47,6 @@ def process_image_name(image_name):
             os.path.exists(fanfname):
         return image_name + ' already done.'
     # data = pd.read_hdf(dbfile, 'df', where="image_name=" + image_name)
-    dbmanager = DBManager(dbfile)
     img_ids = data.image_id.unique()
     blotches = []
     fans = []

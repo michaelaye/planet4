@@ -82,27 +82,31 @@ class P4DBName(object):
 
     def __init__(self, fname):
         self.p = Path(fname)
-        self.name = self.p.name
-        self.parent = self.p.parent
         date = str(self.name)[:10]
         self.date = dt.datetime(*[int(i) for i in date.split('-')])
+
+    def __getattr__(self, name):
+        "looking up things in the Path object if not in `self`."
+        return getattr(self.p, name)
 
 
 def get_latest_file(filenames):
     fnames = list(filenames)
+    if len(fnames) == 0:
+        raise NoFilesFoundError
     retval = P4DBName(fnames[0])
     dtnow = retval.date
     for fname in fnames[1:]:
         dt_to_check = P4DBName(fname).date
         if dt_to_check > dtnow:
             dtnow = dt_to_check
-            retval = fname
+            retval = P4DBName(fname)
     return retval.p
 
 
 def get_current_database_fname(datadir=None):
     datadir = data_root if datadir is None else Path(datadir)
-    h5files = datadir.glob('2015*_queryable_cleaned.h5')
+    h5files = datadir.glob('201*_queryable_cleaned.h5')
     return get_latest_file(h5files)
 
 
@@ -173,13 +177,25 @@ def get_and_save_done(df, limit=30):
     df[df.image_id.isin(ids_done)].to_hdf(done_path, 'df')
 
 
-class PathManager:
+class PathManager(object):
+    """Manage file paths and folders related to the analysis pipeline.
 
+    Parameters
+    ----------
+    datapath : str or path.Path
+        the base path from where to manage all derived paths. No default assumed
+        to prevent errors.
+    id_ : str
+        The data item id that is used to determine sub-paths
+    suffix : {'.hdf', '.h5', '.csv'}
+        The suffix that controls the reader function to be used.
+    """
     def __init__(self, datapath, id_=None, suffix='.hdf'):
         self.id_ = id_
-        self.inpath = datapath
+        self.fnotched_dir = Path(datapath)
         self.suffix = suffix
 
+        # point reader to correct function depending on required suffix
         if suffix in ['.hdf', '.h5']:
             self.reader = pd.read_hdf
         elif suffix == '.csv':
@@ -187,42 +203,69 @@ class PathManager:
 
     def setup_folders(self):
         "Setup folder paths and create them if required."
-        fnotched_dir = self.inpath
+        fnotched_dir = self.fnotched_dir
         if fnotched_dir is None:
             fnotched_dir = Path(data_root) / 'cluster_manager_output'
         else:
             fnotched_dir = Path(fnotched_dir)
         fnotched_dir.mkdir(exist_ok=True)
-        self.fnotched_dir = self.inpath = fnotched_dir
+        self.fnotched_dir = fnotched_dir
 
         # storage path for the clustered data before fnotching
         output_dir_clustered = fnotched_dir / 'just_clustering'
         output_dir_clustered.mkdir(exist_ok=True)
         self.output_dir_clustered = output_dir_clustered
 
-    def fanfile(self, unfnotched=False):
-        if self.id_ is None:
-            raise TypeError("self.id_ needs to be set first")
-        path = self.inpath
-        return path / (self.id_ + '_fans' + self.suffix)
+    def create_cut_folder(self, cut):
+        # storage path for the final catalog after applying `cut`
+        cut_dir = self.fnotched_dir / 'applied_cut_{:.1f}'.format(cut)
+        cut_dir.mkdir(exist_ok=True)
+        self.cut_dir = cut_dir
+        return cut_dir
 
-    def fandf(self, unfnotched=False):
-        return self.reader(str(self.fanfile(unfnotched)))
+    @property
+    def fanfile(self):
+        path = self.fnotched_dir
+        try:
+            retval = path / (self.id_ + '_fans' + self.suffix)
+        except TypeError as e:
+            if 'NoneType' in e.args[0]:
+                raise TypeError("self.id_ needs to be set first")
+            else:
+                raise e
+        return retval
 
-    def blotchfile(self, unfnotched=False):
-        if self.id_ is None:
-            raise TypeError("self.id_ needs to be set first")
-        path = self.inpath
-        return path / (self.id_ + '_blotches' + self.suffix)
+    @property
+    def fandf(self):
+        try:
+            return self.reader(str(self.fanfile))
+        except OSError:
+            return None
 
-    def blotchdf(self, unfnotched=False):
-        return self.reader(str(self.blotchfile(unfnotched)))
+    @property
+    def blotchfile(self):
+        path = self.fnotched_dir
+        try:
+            retval = path / (self.id_ + '_blotches' + self.suffix)
+        except TypeError as e:
+            if 'NoneType' in e.args[0]:
+                raise TypeError('self.id_ needs to be set first')
+            else:
+                raise e
+        return retval
+
+    @property
+    def blotchdf(self):
+        try:
+            return self.reader(str(self.blotchfile))
+        except OSError:
+            return None
 
     @property
     def fnotchfile(self):
         if self.id_ is None:
             raise TypeError("self.id_ needs to be set first")
-        return self.inpath / (self.id_ + '_fnotches' + self.suffix)
+        return self.fnotched_dir / (self.id_ + '_fnotches' + self.suffix)
 
     @property
     def fnotchdf(self):
@@ -234,7 +277,7 @@ class PathManager:
 
 class DBManager(object):
 
-    """Wrapper class for database file.
+    """Access class for database activities.
 
     Provides easy access to often used data items.
 

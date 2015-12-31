@@ -4,7 +4,7 @@ from .io import PathManager
 from .markings import ImageID
 
 
-def plot_image_id_pipeline(image_id, data):
+def plot_image_id_pipeline(image_id, data=None):
     imgid = ImageID(image_id, data)
 
     fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(10, 8))

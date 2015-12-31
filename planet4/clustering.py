@@ -10,7 +10,7 @@ from IPython.display import display
 from ipywidgets import FloatText
 from pathlib import Path
 
-from . import io, markings, plotting
+from . import io, markings
 from .dbscan import DBScanner
 
 importlib.reload(logging)
@@ -126,7 +126,7 @@ class ClusteringManager(object):
 
         Parameters
         ----------
-        dbscanner : DBScanner
+        dbscanner : dbscan.DBScanner
             DBScanner object
         kind : {'fan', 'blotch'}
             current kind of marking to post-process.
@@ -236,6 +236,7 @@ class ClusteringManager(object):
         self.fnotches = fnotches
         self.fnotched_blotches = blotches
         self.fnotched_fans = fans
+        logging.debug("CM: do_the_fnotch: Found {} fnotches.".format(n_close))
 
     def execute_pipeline(self, data):
         """Execute the standard list of methods for catalog production.
@@ -365,11 +366,12 @@ class ClusteringManager(object):
     def apply_fnotch_cut(self, cut=None):
         if cut is None:
             cut = self.cut
-        # storage path for the final catalog after applying `cut`
-        cut_dir = self.fnotched_dir / 'applied_cut_{:.1f}'.format(cut)
-        cut_dir.mkdir(exist_ok=True)
-        self.cut_dir = cut_dir
 
+        # storage path for the final catalog after applying `cut`
+        # PathManager self.pm is doing that.
+        cut_dir = self.pm.create_cut_folder(cut)
+
+        # for the paths to be correct, set the id_ attribute in pathmanager
         self.pm.id_ = self.data_id
 
         self.get_newfans_newblotches()
@@ -378,22 +380,22 @@ class ClusteringManager(object):
             newfans = self.newfans.apply(lambda x: x.store())
             try:
                 completefans = pd.DataFrame(
-                    self.pm.fandf()).append(newfans, ignore_index=True)
+                    self.pm.fandf).append(newfans, ignore_index=True)
             except OSError:
                 completefans = newfans
         else:
-            completefans = self.pm.fandf()
+            completefans = self.pm.fandf
         if len(self.newblotches) > 0:
             newblotches = self.newblotches.apply(lambda x: x.store())
             try:
                 completeblotches = pd.DataFrame(
-                    self.pm.blotchdf()).append(newblotches, ignore_index=True)
+                    self.pm.blotchdf).append(newblotches, ignore_index=True)
             except OSError:
                 completeblotches = newblotches
         else:
-            completeblotches = self.pm.blotchdf()
-        self.finalfanfname = cut_dir / self.pm.fanfile().name
-        self.finalblotchfname = cut_dir / self.pm.blotchfile().name
+            completeblotches = self.pm.blotchdf
+        self.finalfanfname = cut_dir / self.pm.fanfile.name
+        self.finalblotchfname = cut_dir / self.pm.blotchfile.name
         self.save(completefans, self.finalfanfname)
         self.save(completeblotches, self.finalblotchfname)
 
@@ -425,13 +427,13 @@ def gold_star_plotter(gold_id, axis, blotches=True, kind='blotches'):
 
 def is_catalog_production_good():
     from pandas.core.index import InvalidIndexError
-    db = DBManager(get_current_database_fname())
+    db = io.DBManager(io.get_current_database_fname())
     not_there = []
     invalid_index = []
     value_error = []
     for image_name in db.image_names:
         try:
-            ResultManager(image_name)
+            io.PathManager(image_name)
         except InvalidIndexError:
             invalid_index.append(image_name)
         except ValueError:
