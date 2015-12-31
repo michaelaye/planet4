@@ -73,13 +73,15 @@ class ClusteringManager(object):
     """
 
     def __init__(self, dbname=None, scope='hirise', min_distance=10, eps=10,
-                 fnotched_dir=None, output_format='hdf', cut=0.5):
+                 fnotched_dir=None, output_format='hdf', cut=0.5,
+                 include_angle=True):
         self.db = io.DBManager(dbname)
         self.dbname = dbname
         self.scope = scope
         self.min_distance = min_distance
         self.eps = eps
         self.cut = cut
+        self.include_angle = include_angle
         self.confusion = []
         self.output_format = output_format
 
@@ -110,8 +112,11 @@ class ClusteringManager(object):
         elif self.scope == 'hirise':
             coords = ['image_x', 'image_y']
 
+        if self.include_angle:
+            coords += ['angle']
         # Determine the clustering input matrix
         current_X = markings[coords].values
+        self.current_coords = coords
         self.current_markings = markings
         return current_X
 
