@@ -190,8 +190,10 @@ class PathManager(object):
     suffix : {'.hdf', '.h5', '.csv'}
         The suffix that controls the reader function to be used.
     """
-    def __init__(self, datapath, id_=None, suffix='.hdf'):
+    def __init__(self, datapath=None, id_=None, suffix='.hdf'):
         self.id_ = id_
+        if datapath is None:
+            datapath = get_current_database_fname().parent
         self.fnotched_dir = Path(datapath)
         self.suffix = suffix
 
