@@ -365,8 +365,12 @@ class ClusteringManager(object):
             final_clusters.apply(filter_for_blotches).notnull()]
 
     def save(self, obj, path):
-        obj.to_hdf(str(path.with_suffix('.hdf')), 'df')
-        obj.to_csv(str(path.with_suffix('.csv')))
+        try:
+            obj.to_hdf(str(path.with_suffix('.hdf')), 'df')
+            obj.to_csv(str(path.with_suffix('.csv')))
+        # obj could be NoneType if no blotches or fans were found. Catching it here.
+        except AttributeError:
+            pass
 
     def apply_fnotch_cut(self, cut=None):
         if cut is None:
