@@ -194,6 +194,8 @@ class ImageID(object):
         self.plot_blotches(ax=axes[3])
         for ax in axes:
             ax.set_axis_off()
+        fig.subplots_adjust(left=None, top=None, bottom=None, right=None,
+                            wspace=1e-3, hspace=1e-3)
         plt.show()
 
 
