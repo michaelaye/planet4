@@ -225,11 +225,9 @@ class PathManager(object):
         self.cut_dir = cut_dir
         return cut_dir
 
-    @property
-    def fanfile(self):
-        path = self.fnotched_dir
+    def create_path(self, marking, path):
         try:
-            retval = path / (self.id_ + '_fans' + self.suffix)
+            retval = path / (self.id_ + '_' + str(marking) + self.suffix)
         except TypeError as e:
             if 'NoneType' in e.args[0]:
                 raise TypeError("self.id_ needs to be set first")
@@ -237,44 +235,35 @@ class PathManager(object):
                 raise e
         return retval
 
-    @property
-    def fandf(self):
+    def get_df(self, fpath):
         try:
-            return self.reader(str(self.fanfile))
+            return self.reader(str(fpath))
         except OSError:
             return None
+
+    @property
+    def fanfile(self):
+        return self.create_path('fans', self.fnotched_dir)
+
+    @property
+    def fandf(self):
+        return self.get_df(self.fanfile)
 
     @property
     def blotchfile(self):
-        path = self.fnotched_dir
-        try:
-            retval = path / (self.id_ + '_blotches' + self.suffix)
-        except TypeError as e:
-            if 'NoneType' in e.args[0]:
-                raise TypeError('self.id_ needs to be set first')
-            else:
-                raise e
-        return retval
+        return self.create_path('blotches', self.fnotched_dir)
 
     @property
     def blotchdf(self):
-        try:
-            return self.reader(str(self.blotchfile))
-        except OSError:
-            return None
+        return self.get_df(self.blotchfile)
 
     @property
     def fnotchfile(self):
-        if self.id_ is None:
-            raise TypeError("self.id_ needs to be set first")
-        return self.fnotched_dir / (self.id_ + '_fnotches' + self.suffix)
+        return self.create_path('fnotches', self.fnotched_dir)
 
     @property
     def fnotchdf(self):
-        try:
-            return self.reader(str(self.fnotchfile))
-        except OSError:
-            return None
+        return self.get_df(self.fnotchfile)
 
 
 class DBManager(object):
