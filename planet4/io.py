@@ -246,12 +246,20 @@ class PathManager(object):
         return self.create_path('fans', self.fnotched_dir)
 
     @property
+    def reduced_fanfile(self):
+        return self.create_path('fans', self.output_dir_clustered)
+
+    @property
     def fandf(self):
         return self.get_df(self.fanfile)
 
     @property
     def blotchfile(self):
         return self.create_path('blotches', self.fnotched_dir)
+
+    @property
+    def reduced_blotchfile(self):
+        return self.create_path('blotches', self.output_dir_clustered)
 
     @property
     def blotchdf(self):

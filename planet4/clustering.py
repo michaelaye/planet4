@@ -189,7 +189,7 @@ class ClusteringManager(object):
             dbscanner = DBScanner(current_X, eps=self.eps)
             # storing of clustered data happens in here:
             self.post_processing(dbscanner, kind)
-            self.confusion.append((self.data_id, kind,
+            self.confusion.append((self.pm.id_, kind,
                                    len(self.current_markings),
                                    len(self.reduced_data[kind]),
                                    dbscanner.n_rejected))
@@ -266,7 +266,7 @@ class ClusteringManager(object):
             Planetfour `image_id`
         """
         logging.info("Clustering data for {}".format(image_id))
-        self.data_id = image_id
+        self.pm.id_ = image_id
         if data is None:
             self.p4id = markings.ImageID(image_id, self.dbname)
             data = self.p4id.data
@@ -277,7 +277,7 @@ class ClusteringManager(object):
         logging.info("Clustering data for {}".format(image_name))
         if data is None:
             data = self.db.get_image_name_markings(image_name)
-        self.data_id = image_name
+        self.pm.id_ = image_name
         self.execute_pipeline(data)
 
     def store_output(self):
@@ -285,33 +285,27 @@ class ClusteringManager(object):
 
         logging.debug('CM: Writing output files.')
         logging.debug('CM: Output dir: {}'.format(self.fnotched_dir))
-        outfnotch = self.data_id + '_fnotches'
-        outblotch = self.data_id + '_blotches'
-        outfan = self.data_id + '_fans'
-        outdir = self.fnotched_dir
-        outdir.mkdir(exist_ok=True)
         # first write the fnotched data
-        for outfname, outdata in zip([outfnotch, outblotch, outfan],
+        for outfname, outdata in zip(['fnotchfile', 'blotchfile', 'fanfile'],
                                      [self.fnotches, self.fnotched_blotches,
                                       self.fnotched_fans]):
             if len(outdata) == 0:
                 continue
-            outpath = outdir / outfname
+            # get the path from PathManager object
             series = [cluster.store() for cluster in outdata]
             df = pd.DataFrame(series)
-            self.save(df, outpath)
+            self.save(df, getattr(self.pm, outfname))
         # store the unfnotched data as well:
         outdir = self.output_dir_clustered
         outdir.mkdir(exist_ok=True)
-        for outfname, outdata in zip([outblotch, outfan],
+        for outfname, outdata in zip(['reduced_blotchfile', 'reduced_fanfile'],
                                      [self.reduced_data['blotch'],
                                       self.reduced_data['fan']]):
             if len(outdata) == 0:
                 continue
-            outpath = outdir / outfname
             series = [cluster.store() for cluster in outdata]
             df = pd.DataFrame(series)
-            self.save(df, outpath)
+            self.save(df, getattr(self.pm, outfname))
 
     def cluster_all(self):
         image_names = self.db.image_names
@@ -379,9 +373,6 @@ class ClusteringManager(object):
         # storage path for the final catalog after applying `cut`
         # PathManager self.pm is doing that.
         cut_dir = self.pm.create_cut_folder(cut)
-
-        # for the paths to be correct, set the id_ attribute in pathmanager
-        self.pm.id_ = self.data_id
 
         self.get_newfans_newblotches()
 
