@@ -212,11 +212,13 @@ class PathManager(object):
         elif suffix == '.csv':
             self.reader = pd.read_csv
 
+        self.setup_folders()
+
     def setup_folders(self):
         "Setup folder paths and create them if required."
         fnotched_dir = self.fnotched_dir
         if fnotched_dir is None:
-            fnotched_dir = Path(data_root) / 'cluster_manager_output'
+            fnotched_dir = Path(data_root) / 'clustering'
         else:
             fnotched_dir = Path(fnotched_dir)
         fnotched_dir.mkdir(exist_ok=True)
@@ -227,6 +229,8 @@ class PathManager(object):
         output_dir_clustered.mkdir(exist_ok=True)
         self.output_dir_clustered = output_dir_clustered
 
+        self.create_cut_folder(self.cut)
+
     def create_cut_folder(self, cut):
         # storage path for the final catalog after applying `cut`
         cut_dir = self.fnotched_dir / 'applied_cut_{:.1f}'.format(cut)
@@ -235,14 +239,12 @@ class PathManager(object):
         return cut_dir
 
     def create_path(self, marking, path):
-        try:
-            retval = path / (self.id_ + '_' + str(marking) + self.suffix)
-        except TypeError as e:
-            if 'NoneType' in e.args[0]:
-                raise TypeError("self.id_ needs to be set first")
-            else:
-                raise e
-        return retval
+        if path is None:
+            raise TypeError('path needs to be set.')
+        if self.id_ is None:
+            raise TypeError('self.id_ needs to be set.')
+
+        return Path(path) / (self.id_ + '_' + str(marking) + self.suffix)
 
     def get_df(self, fpath):
         try:
@@ -259,6 +261,10 @@ class PathManager(object):
         return self.create_path('fans', self.output_dir_clustered)
 
     @property
+    def final_fanfile(self):
+        return self.create_path('fans', self.cut_dir)
+
+    @property
     def fandf(self):
         return self.get_df(self.fanfile)
 
@@ -269,6 +275,10 @@ class PathManager(object):
     @property
     def reduced_blotchfile(self):
         return self.create_path('blotches', self.output_dir_clustered)
+
+    @property
+    def final_blotchfile(self):
+        return self.create_path('blotches', self.cut_dir)
 
     @property
     def blotchdf(self):

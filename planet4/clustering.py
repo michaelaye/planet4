@@ -74,7 +74,7 @@ class ClusteringManager(object):
 
     def __init__(self, dbname=None, scope='hirise', min_distance=10, eps=10,
                  fnotched_dir=None, output_format='hdf', cut=0.5,
-                 include_angle=True):
+                 include_angle=True, id_=None):
         self.db = io.DBManager(dbname)
         self.dbname = dbname
         self.scope = scope
@@ -85,7 +85,7 @@ class ClusteringManager(object):
         self.confusion = []
         self.output_format = output_format
 
-        self.pm = io.PathManager(fnotched_dir)
+        self.pm = io.PathManager(fnotched_dir, id_=id_)
         self.pm.setup_folders()
 
     def __getattr__(self, name):
@@ -372,7 +372,7 @@ class ClusteringManager(object):
 
         # storage path for the final catalog after applying `cut`
         # PathManager self.pm is doing that.
-        cut_dir = self.pm.create_cut_folder(cut)
+        self.pm.create_cut_folder(cut)
 
         self.get_newfans_newblotches()
 
@@ -394,10 +394,12 @@ class ClusteringManager(object):
                 completeblotches = newblotches
         else:
             completeblotches = self.pm.blotchdf
-        self.finalfanfname = cut_dir / self.pm.fanfile.name
-        self.finalblotchfname = cut_dir / self.pm.blotchfile.name
-        self.save(completefans, self.finalfanfname)
-        self.save(completeblotches, self.finalblotchfname)
+        self.save(completefans, self.pm.final_fanfile)
+        self.save(completeblotches, self.final_blotchfile)
+
+######
+# Functions
+#####
 
 
 def get_mean_position(fan, blotch, scope):
