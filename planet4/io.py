@@ -36,6 +36,13 @@ def dropbox():
     return home / 'Dropbox' / 'data' / 'planet4'
 
 
+def check_and_pad_id(imgid):
+    imgid_template = "APF0000000"
+    if len(imgid) < len(imgid_template):
+        imgid = imgid_template[:-len(imgid)] + imgid
+    return imgid
+
+
 def get_image_id_data(image_id, feedback=False):
     return pd.read_hdf(get_current_database_fname(), 'df',
                        where='image_id=' + image_id)
@@ -178,6 +185,7 @@ def get_and_save_done(df, limit=30):
 
 
 class PathManager(object):
+
     """Manage file paths and folders related to the analysis pipeline.
 
     Parameters
@@ -190,11 +198,12 @@ class PathManager(object):
     suffix : {'.hdf', '.h5', '.csv'}
         The suffix that controls the reader function to be used.
     """
-    def __init__(self, datapath=None, id_=None, suffix='.hdf'):
-        self.id_ = id_
-        if datapath is None:
-            datapath = get_current_database_fname().parent
-        self.fnotched_dir = Path(datapath)
+
+    def __init__(self, datapath=None, id_=None, suffix='.hdf',
+                 cut=0.5):
+        self.id_ = check_and_pad_id(id_)
+        self.cut = cut
+        self.fnotched_dir = datapath
         self.suffix = suffix
 
         # point reader to correct function depending on required suffix

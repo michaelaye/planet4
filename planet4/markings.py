@@ -89,12 +89,8 @@ class ImageID(object):
     data : pd.DataFrame, optional
         If the data was already extracted before init, it can be provided here.
     """
-    imgid_template = "APF0000000"
-
     def __init__(self, imgid, database_fname=None, data=None):
-        if len(imgid) < len(self.imgid_template):
-            imgid = self.imgid_template[:-len(imgid)] + imgid
-        self.imgid = imgid
+        self.imgid = io.check_and_pad_id(imgid)
         if data is not None:
             self.data = data
         else:
