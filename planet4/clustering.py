@@ -1,7 +1,5 @@
 from __future__ import division, print_function
 
-import logging
-
 import importlib
 import matplotlib
 import matplotlib.pyplot as plt
@@ -9,9 +7,12 @@ import pandas as pd
 from IPython.display import display
 from ipywidgets import FloatText
 from pathlib import Path
-
+from scipy.stats import circmean
+import numpy as np
 from . import io, markings
 from .dbscan import DBScanner
+import logging
+
 
 importlib.reload(logging)
 logpath = Path.home() / 'p4reduction.log'
@@ -74,7 +75,7 @@ class ClusteringManager(object):
 
     def __init__(self, dbname=None, scope='hirise', min_distance=10, eps=10,
                  fnotched_dir=None, output_format='hdf', cut=0.5,
-                 include_angle=True, id_=None):
+                 include_angle=True, id_=None, pm=None):
         self.db = io.DBManager(dbname)
         self.dbname = dbname
         self.scope = scope
@@ -85,7 +86,7 @@ class ClusteringManager(object):
         self.confusion = []
         self.output_format = output_format
 
-        self.pm = io.PathManager(fnotched_dir, id_=id_)
+        self.pm = pm if pm is not None else io.PathManager(fnotched_dir, id_=id_)
         self.pm.setup_folders()
 
     def __getattr__(self, name):
@@ -113,7 +114,7 @@ class ClusteringManager(object):
             coords = ['image_x', 'image_y']
 
         if self.include_angle:
-            coords += ['angle']
+            coords.append('angle')
         # Determine the clustering input matrix
         current_X = markings[coords].values
         self.current_coords = coords
@@ -149,6 +150,7 @@ class ClusteringManager(object):
         for cluster_members in dbscanner.reduced_data:
             clusterdata = data[cols].iloc[cluster_members]
             meandata = clusterdata.mean()
+            meandata.angle = np.rad2deg(circmean(np.deg2rad(clusterdata.angle)))
             cluster = Marking(meandata)
             # storing n_members into the object for later.
             cluster.n_members = len(cluster_members)
@@ -265,6 +267,7 @@ class ClusteringManager(object):
         image_id : str
             Planetfour `image_id`
         """
+        image_id = io.check_and_pad_id(image_id)
         logging.info("Clustering data for {}".format(image_id))
         self.pm.id_ = image_id
         if data is None:
