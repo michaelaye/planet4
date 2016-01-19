@@ -97,7 +97,7 @@ class ImageID(object):
             if database_fname is None:
                 database_fname = str(io.get_current_database_fname())
             self.data = pd.read_hdf(database_fname, 'df',
-                                    where='image_id=' + imgid)
+                                    where='image_id=' + self.imgid)
 
     @property
     def subframe(self):
@@ -332,7 +332,7 @@ class Fan(lines.Line2D):
 
     to_average = 'x y image_x image_y angle spread distance'.split()
 
-    def __init__(self, data, **kwargs):
+    def __init__(self, data, linewidth=0.5, **kwargs):
         self.data = data
         # first coordinate is the base of fan
         try:
@@ -356,7 +356,7 @@ class Fan(lines.Line2D):
                                  self.base + self.v2))
         # init fan line, first column are the x-components of the row-vectors
         lines.Line2D.__init__(self, self.coords[:, 0], self.coords[:, 1],
-                              alpha=0.65, linewidth=0.5, color='white',
+                              alpha=0.65, linewidth=linewidth, color='white',
                               **kwargs)
 
     def rotate_vector(self, v, angle):
