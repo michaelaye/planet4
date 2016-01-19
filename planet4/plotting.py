@@ -5,8 +5,8 @@ from . import markings
 from . import clustering
 
 
-def plot_image_id_pipeline(image_id, min_distance=10):
-    cm = clustering.ClusteringManager(id_=image_id, min_distance=min_distance)
+def plot_image_id_pipeline(image_id, **kwargs):
+    cm = clustering.ClusteringManager(id_=image_id, **kwargs)
     cm.cluster_image_id(image_id)
     pm = cm.pm
 
