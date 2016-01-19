@@ -10,7 +10,6 @@ class DBScanner(object):
 
     The instantiated object will execute:
 
-        * _get_current_X() to split off the clustering input from `data`
         * _run_DBSCAN() to perform the clustering itself
         * _post_analysis() to create mean markings from the clustering results
 
@@ -18,7 +17,7 @@ class DBScanner(object):
     Parameters
     ----------
     current_X : numpy.array
-        array holding the data to be clustered.
+        array holding the data to be clustered, preprocessed in ClusterManager
     eps : int, optional
         Distance criterion for DBSCAN algorithm. Samples further away than this value don't
         become members of the currently considered cluster. Default: 10
