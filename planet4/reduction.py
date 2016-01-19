@@ -117,6 +117,17 @@ def convert_ellipse_angles(df):
     logging.info("Conversion of ellipse angles done.")
 
 
+def normalize_fan_angles(df):
+    logging.info("Normalizing fan angles.")
+
+    def func(angle):
+        return angle + 360
+
+    rowindex = (df.marking == 'fan')
+    df.loc[rowindex, 'angle'] = df.loc[rowindex, 'angle'].map(func)
+    logging.info("Normalizing of fan angles done.")
+
+
 def calculate_hirise_pixels(df):
     logging.info("Calculating and assigning hirise pixel coordinates")
     df = df.assign(hirise_x=lambda row: (row.x + 740 * (row.x_tile - 1)).round(),
@@ -376,6 +387,7 @@ def main():
         logging.info("Done removing incompletes.")
 
     convert_ellipse_angles(df)
+    normalize_fan_angles(df)
 
     # commented out for now as image_x and image_y are already in the data.
     # df = calculate_hirise_pixels(df)
