@@ -39,3 +39,64 @@ def plot_image_id_pipeline(image_id, min_distance=10):
         return pm
     else:
         return cm
+
+
+def plot_raw_fans(id_):
+    imgid = markings.ImageID(id_)
+
+    imgid.plot_fans()
+    plt.show()
+
+
+def plot_raw_blotches(id_):
+    imgid = markings.ImageID(id_)
+
+    imgid.plot_blotches()
+    plt.show()
+
+
+def plot_finals(id_, dir=None):
+    pm = io.PathManager(id_=id_, datapath=dir)
+    if not all([pm.reduced_blotchfile.exists(),
+                pm.reduced_fanfile.exists()]):
+        cm = clustering.ClusteringManager(id_=id_, fnotched_dir=dir)
+        cm.cluster_image_id(id_=id_)
+        pm = cm.pm
+
+    finalfans = markings.FanContainer.from_fname(pm.final_fanfile)
+    finalblotches = markings.BlotchContainer.from_fname(pm.final_blotchfile)
+
+    imgid = markings.ImageID(id_)
+
+    fig, ax = plt.subplots()
+    imgid.plot_fans(ax=ax, fans=finalfans.content)
+    imgid.plot_blotches(ax=ax, blotches=finalblotches.content)
+    plt.show()
+
+
+def plot_clustered_blotches(id_, dir=None):
+    pm = io.PathManager(id_=id_, datapath=dir)
+    if not pm.reduced_blotchfile.exists():
+        cm = clustering.ClusteringManager(id_=id_, fnotched_dir=dir)
+        cm.cluster_image_id(id_)
+        pm = cm.pm
+
+    reduced_blotches = markings.BlotchContainer.from_fname(pm.reduced_blotchfile)
+    imgid = markings.ImageID(id_)
+
+    imgid.plot_blotches(blotches=reduced_blotches.content)
+    plt.show()
+
+
+def plot_clustered_fans(id_, dir=None):
+    pm = io.PathManager(id_=id_, datapath=dir)
+    if not pm.reduced_fanfile.exists():
+        cm = clustering.ClusteringManager(id_=id_, fnotched_dir=dir)
+        cm.cluster_image_id(id_)
+        pm = cm.pm
+
+    reduced_fans = markings.FanContainer.from_fname(pm.reduced_fanfile)
+    imgid = markings.ImageID(id_)
+
+    imgid.plot_fans(fans=reduced_fans.content)
+    plt.show()
