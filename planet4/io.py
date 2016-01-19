@@ -201,7 +201,7 @@ class PathManager(object):
 
     def __init__(self, datapath=None, id_=None, suffix='.hdf',
                  cut=0.5):
-        self.id_ = check_and_pad_id(id_)
+        self._id = id_
         self.cut = cut
         self.fnotched_dir = datapath
         self.suffix = suffix
@@ -213,6 +213,17 @@ class PathManager(object):
             self.reader = pd.read_csv
 
         self.setup_folders()
+
+    @property
+    def id_(self):
+        try:
+            return check_and_pad_id(self._id)
+        except TypeError:
+            raise TypeError('self.id_ needs to be set first.')
+
+    @id_.setter
+    def id_(self, value):
+        self._id = value
 
     def setup_folders(self):
         "Setup folder paths and create them if required."
@@ -369,6 +380,7 @@ class DBManager(object):
 
     def get_image_id_markings(self, image_id):
         "Return marking data for one Planet4 image_id"
+        image_id = check_and_pad_id(image_id)
         return pd.read_hdf(self.dbname, 'df', where='image_id=' + image_id)
 
     def get_classification_id_data(self, class_id):
