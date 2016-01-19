@@ -75,7 +75,8 @@ class ClusteringManager(object):
 
     def __init__(self, dbname=None, scope='hirise', min_distance=10, eps=10,
                  fnotched_dir=None, output_format='hdf', cut=0.5,
-                 include_angle=True, id_=None, pm=None):
+                 include_angle=True, id_=None, pm=None,
+                 include_distance=True, include_radius=True):
         self.db = io.DBManager(dbname)
         self.dbname = dbname
         self.scope = scope
@@ -83,6 +84,8 @@ class ClusteringManager(object):
         self.eps = eps
         self.cut = cut
         self.include_angle = include_angle
+        self.include_distance = include_distance
+        self.include_radius = include_radius
         self.confusion = []
         self.output_format = output_format
 
@@ -115,6 +118,13 @@ class ClusteringManager(object):
 
         if self.include_angle:
             coords.append('angle')
+
+        if kind=='fan':
+            if self.include_distance:
+                coords.append('distance')
+        else:
+            if self.include_radius:
+                coords += ['radius_1', 'radius_2']
         # Determine the clustering input matrix
         current_X = markings[coords].values
         self.current_coords = coords
@@ -187,6 +197,7 @@ class ClusteringManager(object):
         # reset stored clustered data
         self.reduced_data = {}
         for kind in ['fan', 'blotch']:
+            # self.include_angle = False if kind == 'blotch' else True
             current_X = self.prepare_DBSCAN_input(data, kind)
             dbscanner = DBScanner(current_X, eps=self.eps)
             # storing of clustered data happens in here:
