@@ -32,8 +32,20 @@ location_target_codes = {'giza': [850],
 
 
 def dropbox():
-    home = Path.home()
-    return home / 'Dropbox' / 'data' / 'planet4'
+    return Path.home() / 'Dropbox'
+
+
+def p4data():
+    return dropbox() / 'data' / 'planet4'
+
+
+def analysis_folder():
+    name = 'p4_analysis'
+    if p4data().exists():
+        path = p4data() / name
+    else:
+        path = dropbox() / name
+    return path
 
 
 def check_and_pad_id(imgid):
