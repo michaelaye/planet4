@@ -21,13 +21,13 @@ class PyTest(TestCommand):
 
 
 setup(
-    name="Planet4",
+    name="planet4",
     version="0.5",
     packages=find_packages(),
 
     package_data={
         # Add small test database for tests
-        'planet4': ['data/*']
+        '': ['data/*']
     },
 
     install_requires=['pandas>='+pandas_version],
