@@ -32,7 +32,7 @@ location_target_codes = {'giza': [850],
 
 
 def dropbox():
-    return Path.home() / 'Dropbox'
+    return HOME / 'Dropbox'
 
 
 def p4data():
