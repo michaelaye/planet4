@@ -4,8 +4,6 @@ import importlib
 import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
-from IPython.display import display
-from ipywidgets import FloatText
 from pathlib import Path
 from scipy.stats import circmean
 import numpy as np
@@ -116,12 +114,11 @@ class ClusteringManager(object):
         elif self.scope == 'hirise':
             coords = ['image_x', 'image_y']
 
-        if self.include_angle:
-            coords.append('angle')
-
-        if kind=='fan':
+        if kind == 'fan':
             if self.include_distance:
                 coords.append('distance')
+            if self.include_angle:
+                coords.append('angle')
         else:
             if self.include_radius:
                 coords += ['radius_1', 'radius_2']
@@ -323,12 +320,7 @@ class ClusteringManager(object):
 
     def cluster_all(self):
         image_names = self.db.image_names
-        ft = FloatText()
-        display(ft)
-        for i, image_name in enumerate(image_names):
-            perc = 100 * i / len(image_names)
-            # print('{:.1f}'.format())
-            ft.value = round(perc, 1)
+        for image_name in image_names:
             self.cluster_image_name(image_name)
 
     def report(self):
