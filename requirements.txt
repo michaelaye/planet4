@@ -3,3 +3,4 @@ scipy
 pandas
 matplotlib
 ipyparallel
+scikit-learn
