@@ -23,7 +23,7 @@ class PyTest(TestCommand):
 setup(
     name="Planet4",
     version="0.5",
-    packages=find_packages('planet4'),
+    packages=find_packages(),
 
     package_data={
         # Add small test database for tests
