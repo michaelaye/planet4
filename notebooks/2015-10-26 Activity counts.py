@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 from planet4 import region_data, io
 from pathlib import Path
@@ -41,6 +41,8 @@ def get_marking(line, cut=0.8):
 # In[ ]:
 
 def get_final_markings_counts(img_name, cut=0.5):
+    # writing in dictionary here b/c later I convert it to pd.DataFrame
+    # for which a dictionary is a natural input format
     d = {}
     d['image_name'] = img_name
     blotch_fname = root / '{}_blotches_latlons.csv'.format(img_name)
