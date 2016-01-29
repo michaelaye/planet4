@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[12]:
+# In[ ]:
 
 # setup
 from planet4 import io
@@ -17,7 +17,7 @@ import datetime as dt
 import pytest
 
 
-# In[13]:
+# In[ ]:
 
 # test_P4DBName
 name = '2015-10-21_planet_four_classifications.csv'
@@ -28,7 +28,7 @@ assert p4db.parent == Path('.')
 assert p4db.date == dt.datetime(2015, 10, 21)
 
 
-# In[14]:
+# In[ ]:
 
 # test_get_image_names_from_db
 result = io.get_image_names_from_db(datapath / 'test_db.csv')
@@ -36,14 +36,14 @@ expected = np.array(['APF000012q', 'APF000012w'])
 assert_array_equal(expected, result)
 
 
-# In[15]:
+# In[ ]:
 
 # test_get_current_database_fname
 fname = io.get_current_database_fname()
 assert isinstance(fname, Path)
 
 
-# In[16]:
+# In[ ]:
 
 # test_get_latest_file
 l = ['2015-12-01_test.h5','2015-11-01_test.h5']
@@ -53,7 +53,7 @@ with pytest.raises(p4.exceptions.NoFilesFoundError):
     io.get_latest_file([])
 
 
-# In[17]:
+# In[ ]:
 
 # test_PathManager_missing_id_
 pm = io.PathManager('/tmp')
@@ -64,7 +64,7 @@ with pytest.raises(TypeError):
     assert pm.fnotchfile == Path('/tmp/ABC01234_fnotches.hdf')
 
 
-# In[19]:
+# In[ ]:
 
 # test_PathManager_proper_setup
 pm = io.PathManager('/tmp')
@@ -74,7 +74,7 @@ assert pm.blotchfile == Path('/tmp/ABC01234_blotches.hdf')
 assert pm.fnotchfile == Path('/tmp/ABC01234_fnotches.hdf')
 
 
-# In[20]:
+# In[ ]:
 
 # test_PathManager_suffix_.h5
 pm = io.PathManager('/tmp', suffix='.h5')
@@ -84,7 +84,7 @@ assert pm.blotchfile == Path('/tmp/ABC01234_blotches.h5')
 assert pm.fnotchfile == Path('/tmp/ABC01234_fnotches.h5')
 
 
-# In[21]:
+# In[ ]:
 
 # test_PathManager_suffix_.csv
 pm = io.PathManager('/tmp', suffix='.csv')
@@ -94,7 +94,7 @@ assert pm.blotchfile == Path('/tmp/ABC01234_blotches.csv')
 assert pm.fnotchfile == Path('/tmp/ABC01234_fnotches.csv')
 
 
-# In[22]:
+# In[ ]:
 
 # test_PathManager_setup_folders
 tempdir = tempfile.TemporaryDirectory()

@@ -1,34 +1,34 @@
 
 # coding: utf-8
 
-# In[2]:
+# In[ ]:
 
 cd ~/Dropbox/CTX_to_jpg/pipeline_check/
 
 
-# In[3]:
+# In[ ]:
 
 from glob import glob
 
 
-# In[3]:
+# In[ ]:
 
 fnames = glob('*.pdf')
 
 
-# In[4]:
+# In[ ]:
 
 ids = [i.split('_')[0] for i in fnames]
 ids[:5]
 
 
-# In[4]:
+# In[ ]:
 
 from planet4 import clustering
 from pathlib import Path
 
 
-# In[5]:
+# In[ ]:
 
 path = Path("/Users/klay6683/data/planet4/pipelinecheck2")
 cm = clustering.ClusteringManager(fnotched_dir=path,
@@ -36,18 +36,18 @@ cm = clustering.ClusteringManager(fnotched_dir=path,
                                  include_radius=False, eps=10, min_distance=20)
 
 
-# In[6]:
+# In[ ]:
 
 from planet4 import plotting
 
 
-# In[24]:
+# In[ ]:
 
 from ipyparallel import Client
 c = Client()
 
 
-# In[7]:
+# In[ ]:
 
 def process_imgid(id_):
     import matplotlib.pyplot as plt
@@ -64,119 +64,119 @@ def process_imgid(id_):
     plt.close('all')
 
 
-# In[8]:
+# In[ ]:
 
 get_ipython().magic('matplotlib nbagg')
 
 
-# In[9]:
+# In[ ]:
 
 plotting.plot_image_id_pipeline('1c5', datapath=path)
 
 
-# In[10]:
+# In[ ]:
 
 plotting.plot_finals('1c5', dir=path)
 
 
-# In[29]:
+# In[ ]:
 
 plotting.plot_raw_blotches('1ab')
 
 
-# In[11]:
+# In[ ]:
 
 x, y = (282.288, 226.657)
 x2, y2 = (303.627, 232.805)
 
 
-# In[12]:
+# In[ ]:
 
 from numpy.linalg import norm
 
 
-# In[13]:
+# In[ ]:
 
 norm(np.array([x,y]-np.array([x2,y2])))
 
 
-# In[17]:
+# In[ ]:
 
 from planet4 import io, helper_functions as hf
 
 
-# In[12]:
+# In[ ]:
 
 db = io.DBManager()
 
 
-# In[13]:
+# In[ ]:
 
 data = db.get_image_id_markings('1fo')
 
 
-# In[14]:
+# In[ ]:
 
 data.classification_id.nunique()
 
 
-# In[15]:
+# In[ ]:
 
 data.head()
 
 
-# In[16]:
+# In[ ]:
 
 data.columns
 
 
-# In[18]:
+# In[ ]:
 
 hf.define_season_column(data)
 
 
-# In[22]:
+# In[ ]:
 
 db.get_classification_id_data('50ef41ea95e6e42e89000001')
 
 
-# In[23]:
+# In[ ]:
 
 db.dbname
 
 
-# In[41]:
+# In[ ]:
 
 lbview = c.load_balanced_view()
 
 
-# In[42]:
+# In[ ]:
 
 results = lbview.map_async(process_imgid, ids[20:])
 
 
-# In[43]:
+# In[ ]:
 
 for res in results:
     print(res)
 
 
-# In[12]:
+# In[ ]:
 
 len(ids)
 
 
-# In[24]:
+# In[ ]:
 
 a='50ef41ea95e6e42e89000001'
 
 
-# In[25]:
+# In[ ]:
 
 b = '50ef419195e6e40eac000001'
 
 
-# In[26]:
+# In[ ]:
 
 a < b
 

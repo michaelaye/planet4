@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 # setup
 get_ipython().magic('matplotlib nbagg')
@@ -11,42 +11,42 @@ from planet4 import plotting, io, markings, clustering
 from pathlib import Path
 
 
-# In[2]:
+# In[ ]:
 
 id_ = '6t3'
 
 
-# In[3]:
+# In[ ]:
 
 cm = clustering.ClusteringManager(include_angle=False)
 
 
-# In[7]:
+# In[ ]:
 
 cm.db.dbname
 
 
-# In[4]:
+# In[ ]:
 
 cm.cluster_image_id(id_)
 
 
-# In[5]:
+# In[ ]:
 
 plotting.plot_raw_fans(id_)
 
 
-# In[6]:
+# In[ ]:
 
 plotting.plot_clustered_fans(id_)
 
 
-# In[8]:
+# In[ ]:
 
 plotting.plot_clustered_blotches(id_)
 
 
-# In[9]:
+# In[ ]:
 
 plotting.plot_finals(id_)
 
