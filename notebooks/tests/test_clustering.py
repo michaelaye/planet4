@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[20]:
+# In[ ]:
 
 # setup
 import planet4 as p4
@@ -22,7 +22,7 @@ with warnings.catch_warnings():
     warnings.filterwarnings("ignore",category=DeprecationWarning)
 
 
-# In[21]:
+# In[ ]:
 
 # test_calc_fnotch
 actual = clustering.calc_fnotch(4, 4)
@@ -33,7 +33,7 @@ actual = clustering.calc_fnotch(0, 4)
 assert actual == 0
 
 
-# In[22]:
+# In[ ]:
 
 # test_dbscan_xy
 
@@ -46,7 +46,7 @@ assert dbscanner.reduced_data == [[0, 1, 2]]
 assert dbscanner.n_rejected == 0
 
 
-# In[23]:
+# In[ ]:
 
 coords = ['image_x','image_y', 'angle']
 X = three_blotches_data[coords].values
@@ -56,12 +56,12 @@ assert dbscanner.reduced_data == [[0, 1]]
 assert dbscanner.n_rejected == 1
 
 
-# In[24]:
+# In[ ]:
 
 p4id = markings.example_p4id()
 
 
-# In[25]:
+# In[ ]:
 
 for eps in range(10,16):
     cm = clustering.ClusteringManager(scope='planet4', eps=eps)
@@ -71,17 +71,17 @@ for eps in range(10,16):
 
 # # Testing test database
 
-# In[26]:
+# In[ ]:
 
 data = pd.read_csv(datapath / 'test_db.csv')
 
 
-# In[27]:
+# In[ ]:
 
 data.image_id.value_counts()
 
 
-# In[28]:
+# In[ ]:
 
 imid1 = 'APF000012w'
 imid2 = 'APF000012q'
@@ -89,18 +89,18 @@ imid1data = data[data.image_id==imid1]
 imid2data = data[data.image_id==imid2]
 
 
-# In[29]:
+# In[ ]:
 
 outputdir = Path('/Users/klay6683/Dropbox/data/planet4/test_clustering')
 cm = clustering.ClusteringManager(fnotched_dir=outputdir)
 
 
-# In[30]:
+# In[ ]:
 
 cm.cluster_image_id(imid1, data=imid1data)
 
 
-# In[31]:
+# In[ ]:
 
 from planet4 import plotting
 get_ipython().magic('matplotlib nbagg')
@@ -108,7 +108,7 @@ import seaborn as sns
 sns.set_context('notebook')
 
 
-# In[32]:
+# In[ ]:
 
 plotting.plot_raw_fans('12w')
 
@@ -119,77 +119,77 @@ from planet4 import markings, plotting
 get_ipython().magic('matplotlib nbagg')
 
 
-# In[33]:
+# In[ ]:
 
 id_='6t3'
 cm = clustering.ClusteringManager(include_angle=False)
 cm.cluster_image_id(id_)
 
 
-# In[34]:
+# In[ ]:
 
 plotting.plot_image_id_pipeline(id_, include_angle=True, include_distance=True,
                                 include_radius=False, eps=10)
 
 
-# In[37]:
+# In[ ]:
 
 plotting.plot_image_id_pipeline(id_, include_angle=False, include_distance=True,
                                 include_radius=True, eps=10, min_distance=15)
 
 
-# In[36]:
+# In[ ]:
 
 plotting.plot_image_id_pipeline(id_, include_angle=False, include_distance=True,
                                 include_radius=False, eps=10, min_distance=15)
 
 
-# In[47]:
+# In[ ]:
 
 plotting.plot_image_id_pipeline('139', include_angle=True, include_distance=True,
                                 include_radius=True, eps=20, min_distance=10)
 
 
-# In[54]:
+# In[ ]:
 
 plotting.plot_image_id_pipeline('13t', include_angle=True, include_distance=True,
                                 include_radius=True, eps=20, min_distance=10)
 
 
-# In[55]:
+# In[ ]:
 
 plotting.plot_finals('13t')
 
 
-# In[81]:
+# In[ ]:
 
 plotting.plot_image_id_pipeline('15k', include_angle=True, include_distance=True,
                                 include_radius=True, eps=20, min_distance=10)
 
 
-# In[53]:
+# In[ ]:
 
 plotting.plot_finals('15k')
 
 
-# In[73]:
+# In[ ]:
 
 db = io.DBManager()
 data = db.get_image_id_markings('17a')
 
 
-# In[80]:
+# In[ ]:
 
 plotting.plot_image_id_pipeline('17a', include_angle=True, include_distance=True,
                                 include_radius=False, eps=20, min_distance=20)
 
 
-# In[60]:
+# In[ ]:
 
 plotting.plot_raw_fans('17a')
 
 
-# In[67]:
+# In[ ]:
 
 plotting.plot_finals('17a')
 
