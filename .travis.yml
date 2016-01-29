@@ -16,11 +16,13 @@ before_install:
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt
   - conda install --yes pytest
-  - pip install pytest-ipynb
+ # - pip install pytest-ipynb
   - python setup.py install
 cache:
   directories:
     - miniconda
 
 # command to run tests, e.g. python setup.py test
-script: py.test *.ipynb
+script:
+    - cd notebooks/tests
+    - py.test
