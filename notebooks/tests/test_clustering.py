@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[20]:
 
 # setup
 import planet4 as p4
@@ -22,7 +22,7 @@ with warnings.catch_warnings():
     warnings.filterwarnings("ignore",category=DeprecationWarning)
 
 
-# In[2]:
+# In[21]:
 
 # test_calc_fnotch
 actual = clustering.calc_fnotch(4, 4)
@@ -33,7 +33,7 @@ actual = clustering.calc_fnotch(0, 4)
 assert actual == 0
 
 
-# In[3]:
+# In[22]:
 
 # test_dbscan_xy
 
@@ -46,7 +46,7 @@ assert dbscanner.reduced_data == [[0, 1, 2]]
 assert dbscanner.n_rejected == 0
 
 
-# In[4]:
+# In[23]:
 
 coords = ['image_x','image_y', 'angle']
 X = three_blotches_data[coords].values
@@ -56,12 +56,12 @@ assert dbscanner.reduced_data == [[0, 1]]
 assert dbscanner.n_rejected == 1
 
 
-# In[5]:
+# In[24]:
 
 p4id = markings.example_p4id()
 
 
-# In[6]:
+# In[25]:
 
 for eps in range(10,16):
     cm = clustering.ClusteringManager(scope='planet4', eps=eps)
@@ -71,17 +71,17 @@ for eps in range(10,16):
 
 # # Testing test database
 
-# In[7]:
+# In[26]:
 
 data = pd.read_csv(datapath / 'test_db.csv')
 
 
-# In[8]:
+# In[27]:
 
 data.image_id.value_counts()
 
 
-# In[9]:
+# In[28]:
 
 imid1 = 'APF000012w'
 imid2 = 'APF000012q'
@@ -89,18 +89,18 @@ imid1data = data[data.image_id==imid1]
 imid2data = data[data.image_id==imid2]
 
 
-# In[10]:
+# In[29]:
 
 outputdir = Path('/Users/klay6683/Dropbox/data/planet4/test_clustering')
 cm = clustering.ClusteringManager(fnotched_dir=outputdir)
 
 
-# In[11]:
+# In[30]:
 
 cm.cluster_image_id(imid1, data=imid1data)
 
 
-# In[12]:
+# In[31]:
 
 from planet4 import plotting
 get_ipython().magic('matplotlib nbagg')
@@ -108,132 +108,177 @@ import seaborn as sns
 sns.set_context('notebook')
 
 
-# In[13]:
+# In[32]:
 
 plotting.plot_raw_fans('12w')
 
 
-# In[10]:
+# In[ ]:
 
 from planet4 import markings, plotting
 get_ipython().magic('matplotlib nbagg')
 
 
-# In[8]:
+# In[33]:
 
 id_='6t3'
 cm = clustering.ClusteringManager(include_angle=False)
 cm.cluster_image_id(id_)
 
 
-# In[15]:
+# In[34]:
 
 plotting.plot_image_id_pipeline(id_, include_angle=True, include_distance=True,
                                 include_radius=False, eps=10)
 
 
-# In[16]:
+# In[37]:
 
 plotting.plot_image_id_pipeline(id_, include_angle=False, include_distance=True,
-                                include_radius=True, eps=10)
+                                include_radius=True, eps=10, min_distance=15)
 
 
-# In[18]:
+# In[36]:
 
 plotting.plot_image_id_pipeline(id_, include_angle=False, include_distance=True,
                                 include_radius=False, eps=10, min_distance=15)
 
 
-# In[109]:
+# In[47]:
 
-plotting.plot_clustered_fans(id_)
+plotting.plot_image_id_pipeline('139', include_angle=True, include_distance=True,
+                                include_radius=True, eps=20, min_distance=10)
 
 
-# In[42]:
+# In[54]:
+
+plotting.plot_image_id_pipeline('13t', include_angle=True, include_distance=True,
+                                include_radius=True, eps=20, min_distance=10)
+
+
+# In[55]:
+
+plotting.plot_finals('13t')
+
+
+# In[81]:
+
+plotting.plot_image_id_pipeline('15k', include_angle=True, include_distance=True,
+                                include_radius=True, eps=20, min_distance=10)
+
+
+# In[53]:
+
+plotting.plot_finals('15k')
+
+
+# In[73]:
+
+db = io.DBManager()
+data = db.get_image_id_markings('17a')
+
+
+# In[80]:
+
+plotting.plot_image_id_pipeline('17a', include_angle=True, include_distance=True,
+                                include_radius=False, eps=20, min_distance=20)
+
+
+# In[60]:
+
+plotting.plot_raw_fans('17a')
+
+
+# In[67]:
+
+plotting.plot_finals('17a')
+
+
+# In[ ]:
 
 imgid = markings.ImageID(id_)
 
 
-# In[43]:
+# In[ ]:
 
 fans = imgid.get_fans()
 
 
-# In[44]:
+# In[ ]:
 
 dbscanner = clustering.DBScanner(fans[['x','y']].values)
 
 
-# In[45]:
+# In[ ]:
 
 dbscanner.reduced_data
 
 
-# In[46]:
+# In[ ]:
 
 fan = fans.iloc[dbscanner.reduced_data[6]]
 
 imgid.plot_fans(fans=markings.FanContainer.from_df(fan).content)
 
 
-# In[22]:
+# In[ ]:
 
 fan[['x','y']]
 
 
-# In[47]:
+# In[ ]:
 
 markings.Fan.to_average
 
 
-# In[49]:
+# In[ ]:
 
 clusterdata = fans[markings.Fan.to_average].iloc[dbscanner.reduced_data[6]]
 clusterdata
 
 
-# In[93]:
+# In[ ]:
 
 from scipy.stats import circmean
 
 
-# In[99]:
+# In[ ]:
 
 np.rad2deg(circmean(np.deg2rad(angles)))
 
 
-# In[100]:
+# In[ ]:
 
 meandata = clusterdata.mean()
 meandata
 
 
-# In[101]:
+# In[ ]:
 
 meandata.angle = np.rad2deg(circmean(np.deg2rad(clusterdata.angle)))
 
 
-# In[102]:
+# In[ ]:
 
 meandata
 
 
-# In[53]:
+# In[ ]:
 
 type(meandata)
 
 
-# In[56]:
+# In[ ]:
 
 imgid.plot_fans(fans=[markings.Fan(meandata)])
 
 
-# In[52]:
+# In[ ]:
 
 plotting.plot_clustered_fans('6t3')
 
 
-# In[58]:
+# In[ ]:
 
 angle1 = 181
 angle2 = 538
@@ -246,7 +291,7 @@ fantest2 = markings.Fan(pd.Series(dict(x=200,y=200, angle=angle2, spread=30, dis
 imgid.plot_fans(fans=[fantest, fantest2])
 
 
-# In[103]:
+# In[ ]:
 
 angle2 = 182
 fantest2 = markings.Fan(pd.Series(dict(x=meandata.x,y=meandata.y, angle=angle2, 
@@ -255,12 +300,12 @@ fantest2 = markings.Fan(pd.Series(dict(x=meandata.x,y=meandata.y, angle=angle2,
 imgid.plot_fans(fans=[fantest2])
 
 
-# In[68]:
+# In[ ]:
 
 meandata.angle
 
 
-# In[66]:
+# In[ ]:
 
 imgid.plot_fans(fans=[markings.Fan(meandata)])
 
