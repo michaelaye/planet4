@@ -53,3 +53,5 @@ nosetests.xml
 **/.DS_Store
 *.sublime-workspace
 .cache
+
+notebooks/tests/label_encoder.pkl
