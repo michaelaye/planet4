@@ -6,7 +6,7 @@
 # setup
 from planet4 import io
 import tempfile
-
+import numpy as np
 import planet4 as p4
 from pathlib import Path
 datapath = Path(p4.__path__[0]) / 'data'
@@ -59,39 +59,39 @@ with pytest.raises(p4.exceptions.NoFilesFoundError):
 pm = io.PathManager('/tmp')
 # testing exceptions
 with pytest.raises(TypeError):
-    assert pm.fanfile == Path('/tmp/ABC01234_fans.hdf')
-    assert pm.blotchfile == Path('/tmp/ABC01234_blotches.hdf')
-    assert pm.fnotchfile == Path('/tmp/ABC01234_fnotches.hdf')
+    assert pm.fanfile == Path('/tmp/ABC0001234_fans.hdf')
+    assert pm.blotchfile == Path('/tmp/ABC0001234_blotches.hdf')
+    assert pm.fnotchfile == Path('/tmp/ABC0001234_fnotches.hdf')
 
 
 # In[ ]:
 
 # test_PathManager_proper_setup
 pm = io.PathManager('/tmp')
-pm.id_ = 'ABC01234'
-assert pm.fanfile == Path('/tmp/ABC01234_fans.hdf')
-assert pm.blotchfile == Path('/tmp/ABC01234_blotches.hdf')
-assert pm.fnotchfile == Path('/tmp/ABC01234_fnotches.hdf')
+pm.id_ = 'ABC0001234'
+assert pm.fanfile == Path('/tmp/ABC0001234_fans.hdf')
+assert pm.blotchfile == Path('/tmp/ABC0001234_blotches.hdf')
+assert pm.fnotchfile == Path('/tmp/ABC0001234_fnotches.hdf')
 
 
 # In[ ]:
 
 # test_PathManager_suffix_.h5
 pm = io.PathManager('/tmp', suffix='.h5')
-pm.id_ = 'ABC01234'
-assert pm.fanfile == Path('/tmp/ABC01234_fans.h5')
-assert pm.blotchfile == Path('/tmp/ABC01234_blotches.h5')
-assert pm.fnotchfile == Path('/tmp/ABC01234_fnotches.h5')
+pm.id_ = 'ABC0001234'
+assert pm.fanfile == Path('/tmp/ABC0001234_fans.h5')
+assert pm.blotchfile == Path('/tmp/ABC0001234_blotches.h5')
+assert pm.fnotchfile == Path('/tmp/ABC0001234_fnotches.h5')
 
 
 # In[ ]:
 
 # test_PathManager_suffix_.csv
 pm = io.PathManager('/tmp', suffix='.csv')
-pm.id_ = 'ABC01234'
-assert pm.fanfile == Path('/tmp/ABC01234_fans.csv')
-assert pm.blotchfile == Path('/tmp/ABC01234_blotches.csv')
-assert pm.fnotchfile == Path('/tmp/ABC01234_fnotches.csv')
+pm.id_ = 'ABC0001234'
+assert pm.fanfile == Path('/tmp/ABC0001234_fans.csv')
+assert pm.blotchfile == Path('/tmp/ABC0001234_blotches.csv')
+assert pm.fnotchfile == Path('/tmp/ABC0001234_fnotches.csv')
 
 
 # In[ ]:
@@ -102,29 +102,4 @@ pm = io.PathManager(tempdir.name)
 pm.setup_folders()
 assert pm.fnotched_dir == Path(tempdir.name)
 assert pm.output_dir_clustered == Path(tempdir.name) / 'just_clustering'
-
-
-# In[ ]:
-
-pm = io.PathManager()
-
-
-# In[ ]:
-
-pm.setup_folders()
-
-
-# In[ ]:
-
-pm.id_ = 'ABC'
-
-
-# In[ ]:
-
-pm.fanfile
-
-
-# In[ ]:
-
-
 
