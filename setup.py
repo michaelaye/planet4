@@ -36,7 +36,7 @@ setup(
     setup_requires=['setuptools_scm'],
     packages=['planet4'],
     install_requires=['pandas>=0.17.1'],
-    tests_require=['pytest'],
+    tests_require=['pytest', 'pandas', 'pytables'],
     extras_require={
         'test': ['coverage'],
     },
