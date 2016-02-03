@@ -7,7 +7,6 @@
 import planet4 as p4
 import pandas as pd
 from pathlib import Path
-datapath = Path(p4.__path__[0]) / 'data'
 
 from planet4 import clustering, markings, io
 data = {'x':[210,211,212], 'y':[100,102, 104], 'image_x':[10010,10011,10012], 
@@ -64,7 +63,10 @@ assert dbscanner.n_rejected == 1
 
 # test_test_database
 
-data = pd.read_csv(datapath / 'test_db.csv')
+import pkg_resources as pr
+
+with pr.resource_stream('planet4', 'data/test_db.csv') as f:
+    data = pd.read_csv(f)
 imid1 = 'APF000012w'
 imid2 = 'APF000012q'
 vc = data.image_id.value_counts()
@@ -104,4 +106,9 @@ assert expected.exists() and expected.is_dir()
 expected = tdir / 'just_clustering'    
 
 _tdir.cleanup()
+
+
+# In[ ]:
+
+
 
