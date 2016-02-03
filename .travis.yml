@@ -18,7 +18,7 @@ before_install:
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt
   - conda install --yes pytest
-  - pip install git+ssh://git@github.com:zonca/pytest-ipynb.git
+  - pip install git+https://github.com/zonca/pytest-ipynb.git
   - pip install --pre .
 
 # command to run tests, e.g. python setup.py test
