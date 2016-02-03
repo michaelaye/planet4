@@ -1,0 +1,10 @@
+doc-warnings: yes
+test-warnings: yes
+strictness: veryhigh
+max-line-length: 100
+autodetect: yes
+ignore-paths:
+    - meg
+    - notebooks
+python-targets:
+    - 3
