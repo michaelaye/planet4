@@ -38,13 +38,6 @@ assert_array_equal(expected, result)
 
 # In[ ]:
 
-# test_get_current_database_fname
-fname = io.get_current_database_fname()
-assert isinstance(fname, Path)
-
-
-# In[ ]:
-
 # test_get_latest_file
 l = ['2015-12-01_test.h5','2015-11-01_test.h5']
 assert io.get_latest_file(l) == Path(l[0])
