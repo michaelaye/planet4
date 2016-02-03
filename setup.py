@@ -1,9 +1,12 @@
+#!/usr/bin/env python
+
 import sys
 
-from setuptools import find_packages, setup
+from setuptools import setup
 from setuptools.command.test import test as TestCommand
-
-pandas_version = '0.17.0'
+from os import path
+# To use a consistent encoding
+from codecs import open
 
 
 class PyTest(TestCommand):
@@ -20,18 +23,26 @@ class PyTest(TestCommand):
         sys.exit(errno)
 
 
+here = path.abspath(path.dirname(__file__))
+
+# Get the long description from the README file
+with open(path.join(here, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
+
+
 setup(
     name="planet4",
-    version="0.5",
-    packages=find_packages(),
-
-    package_data={
-        # Add small test database for tests
-        '': ['data/*']
-    },
-
-    install_requires=['pandas>='+pandas_version],
+    use_scm_version=True,
+    setup_requires=['setuptools_scm'],
+    packages=['planet4'],
+    install_requires=['pandas>=0.17.1'],
     tests_require=['pytest'],
+    extras_require={
+        'test': ['coverage'],
+    },
+    package_data={
+        'planet4' : ['data/*']
+    },
 
     cmdclass={'test': PyTest},
 
@@ -49,7 +60,16 @@ setup(
     author="K.-Michael Aye",
     author_email="kmichael.aye@gmail.com",
     description="Software for the reduction and analysis of Planet4 data.",
+    long_description=long_description,
     license="ISC",
     keywords="Mars Planet4 Zooniverse",
-    url="http://www.planetfour.org",
+    url="http://github.com/michaelaye/planet4",
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: ISC License (ISCL)',
+        'Programming Language :: Python :: 3.5',
+        'Topic :: Scientific/Engineering :: Astronomy',
+        'Topic :: Scientific/Engineering :: Information Analysis',
+    ]
 )
