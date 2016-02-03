@@ -55,3 +55,4 @@ nosetests.xml
 .cache
 
 notebooks/tests/label_encoder.pkl
+.eggs
