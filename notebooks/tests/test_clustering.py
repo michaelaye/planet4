@@ -80,7 +80,7 @@ from tempfile import TemporaryDirectory
 
 _tdir = TemporaryDirectory()
 tdir = Path(_tdir.name)
-cm = clustering.ClusteringManager(fnotched_dir=tdir)
+cm = clustering.ClusteringManager(dbname='ignore', fnotched_dir=tdir)
 
 _id = imid1
 cm.cluster_image_id(_id, data=data[data.image_id==_id])
@@ -106,9 +106,4 @@ assert expected.exists() and expected.is_dir()
 expected = tdir / 'just_clustering'    
 
 _tdir.cleanup()
-
-
-# In[ ]:
-
-
 
