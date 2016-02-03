@@ -24,7 +24,7 @@ install:
 # command to run tests, e.g. python setup.py test
 script:
     - cd notebooks/tests
-    - py.test
+    - py.test -v
 
 notifications:
   webhooks:
