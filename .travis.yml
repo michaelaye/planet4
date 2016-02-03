@@ -1,6 +1,8 @@
 sudo: false
 language: python
 
+cache: pip
+
 branches:
   except:
     - gh-pages
@@ -18,9 +20,6 @@ install:
   - conda install --yes pytest
   - pip install pytest-ipynb
   - pip install --pre .
-cache:
-  directories:
-    - miniconda
 
 # command to run tests, e.g. python setup.py test
 script:
