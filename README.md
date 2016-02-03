@@ -9,6 +9,8 @@ Software to support the analyis of planetfour data.
 
 See more on the Wiki [here](https://github.com/michaelaye/planet4/wiki)
 
+Release link [![DOI](https://zenodo.org/badge/15486/michaelaye/planet4.svg)](https://zenodo.org/badge/latestdoi/15486/michaelaye/planet4)
+
 Poster at the DPS 2015 conference:
 [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.34114.svg)](http://dx.doi.org/10.5281/zenodo.34114)
 
