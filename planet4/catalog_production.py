@@ -70,7 +70,7 @@ def main():
     args = parser.parse_args()
 
     image_names = get_image_names_from_db(args.db_fname)
-    logging.info('Found %s image_names', len(image_names))
+    logging.info('Found %i image_names', len(image_names))
 
     c = Client()
     dview = c.direct_view()

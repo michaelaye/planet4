@@ -181,8 +181,7 @@ class ClusteringManager(object):
             reduced_data.append(cluster)
 
         self.reduced_data[kind] = reduced_data
-        logging.debug("Reduced data to {} {}(e)s.".format(len(reduced_data),
-                                                          kind))
+        logging.debug("Reduced data to %i %s(e)s.", len(reduced_data), kind)
 
     def cluster_data(self, data):
         """Basic clustering.
@@ -258,7 +257,7 @@ class ClusteringManager(object):
         self.fnotches = fnotches
         self.fnotched_blotches = blotches
         self.fnotched_fans = fans
-        logging.debug("CM: do_the_fnotch: Found {} fnotches.".format(n_close))
+        logging.debug("CM: do_the_fnotch: Found %i fnotches.", n_close)
 
     def execute_pipeline(self, data):
         """Execute the standard list of methods for catalog production.
