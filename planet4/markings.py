@@ -41,11 +41,11 @@ def calc_fig_size(width):
 
 
 def gold_legend(ax):
-    colors = list('cmyg')
-    line1 = plt.Line2D(range(10), range(10), marker='o', color=colors[0])
-    line2 = plt.Line2D(range(10), range(10), marker='o', color=colors[1])
-    line3 = plt.Line2D(range(10), range(10), marker='o', color=colors[2])
-    line4 = plt.Line2D(range(10), range(10), marker='o', color=colors[3])
+    lcolors = list('cmyg')
+    line1 = plt.Line2D(range(10), range(10), marker='o', color=lcolors[0])
+    line2 = plt.Line2D(range(10), range(10), marker='o', color=lcolors[1])
+    line3 = plt.Line2D(range(10), range(10), marker='o', color=lcolors[2])
+    line4 = plt.Line2D(range(10), range(10), marker='o', color=lcolors[3])
     ax.legend((line1, line2, line3, line4),
               gold_members, numpoints=2, loc='best', fontsize=7)
 
@@ -55,7 +55,7 @@ def set_upper_left_corner(ul_x, ul_y):
     mngr = plt.get_current_fig_manager()
     # to put it into the upper left corner for example:
     geom = mngr.window.geometry()
-    x, y, dx, dy = geom.getRect()
+    _, _, dx, dy = geom.getRect()
     mngr.window.setGeometry(ul_x, ul_y, dx, dy)
 
 
@@ -139,7 +139,7 @@ class ImageID(object):
             blotches = [Blotch(i) for _, i in
                         self.get_blotches(user_name, without_users).iterrows()]
         if ax is None:
-            fig, ax = plt.subplots(figsize=calc_fig_size(8))
+            _, ax = plt.subplots(figsize=calc_fig_size(8))
         if img:
             self.show_subframe(ax)
         if n is None:
@@ -163,7 +163,7 @@ class ImageID(object):
             fans = [Fan(i) for _, i in
                     self.get_fans(user_name, without_users).iterrows()]
         if ax is None:
-            fig, ax = plt.subplots(figsize=calc_fig_size(8))
+            _, ax = plt.subplots(figsize=calc_fig_size(8))
         if img:
             self.show_subframe(ax)
         if n is None:
@@ -437,7 +437,7 @@ class Fan(lines.Line2D):
         ax.add_line(pointer)
 
     def plot(self):
-        fig, ax = plt.subplots()
+        _, ax = plt.subplots()
         img = np.ones(img_shape)
         ax.imshow(img)
         ax.add_line(self)
