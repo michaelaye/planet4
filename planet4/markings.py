@@ -550,20 +550,17 @@ class Container(object):
         df = pd.read_hdf(str(fname))
         return cls.from_df(df)
 
-    def __init__(self, iterable, cls):
-        self.content = [cls(item) for item in iterable]
-
 
 class FanContainer(Container):
 
     def __init__(self, iterable):
-        super().__init__(iterable, Fan)
+        self.content = [Fan(item) for item in iterable]
 
 
 class BlotchContainer(Container):
 
     def __init__(self, iterable):
-        super().__init__(iterable, Blotch)
+        self.content = [Blotch(item) for item in iterable]
 
 
 class FnotchContainer(Container):
