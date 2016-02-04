@@ -40,7 +40,7 @@ def get_image_name_from_data(data):
 
 def add_ellipses_to_axis(ax, blotches):
     colors = cycle('bgrcmyk')
-    for i, color in zip(xrange(len(blotches),), colors):
+    for i, color in zip(range(len(blotches),), colors):
         line = blotches.iloc[i]
         ax.scatter(line.x, line.y, color=color)
         el = Ellipse((line.x, line.y),
