@@ -1,0 +1,14 @@
+# Configuration for coverage.py
+
+[run]
+branch = True
+source = planet4
+include = */planet4/*
+
+[report]
+exclude_lines =
+    def __repr__
+    if __name__ == .__main__.:
+
+[html]
+directory = coverage_html_report
