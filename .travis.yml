@@ -18,21 +18,21 @@ before_install:
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt
   - conda install --yes pytest
-  - pip install codecov
-  - pip install pytest-cov
+  # - pip install codecov
+  # - pip install pytest-cov
   - pip install coveralls
   - pip install git+https://github.com/zonca/pytest-ipynb.git
   - pip install --pre .
 
 # command to run tests, e.g. python setup.py test
 script:
-    - py.test -s --cov .
+    # - py.test -s --cov .
     - cd notebooks/tests
     - py.test -v
 
 after_success:
     - coveralls
-    - codecov
+    # - codecov
 
 notifications:
   webhooks:
