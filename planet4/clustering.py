@@ -105,8 +105,8 @@ class ClusteringManager(object):
 
     def prepare_DBSCAN_input(self, data, kind):
         # filter for the marking for `kind`
-        markings = data[data.marking == kind]
-        if len(markings) == 0:
+        marking_data = data[data.marking == kind]
+        if len(marking_data) == 0:
             return None
 
         if self.scope == 'planet4':
@@ -123,9 +123,9 @@ class ClusteringManager(object):
             if self.include_radius:
                 coords += ['radius_1', 'radius_2']
         # Determine the clustering input matrix
-        current_X = markings[coords].values
+        current_X = marking_data[coords].values
         self.current_coords = coords
-        self.current_markings = markings
+        self.current_markings = marking_data
         return current_X
 
     def post_processing(self, dbscanner, kind):
@@ -422,10 +422,10 @@ def calc_fnotch(nfans, nblotches):
     return (nfans)/(nfans+nblotches)
 
 
-def gold_star_plotter(gold_id, axis, blotches=True, kind='blotches'):
+def gold_star_plotter(gold_id, axis, kind='blotches'):
     for goldstar, color in zip(markings.gold_members,
                                markings.gold_plot_colors):
-        if blotches:
+        if kind == 'blotches':
             gold_id.plot_blotches(user_name=goldstar, ax=axis,
                                   user_color=color)
         if kind == 'fans':
@@ -479,12 +479,12 @@ def main():
     # citizen stuff
     p4img.plot_fans(ax=axes[0])
     axes[0].set_title('Citizen Markings')
-    DBScanner(p4img.get_fans(), 'fan', ax=axes[1], eps=7, min_samples=5,
-              linestyle='-')
+    # TODO: fix use syntax of DBScanner here
+    # DBScanner(p4img.get_fans(), eps=7, min_samples=5)
     axes[1].set_title('All citizens clusters (including science team)')
 
     # gold stuff
-    gold_star_plotter(p4img, axes[2], fans=True, blotches=False)
+    gold_star_plotter(p4img, axes[2], kind='fans')
     axes[2].set_title('Science team markings')
     DBScanner(golddata, 'fan', ax=axes[1], min_samples=2, eps=11,
               linestyle='--')
