@@ -63,6 +63,10 @@ class ClusteringManager(object):
         List of clustered Fan objects after clustering and averaging.
     clustered_blotches : list
         List of clustered Blotch objects after clustering and averaging.
+    current_coords : list
+        List of coordinate columns currently used for clustering
+    current_markings : pandas.DataFrame
+        Dataframe with the currently to-be-clustered marking data
     n_clustered_fans
     n_clustered_blotches
     output_dir_clustered : pathlib.Path
@@ -86,6 +90,9 @@ class ClusteringManager(object):
         self.include_radius = include_radius
         self.confusion = []
         self.output_format = output_format
+        # to be defined at runtime:
+        self.current_coords = None
+        self.current_markings = None
 
         self.pm = pm if pm is not None else io.PathManager(fnotched_dir, id_=id_)
         self.pm.setup_folders()
