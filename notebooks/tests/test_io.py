@@ -9,12 +9,13 @@ import tempfile
 import numpy as np
 import planet4 as p4
 from pathlib import Path
-datapath = Path(p4.__path__[0]) / 'data'
-
 import datetime as dt
 from numpy.testing import assert_array_equal
 import datetime as dt
 import pytest
+import pkg_resources as pr
+
+datapath = Path(pr.resource_filename('planet4', 'data'))
 
 
 # In[ ]:
