@@ -1,5 +1,5 @@
 class Manhattan:
-    lat = --85.751
+    lat = -85.751
     lon = 105.971
     season1 = ['PSP_002770_0940',
                'PSP_003113_0940']
