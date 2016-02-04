@@ -6,7 +6,7 @@ Software to support the analyis of planetfour data.
 
 [![Build Status](https://travis-ci.org/michaelaye/planet4.svg?branch=master)](https://travis-ci.org/michaelaye/planet4)
 [![Coverage Status](https://coveralls.io/repos/github/michaelaye/planet4/badge.svg?branch=master)](https://coveralls.io/github/michaelaye/planet4?branch=master)
-[![Code Health](https://landscape.io/github/michaelaye/planet4/master/landscape.svg?style=flat)](https://landscape.io/github/michaelaye/planet4/master)
+[![Code Health](https://landscape.io/github/michaelaye/planet4/master/landscape.svg?style=plastic)](https://landscape.io/github/michaelaye/planet4/master)
 
 See more on the Wiki [here](https://github.com/michaelaye/planet4/wiki)
 
