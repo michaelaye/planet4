@@ -57,7 +57,7 @@ def plot_finals(id_, dir=None):
     if not all([pm.reduced_blotchfile.exists(),
                 pm.reduced_fanfile.exists()]):
         cm = clustering.ClusteringManager(id_=id_, fnotched_dir=dir)
-        cm.cluster_image_id(id_=id_)
+        cm.cluster_image_id(id_)
         pm = cm.pm
 
     finalfans = markings.FanContainer.from_fname(pm.final_fanfile)
