@@ -52,7 +52,7 @@ def add_ellipses_to_axis(ax, blotches):
 def plot_blotches(data, _id):
     blotches = get_blotches(data, _id)
     # this will endlessly cycle through the colors given
-    fig, ax = plt.subplots(ncols=2)
+    _, ax = plt.subplots(ncols=2)
     img = get_image_from_record(blotches.iloc[0])
     ax[0].imshow(img)
     im = ax[1].imshow(img)

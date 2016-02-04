@@ -52,11 +52,11 @@ def plot_raw_blotches(id_):
     plt.show()
 
 
-def plot_finals(id_, dir=None):
-    pm = io.PathManager(id_=id_, datapath=dir)
+def plot_finals(id_, _dir=None):
+    pm = io.PathManager(id_=id_, datapath=_dir)
     if not all([pm.reduced_blotchfile.exists(),
                 pm.reduced_fanfile.exists()]):
-        cm = clustering.ClusteringManager(id_=id_, fnotched_dir=dir)
+        cm = clustering.ClusteringManager(id_=id_, fnotched_dir=_dir)
         cm.cluster_image_id(id_)
         pm = cm.pm
 
@@ -65,16 +65,16 @@ def plot_finals(id_, dir=None):
 
     imgid = markings.ImageID(id_)
 
-    fig, ax = plt.subplots()
+    _, ax = plt.subplots()
     imgid.plot_fans(ax=ax, fans=finalfans.content)
     imgid.plot_blotches(ax=ax, blotches=finalblotches.content)
     plt.show()
 
 
-def plot_clustered_blotches(id_, dir=None):
-    pm = io.PathManager(id_=id_, datapath=dir)
+def plot_clustered_blotches(id_, _dir=None):
+    pm = io.PathManager(id_=id_, datapath=_dir)
     if not pm.reduced_blotchfile.exists():
-        cm = clustering.ClusteringManager(id_=id_, fnotched_dir=dir)
+        cm = clustering.ClusteringManager(id_=id_, fnotched_dir=_dir)
         cm.cluster_image_id(id_)
         pm = cm.pm
 
@@ -85,10 +85,10 @@ def plot_clustered_blotches(id_, dir=None):
     plt.show()
 
 
-def plot_clustered_fans(id_, dir=None):
-    pm = io.PathManager(id_=id_, datapath=dir)
+def plot_clustered_fans(id_, _dir=None):
+    pm = io.PathManager(id_=id_, datapath=_dir)
     if not pm.reduced_fanfile.exists():
-        cm = clustering.ClusteringManager(id_=id_, fnotched_dir=dir)
+        cm = clustering.ClusteringManager(id_=id_, fnotched_dir=_dir)
         cm.cluster_image_id(id_)
         pm = cm.pm
 

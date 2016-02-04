@@ -90,7 +90,7 @@ def splitting_tutorials(rootpath, df):
                                 'local_mars_time'], axis=1)
     tutorials.to_hdf(tutfpath, 'df', format='t')
 
-    logging.info("Tutorial split done.\nCreated {}.".format(tutfpath))
+    logging.info("Tutorial split done.\nCreated %s.", tutfpath)
     return df[df.image_name != 'tutorial']
 
 
@@ -99,7 +99,7 @@ def produce_fast_read(rootpath, df):
                  "fast read-in of all data.")
     newfpath = '{0}_fast_all_read.h5'.format(rootpath)
     df.to_hdf(newfpath, 'df')
-    logging.info("Created {}.".format(newfpath))
+    logging.info("Created %s.", newfpath)
 
 
 def convert_ellipse_angles(df):
@@ -213,7 +213,7 @@ def merge_temp_files(dbname, image_names=None, do_odo=False):
     dbname = Path(dbname)
     newname = dbname.stem + '_cleaned' + dbname.suffix
     dbnamenew = dbname.with_name(newname)
-    logging.info('Creating concatenated db file {}'.format(dbnamenew))
+    logging.info('Creating concatenated db file %s', dbnamenew)
     if not do_odo:
         df = []
     for image_name in image_names:
@@ -293,7 +293,7 @@ def create_season2_and_3_database():
     if os.path.exists(newfname):
         os.remove(newfname)
     season23.to_hdf(newfname, 'df', format='t', data_columns=data_columns)
-    logging.info('Finished. Produced {}.'.format(newfname))
+    logging.info('Finished. Produced %s', newfname)
 
 
 def main():
@@ -399,8 +399,8 @@ def main():
     df.to_hdf(newfpath, 'df',
               format='table',
               data_columns=['image_name'])
-    logging.info("Writing to HDF file finished. Created {}. "
-                 "Reduction complete.".format(newfpath))
+    logging.info("Writing to HDF file finished. Created %s. "
+                 "Reduction complete.", newfpath)
 
     # free memory
     df = 0
@@ -409,7 +409,7 @@ def main():
         remove_duplicates_from_file(newfpath)
 
     dt = time.time() - t0
-    logging.info("Time taken: {} minutes.".format(dt / 60.0))
+    logging.info("Time taken: %f minutes.", dt / 60.0)
 
 if __name__ == '__main__':
     main()

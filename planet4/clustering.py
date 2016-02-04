@@ -1,3 +1,4 @@
+"""Managing clustering, fnotching and cut application here."""
 from __future__ import division, print_function
 
 import importlib
@@ -22,7 +23,6 @@ matplotlib.style.use('bmh')
 
 
 class ClusteringManager(object):
-
     """Control class to manage the clustering pipeline.
 
     Parameters
@@ -108,19 +108,20 @@ class ClusteringManager(object):
         self.pm.setup_folders()
 
     def __getattr__(self, name):
+        """Search for attributes in PathManager if not offered in this object."""
         return getattr(self.pm, name)
 
     @property
     def n_clustered_fans(self):
-        "int : Number of clustered fans."
+        """int : Number of clustered fans."""
         return len(self.clustered_data['fan'])
 
     @property
     def n_clustered_blotches(self):
-        "int : Number of clustered blotches."
+        """int : Number of clustered blotches."""
         return len(self.clustered_data['blotch'])
 
-    def prepare_DBSCAN_input(self, data, kind):
+    def pre_processing(self, data, kind):
         # filter for the marking for `kind`
         marking_data = data[data.marking == kind]
         if len(marking_data) == 0:
@@ -211,7 +212,7 @@ class ClusteringManager(object):
         self.reduced_data = {}
         for kind in ['fan', 'blotch']:
             # self.include_angle = False if kind == 'blotch' else True
-            current_X = self.prepare_DBSCAN_input(data, kind)
+            current_X = self.pre_processing(data, kind)
             dbscanner = DBScanner(current_X, eps=self.eps)
             # storing of clustered data happens in here:
             self.post_processing(dbscanner, kind)
@@ -234,7 +235,6 @@ class ClusteringManager(object):
         markings.Fnotch : The Fnotch object with a `get_marking` method for a
             `cut` value.
         """
-
         logging.debug("CM: do_the_fnotch")
         from numpy.linalg import norm
         n_close = 0
@@ -308,8 +308,7 @@ class ClusteringManager(object):
         self.execute_pipeline(data)
 
     def store_output(self):
-        "Write out the clustered and fnotched data."
-
+        """Write out the clustered and fnotched data."""
         logging.debug('CM: Writing output files.')
         logging.debug('CM: Output dir: %s', self.fnotched_dir)
         # first write the fnotched data
@@ -435,7 +434,7 @@ def get_mean_position(fan, blotch, scope):
 
 
 def calc_fnotch(nfans, nblotches):
-    return (nfans)/(nfans+nblotches)
+    return (nfans) / (nfans + nblotches)
 
 
 def gold_star_plotter(gold_id, axis, kind='blotches'):
