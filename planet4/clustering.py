@@ -48,6 +48,9 @@ class ClusteringManager(object):
         Format to save the output in. Default: 'hdf'
     cut : float
         Value to apply for fnotch cutting.
+    min_samples_factor : float
+        Value to multiply the number of unique classifications per image_id with
+        to determine the `min_samples` value for DBSCAN to use. Default: 0.1
 
     Attributes
     ----------
@@ -79,6 +82,7 @@ class ClusteringManager(object):
 
     def __init__(self, dbname=None, scope='hirise', min_distance=10, eps=10,
                  fnotched_dir=None, output_format='hdf', cut=0.5,
+                 min_samples_factor=0.1,
                  include_angle=True, id_=None, pm=None,
                  include_distance=True, include_radius=True):
         self.db = io.DBManager(dbname)
@@ -92,6 +96,7 @@ class ClusteringManager(object):
         self.include_radius = include_radius
         self.confusion = []
         self.output_format = output_format
+        self.min_samples_factor = min_samples_factor
 
         # to be defined at runtime:
         self.current_coords = None
@@ -142,9 +147,15 @@ class ClusteringManager(object):
                 coords += ['radius_1', 'radius_2']
         # Determine the clustering input matrix
         current_X = marking_data[coords].values
+
+        # Calculate the unique classification_ids so that the mininum number of
+        # samples for DBScanner can be calculated (10 % currently)
+        n_classifications = marking_data.classification_id.nunique()
+
+        # store stuff for later
         self.current_coords = coords
         self.current_markings = marking_data
-        return current_X
+        return current_X, n_classifications
 
     def post_processing(self, dbscanner, kind):
         """Create mean objects out of cluster label members.
@@ -212,8 +223,10 @@ class ClusteringManager(object):
         self.reduced_data = {}
         for kind in ['fan', 'blotch']:
             # self.include_angle = False if kind == 'blotch' else True
-            current_X = self.pre_processing(data, kind)
-            dbscanner = DBScanner(current_X, eps=self.eps)
+            current_X, n_classifications = self.pre_processing(data, kind)
+            min_samples = round(self.min_samples_factor * n_classifications)
+            dbscanner = DBScanner(current_X,
+                                  eps=self.eps, min_samples=min_samples)
             # storing of clustered data happens in here:
             self.post_processing(dbscanner, kind)
             self.confusion.append((self.pm.id_, kind,
@@ -424,6 +437,7 @@ class ClusteringManager(object):
 
 
 def get_mean_position(fan, blotch, scope):
+    """Calculate mean for just the base coordinates of some data."""
     if scope == 'hirise':
         columns = ['hirise_x', 'hirise_y']
     else:
@@ -434,10 +448,12 @@ def get_mean_position(fan, blotch, scope):
 
 
 def calc_fnotch(nfans, nblotches):
+    """Calculate the fnotch value (or fan-ness)."""
     return (nfans) / (nfans + nblotches)
 
 
 def gold_star_plotter(gold_id, axis, kind='blotches'):
+    """Plot gold data."""
     for goldstar, color in zip(markings.gold_members,
                                markings.gold_plot_colors):
         if kind == 'blotches':
@@ -449,6 +465,7 @@ def gold_star_plotter(gold_id, axis, kind='blotches'):
 
 
 def is_catalog_production_good():
+    """A simple quality check for the catalog production."""
     from pandas.core.index import InvalidIndexError
     db = io.DBManager(io.get_current_database_fname())
     not_there = []
@@ -469,6 +486,10 @@ def is_catalog_production_good():
 
 
 def main():
+    """Exeucute gold data plotting by default. Should probably moved elsewhere.
+
+    Also, most likely not working currently.
+    """
     gold_ids = io.common_gold_ids()
 
     p4img = markings.ImageID(gold_ids[10])
