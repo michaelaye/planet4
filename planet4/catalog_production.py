@@ -7,7 +7,7 @@ import logging
 from ipyparallel import Client
 from ipyparallel.util import interactive
 
-from .io import get_image_names_from_db
+from .io import get_image_names_from_db, DBManager
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
@@ -46,7 +46,8 @@ def process_image_name(image_name):
     if os.path.exists(blotchfname) and\
             os.path.exists(fanfname):
         return image_name + ' already done.'
-    # data = pd.read_hdf(dbfile, 'df', where="image_name=" + image_name)
+    db = DBManager()
+    data = db.get_image_name_markings(image_name)
     img_ids = data.image_id.unique()
     blotches = []
     fans = []
@@ -69,7 +70,7 @@ def main():
     args = parser.parse_args()
 
     image_names = get_image_names_from_db(args.db_fname)
-    logging.info('Found {} image_names'.format(len(image_names)))
+    logging.info('Found %s image_names', len(image_names))
 
     c = Client()
     dview = c.direct_view()
@@ -88,4 +89,4 @@ def main():
         time.sleep(10)
     for res in results.result:
         print(res)
-    logging.info('Catalog production done. Results in {}.'.format(dirname))
+    logging.info('Catalog production done. Results in %s.', dirname)
