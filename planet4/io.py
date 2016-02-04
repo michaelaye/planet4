@@ -55,7 +55,7 @@ def check_and_pad_id(imgid):
     return imgid
 
 
-def get_image_id_data(image_id, feedback=False):
+def get_image_id_data(image_id):
     return pd.read_hdf(get_current_database_fname(), 'df',
                        where='image_id=' + image_id)
 
@@ -209,6 +209,11 @@ class PathManager(object):
         The data item id that is used to determine sub-paths
     suffix : {'.hdf', '.h5', '.csv'}
         The suffix that controls the reader function to be used.
+
+    Attributes
+    ----------
+    cut_dir : pathlib.Path
+        Defined in `create_cut_folder`.
     """
 
     def __init__(self, datapath=None, id_=None, suffix='.hdf',
@@ -217,6 +222,8 @@ class PathManager(object):
         self.cut = cut
         self.fnotched_dir = datapath
         self.suffix = suffix
+
+        self.cut_dir = None  # defined at run time
 
         # point reader to correct function depending on required suffix
         if suffix in ['.hdf', '.h5']:

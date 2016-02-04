@@ -44,8 +44,7 @@ class DBScanner(object):
         self.n_clusters = len(unique_labels) - (1 if -1 in labels else 0)
         self.labels = labels
         self.unique_labels = unique_labels
-        logging.debug("Estimated number of clusters: {}"
-                      .format(self.n_clusters))
+        logging.debug("Estimated number of clusters: %i", self.n_clusters)
 
     def _post_analysis(self):
         """Use clustering results to create mean markings."""

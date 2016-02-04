@@ -12,6 +12,7 @@ class NoFilesFoundError(PlanetFourError):
 class NoDataToClusterError(PlanetFourError):
 
     def __init__(self, obj):
+        super().__init__()
         self.obj = obj
 
     def __str__(self):
@@ -21,6 +22,7 @@ class NoDataToClusterError(PlanetFourError):
 class UnknownClusteringScopeError(PlanetFourError):
 
     def __init__(self, scope):
+        super().__init__()
         self.scope = scope
 
     def __str__(self):
@@ -32,6 +34,7 @@ class UnknownClusteringScopeError(PlanetFourError):
 class UnknownMarkingKindError(PlanetFourError):
 
     def __init__(self, kind):
+        super().__init__()
         self.kind = kind
 
     def __str__(self):

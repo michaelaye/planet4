@@ -41,7 +41,7 @@ setup(
         'test': ['coverage'],
     },
     package_data={
-        'planet4' : ['data/*']
+        'planet4': ['data/*']
     },
 
     cmdclass={'test': PyTest},

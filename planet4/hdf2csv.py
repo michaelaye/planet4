@@ -30,7 +30,7 @@ def main():
 
     root = os.path.abspath(args.directory)
     fnames = glob.glob(os.path.join(root, '*.hdf'))
-    logging.info('Found {} files to convert.'.format(len(fnames)))
+    logging.info('Found %i files to convert.', len(fnames))
 
     c = Client()
     lbview = c.load_balanced_view()

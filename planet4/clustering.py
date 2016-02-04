@@ -67,6 +67,8 @@ class ClusteringManager(object):
         List of coordinate columns currently used for clustering
     current_markings : pandas.DataFrame
         Dataframe with the currently to-be-clustered marking data
+    reduced_data : dictionary
+        Stores reduced average cluster markings
     n_clustered_fans
     n_clustered_blotches
     output_dir_clustered : pathlib.Path
@@ -90,9 +92,17 @@ class ClusteringManager(object):
         self.include_radius = include_radius
         self.confusion = []
         self.output_format = output_format
+
         # to be defined at runtime:
         self.current_coords = None
         self.current_markings = None
+        self.reduced_data = None
+        self.fnotches = None
+        self.fnotched_blotches = None
+        self.fnotched_fans = None
+        self.p4id = None
+        self.newfans = None
+        self.newblotches = None
 
         self.pm = pm if pm is not None else io.PathManager(fnotched_dir, id_=id_)
         self.pm.setup_folders()
@@ -282,7 +292,7 @@ class ClusteringManager(object):
             Planetfour `image_id`
         """
         image_id = io.check_and_pad_id(image_id)
-        logging.info("Clustering data for {}".format(image_id))
+        logging.info("Clustering data for %s", image_id)
         self.pm.id_ = image_id
         if data is None:
             self.p4id = markings.ImageID(image_id, self.dbname)
@@ -291,7 +301,7 @@ class ClusteringManager(object):
 
     def cluster_image_name(self, image_name, data=None):
         """Process the clustering and fnoching pipeline for a HiRISE image_name."""
-        logging.info("Clustering data for {}".format(image_name))
+        logging.info("Clustering data for %s", image_name)
         if data is None:
             data = self.db.get_image_name_markings(image_name)
         self.pm.id_ = image_name
@@ -301,7 +311,7 @@ class ClusteringManager(object):
         "Write out the clustered and fnotched data."
 
         logging.debug('CM: Writing output files.')
-        logging.debug('CM: Output dir: {}'.format(self.fnotched_dir))
+        logging.debug('CM: Output dir: %s', self.fnotched_dir)
         # first write the fnotched data
         for outfname, outdata in zip(['fnotchfile', 'blotchfile', 'fanfile'],
                                      [self.fnotches, self.fnotched_blotches,
@@ -452,8 +462,6 @@ def is_catalog_production_good():
             invalid_index.append(image_name)
         except ValueError:
             value_error.append(image_name)
-        except:
-            not_there.append(image_name)
     if len(value_error) == 0 and len(not_there) == 0 and\
             len(invalid_index) == 0:
         return True
@@ -492,8 +500,9 @@ def main():
     # gold stuff
     gold_star_plotter(p4img, axes[2], kind='fans')
     axes[2].set_title('Science team markings')
-    DBScanner(golddata, 'fan', ax=axes[1], min_samples=2, eps=11,
-              linestyle='--')
+    # TODO: refactor for plotting version of DBSCanner
+    # DBScanner(golddata, ax=axes[1], min_samples=2, eps=11,
+    #           linestyle='--')
     axes[3].set_title('Science team clusters')
 
     plt.show()

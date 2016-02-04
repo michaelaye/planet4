@@ -18,7 +18,7 @@ class MyHTMLParser(HTMLParser):
         HTMLParser.__init__(self)
         self.container = []
 
-    def handle_starttag(self, tag, attrs):
+    def handle_starttag(self, attrs):
         if attrs and attrs[0][0] == 'href':
             url = attrs[0][1]
             if '#' in url:
@@ -26,15 +26,15 @@ class MyHTMLParser(HTMLParser):
 
 
 def main(fname, user_name='michaelaye', datadir=None):
-    parser = MyHTMLParser()
+    htmlparser = MyHTMLParser()
 
     with open(fname) as f:
-        parser.feed(f.read())
+        htmlparser.feed(f.read())
 
     dbname = io.get_current_database_fname(datadir)
     df = pd.read_hdf(str(dbname), 'df', where='user_name={0}'.format(user_name))
 
-    check = pd.DataFrame(parser.container, columns=['ids_to_test'])
+    check = pd.DataFrame(htmlparser.container, columns=['ids_to_test'])
 
     check['Done'] = check.ids_to_test.isin(df.image_id)
 

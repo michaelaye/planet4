@@ -10,24 +10,24 @@ import sys
 data_root = '/Users/maye/data/planet4'
 
 
-def data_munging(img_id):
+def data_munging(_id):
     print("Reading current marked data.")
     data = pd.read_hdf(os.path.join(data_root, 'marked.h5'), 'df',
-                       where='image_id=='+img_id)
+                       where='image_id=='+_id)
     print("Done.")
     return data
 
 
-def get_blotches(data, img_id):
+def get_blotches(data, _id):
     """get the blotches for given image_id"""
-    subframe = data[data.image_id == img_id]
+    subframe = data[data.image_id == _id]
     blotches = subframe[subframe.marking == 'blotch']
     return blotches
 
 
-def get_fans(data, img_id):
+def get_fans(data, _id):
     """get the fans for given image_id"""
-    subframe = data[data.image_id == img_id]
+    subframe = data[data.image_id == _id]
     fans = subframe[subframe.marking == 'fan']
     return fans
 
@@ -49,15 +49,15 @@ def add_ellipses_to_axis(ax, blotches):
         ax.add_artist(el)
 
 
-def plot_blotches(data, img_id):
-    blotches = get_blotches(data, img_id)
+def plot_blotches(data, _id):
+    blotches = get_blotches(data, _id)
     # this will endlessly cycle through the colors given
     fig, ax = plt.subplots(ncols=2)
     img = get_image_from_record(blotches.iloc[0])
     ax[0].imshow(img)
     im = ax[1].imshow(img)
     add_ellipses_to_axis(ax[1], blotches)
-    ax[0].set_title('image_id {}'.format(img_id))
+    ax[0].set_title('image_id {}'.format(_id))
     plt.savefig('plots/blotches_'+get_image_name_from_data(blotches),
                 bbbox_inches='tight')
     plt.show()
@@ -67,5 +67,5 @@ def plot_blotches(data, img_id):
 if __name__ == '__main__':
     # img id should be given on command line
     img_id = sys.argv[1]
-    data = data_munging(img_id)
-    plot_blotches(data, img_id)
+    mdata = data_munging(img_id)
+    plot_blotches(mdata, img_id)
