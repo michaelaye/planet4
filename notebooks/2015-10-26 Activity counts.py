@@ -44,7 +44,7 @@ def get_final_markings_counts(img_name, cut=0.5):
     # writing in dictionary here b/c later I convert it to pd.DataFrame
     # for which a dictionary is a natural input format
     d = {}
-    d['image_name'] = img_name
+    d['obsid'] = img_name
     blotch_fname = root / '{}_blotches_latlons.csv'.format(img_name)
     d['n_blotches'] = len(pd.read_csv(str(blotch_fname)))
     fan_fname = root / '{}_fans_latlons.csv'.format(img_name)
@@ -60,140 +60,103 @@ get_final_markings_counts('ESP_020115_0985')
 
 # In[ ]:
 
-results = []
-from IPython.display import display
-from ipywidgets import IntProgress
-t = IntProgress(min=0, max=len(region_data.Inca.season2)-1)
-display(t)
-for i, img_name in enumerate(region_data.Inca.season2):
-    t.value = i
-    try:
-        results.append(get_final_markings_counts(img_name))
-    except OSError:
-        continue
-season2 = pd.DataFrame(results).sort_values(by='image_name')
+from nbtools import ListProgressBar
 
 
 # In[ ]:
 
 results = []
-from IPython.display import display
-from ipywidgets import IntProgress
-t = IntProgress(min=0, max=len(region_data.Inca.season3)-1)
-display(t)
-for i, img_name in enumerate(region_data.Inca.season3):
-    t.value = i
+progbar = ListProgressBar(region_data.Inca.season2)
+for img_name in region_data.Inca.season2:
+    progbar.value = img_name
     try:
         results.append(get_final_markings_counts(img_name))
     except OSError:
         continue
-season3 = pd.DataFrame(results).sort_values(by='image_name')
+season2 = pd.DataFrame(results).sort_values(by='obsid')
 
 
 # In[ ]:
 
-season2.info()
+results = []
+progbar = ListProgressBar(region_data.Inca.season3)
+for img_name in region_data.Inca.season3:
+    progbar.value = img_name
+    try:
+        results.append(get_final_markings_counts(img_name))
+    except OSError:
+        continue
+season3 = pd.DataFrame(results).sort_values(by='obsid')
 
 
 # In[ ]:
 
-get_ipython().magic('matplotlib inline')
+season2.head()
 
 
 # In[ ]:
 
-metadata = pd.read_csv(io.analysis_folder() / "P4_10-18-15_H_lat_lng.csv")
+season2.head()
 
 
 # In[ ]:
 
-metadata
+season2_meta = pd.read_csv(io.analysis_folder() / 'inca_season2_metadata.csv')
+# dropping the label path here as it's not required
+# if it is, delete this line.
+season2_meta.drop('path', axis=1, inplace=True)
 
 
 # In[ ]:
 
-from hirise.hirise_tools import get_rdr_label, labels_root
+season2_meta.head()
 
 
 # In[ ]:
 
-import pvl
-def get_nlines_from_label(labelfname):
-    module = pvl.load(str(labelfname))
-    return module['UNCOMPRESSED_FILE']['IMAGE']['LINE_SAMPLES']
+season2 = season2.merge(season2_meta, on='obsid')
 
 
 # In[ ]:
 
-p = labels_root()
+season2.head()
 
 
 # In[ ]:
 
-metadata['labelpath'] = metadata.HiRISE_image.map(lambda x: p / (x + '_RED.LBL'))
+path = io.analysis_folder() / 'inca_season3_metadata.csv'
+season3_meta = pd.read_csv(path)
 
 
 # In[ ]:
 
-metadata['nsamples'] = metadata.labelpath.map(get_nlines_from_label)
+season3 = season3.merge(season3_meta, on='obsid')
 
 
 # In[ ]:
 
-metadata.set_index('HiRISE_image', inplace=True)
+season2.set_index('l_s', inplace=True)
 
-
-# In[ ]:
-
-season2.set_index('image_name', inplace=True)
-season3.set_index('image_name', inplace=True)
-
-
-# In[ ]:
-
-season2 = season2.join(metadata['solar_longitude binning nsamples'.split()])
-
-
-# In[ ]:
-
-season3 = season3.join(metadata['solar_longitude binning nsamples'.split()])
-
-
-# In[ ]:
-
-season2.set_index('solar_longitude', inplace=True)
-
-
-# In[ ]:
-
-season3.set_index('solar_longitude', inplace=True)
+season3.set_index('l_s', inplace=True)
 
 
 # In[ ]:
 
 season2['both'] = season2.n_blotches + season2.n_fans
 
-
-# In[ ]:
-
 season3['both'] = season3.n_blotches + season3.n_fans
 
 
 # In[ ]:
 
-season2['scaled'] = season2.both / season2.nsamples / season2.binning
+season2['scaled'] = season2.both / season2.line_samples / season2.binning
 
-
-# In[ ]:
-
-season3['scaled'] = season3.both / season3.nsamples / season3.binning
+season3['scaled'] = season3.both / season3.line_samples / season3.binning
 
 
 # In[ ]:
 
 get_ipython().magic('matplotlib notebook')
-import seaborn as sns
-sns.set()
 
 
 # In[ ]:
@@ -205,24 +168,4 @@ plt.legend(loc='best')
 plt.ylabel('Scaled prevalence of markings')
 plt.title("Number of markings in Inca City region,scaled for binning and image size.")
 plt.savefig('/Users/klay6683/Desktop/inca_s23.pdf')
-
-
-# In[ ]:
-
-season2
-
-
-# In[ ]:
-
-season3
-
-
-# In[ ]:
-
-season3.scaled.plot()
-
-
-# In[ ]:
-
-
 
