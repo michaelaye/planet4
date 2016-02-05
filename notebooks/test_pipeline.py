@@ -10,13 +10,7 @@ cd ~/Dropbox/CTX_to_jpg/pipeline_check/
 
 from glob import glob
 
-
-# In[ ]:
-
 fnames = glob('*.pdf')
-
-
-# In[ ]:
 
 ids = [i.split('_')[0] for i in fnames]
 ids[:5]
@@ -24,13 +18,14 @@ ids[:5]
 
 # In[ ]:
 
-from planet4 import clustering
+from planet4 import clustering, io, markings, helper_functions as hf
 from pathlib import Path
 
 
 # In[ ]:
 
-path = Path("/Users/klay6683/data/planet4/pipelinecheck2")
+path = Path("/Users/klay6683/data/planet4/pipelinecheck3")
+path.mkdir(exist_ok=True)
 cm = clustering.ClusteringManager(fnotched_dir=path,
                                  include_angle=True, include_distance=False, 
                                  include_radius=False, eps=10, min_distance=20)
@@ -53,15 +48,15 @@ def process_imgid(id_):
     import matplotlib.pyplot as plt
     from planet4 import plotting, clustering
     from pathlib import Path
-    path = Path("/Users/klay6683/data/planet4/pipelinecheck2")
+    path = Path("/Users/klay6683/data/planet4/pipelinecheck3")
     cm = clustering.ClusteringManager(fnotched_dir=path,
                                  include_angle=True, include_distance=False, 
                                  include_radius=False, eps=10, min_distance=20)
     print(id_)
     cm.cluster_image_id(id_)
-    plotting.plot_image_id_pipeline(id_, datapath=path)
-    plt.savefig(str(path / (id_+"_angle.pdf")))
+    plotting.plot_image_id_pipeline(id_, datapath=path, save=True)
     plt.close('all')
+    return id_
 
 
 # In[ ]:
@@ -71,48 +66,15 @@ get_ipython().magic('matplotlib nbagg')
 
 # In[ ]:
 
-plotting.plot_image_id_pipeline('1c5', datapath=path)
-
-
-# In[ ]:
-
-plotting.plot_finals('1c5', dir=path)
-
-
-# In[ ]:
-
-plotting.plot_raw_blotches('1ab')
-
-
-# In[ ]:
-
-x, y = (282.288, 226.657)
-x2, y2 = (303.627, 232.805)
-
-
-# In[ ]:
-
-from numpy.linalg import norm
-
-
-# In[ ]:
-
-norm(np.array([x,y]-np.array([x2,y2])))
-
-
-# In[ ]:
-
-from planet4 import io, helper_functions as hf
+imid = '1c5'
+cm.cluster_image_id(imid)
+plotting.plot_image_id_pipeline(imid, datapath=path, save=True)
 
 
 # In[ ]:
 
 db = io.DBManager()
-
-
-# In[ ]:
-
-data = db.get_image_id_markings('1fo')
+data = db.get_image_id_markings('1fe')
 
 
 # In[ ]:
@@ -122,27 +84,29 @@ data.classification_id.nunique()
 
 # In[ ]:
 
-data.head()
+plotting.plot_finals(imid, _dir=path)
 
 
 # In[ ]:
 
-data.columns
+plotting.plot_raw_blotches(imid)
 
 
 # In[ ]:
 
-hf.define_season_column(data)
+from planet4.plotting import blotches_all, fans_all
 
 
 # In[ ]:
 
-db.get_classification_id_data('50ef41ea95e6e42e89000001')
+import seaborn as sns
+sns.set_context('notebook')
+blotches_all(imid)
 
 
 # In[ ]:
 
-db.dbname
+fans_all(imid)
 
 
 # In[ ]:
@@ -152,33 +116,17 @@ lbview = c.load_balanced_view()
 
 # In[ ]:
 
-results = lbview.map_async(process_imgid, ids[20:])
+import nbtools.multiprocessing as mptools
 
 
 # In[ ]:
 
-for res in results:
-    print(res)
+results = lbview.map_async(process_imgid, ids)
 
 
 # In[ ]:
 
-len(ids)
-
-
-# In[ ]:
-
-a='50ef41ea95e6e42e89000001'
-
-
-# In[ ]:
-
-b = '50ef419195e6e40eac000001'
-
-
-# In[ ]:
-
-a < b
+mptools.nb_progress_display(results, ids)
 
 
 # In[ ]:

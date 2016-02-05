@@ -102,7 +102,7 @@ get_ipython().magic('matplotlib inline')
 
 # In[ ]:
 
-metadata = pd.read_csv("/Users/klay6683/Dropbox/data/planet4/P4_10-18-15_H_lat_lng.csv")
+metadata = pd.read_csv(io.analysis_folder() / "P4_10-18-15_H_lat_lng.csv")
 
 
 # In[ ]:
