@@ -73,6 +73,17 @@ plotting.plot_image_id_pipeline(imid, datapath=path, save=True)
 
 # In[ ]:
 
+db = io.DBManager()
+data = db.get_image_id_markings('1fe')
+
+
+# In[ ]:
+
+data.classification_id.nunique()
+
+
+# In[ ]:
+
 plotting.plot_finals(imid, _dir=path)
 
 
@@ -95,7 +106,7 @@ blotches_all(imid)
 
 # In[ ]:
 
-fans_all(im)
+fans_all(imid)
 
 
 # In[ ]:
