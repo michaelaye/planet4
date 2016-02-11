@@ -2,7 +2,7 @@
 import argparse
 import math
 from itertools import cycle
-from math import cos, degrees, radians, sin
+from math import cos, degrees, radians, sin, pi
 
 import matplotlib.lines as lines
 import matplotlib.patches as mpatches
@@ -230,6 +230,10 @@ class Blotch(Ellipse):
                                      data.angle, alpha=0.65,
                                      fill=False, linewidth=1, color=color)
         self.data = data
+
+    @property
+    def area(self):
+        return pi * self.data.radius_1 * self.data.radius_2
 
     @property
     def x1(self):
