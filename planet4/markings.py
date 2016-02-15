@@ -375,6 +375,13 @@ class Fan(lines.Line2D):
         return self.data.distance / (cos(half) + sin(half))
 
     @property
+    def area(self):
+        tr_h = np.sqrt(self.armlength**2 - self.radius**2)
+        tr_area = tr_h*self.radius
+        half_circ_area = 0.5 * pi * self.radius**2
+        return tr_area + half_circ_area
+
+    @property
     def circle_base(self):
         "float[2] : Vector between end of first arm and second arm of fan."
         return self.v1 - self.v2
