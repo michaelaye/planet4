@@ -558,7 +558,14 @@ class Container(object):
 
     @classmethod
     def from_fname(cls, fname):
-        df = pd.read_hdf(str(fname))
+        if str(fname).endswith('.hdf'):
+            readfunc = pd.read_hdf
+        elif str(fname).endswith('.csv'):
+            readfunc = pd.read_csv
+        else:
+            print("Can only work with '.csv' or '.hdf' files.")
+            return
+        df = readfunc(str(fname))
         return cls.from_df(df)
 
 
