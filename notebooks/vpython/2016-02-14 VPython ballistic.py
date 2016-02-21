@@ -42,11 +42,11 @@ start = vec(0, 0, radius)
 g_M = np.array([0, 0, -3.80])
 g_E = np.array([0, 0, -9.81])
 
-N=1000
+N=3000
 
 # positions
 R = 0.5  # vent radius
-radii = np.random.uniform(-R, R, N)
+radii = np.random.uniform(0, R, N)
 thetas = np.random.uniform(0, math.tau, N)
 X,Y = uniform_circle_sample(thetas, radii)
 positions = np.stack([X, Y, np.full_like(X, radius/2)], axis=1)
@@ -58,7 +58,17 @@ vz = vmax * (1 - radii**2/0.6**2)  # 2**2
 velocities = np.zeros((N, 3))
 velocities[:, -1] = vz
 # incline the jet
-velocities[:, 0] = 1  #
+velocities[:, 0] = 0.5  # incline along x-axis
+# variations for vx and vy
+radii = np.random.uniform(0, 0.2, N)
+thetas = np.random.uniform(0, math.tau, N)
+vx,vy = uniform_circle_sample(thetas, radii)
+velocities[:, 0] += vx
+velocities[:, 1] += vy
+# define particles here to make loop work with or without
+particles =[]
+# save positions for later comparison
+init_pos = positions.copy()
 
 
 # In[ ]:
@@ -73,7 +83,7 @@ h = 0.1
 mybox = box(pos=vec(0, 0, -h/2), length=L, height=h, width=L, up=up, color=color.white)
 
 # create dust particles
-particles =[]
+
 for pos in positions:
     p = sphere(pos=vec(*pos), radius=radius, color=color.red)
     p.update = True  # to determine if needs position update
@@ -83,62 +93,41 @@ for pos in positions:
 # In[ ]:
 
 t=0
-while True:
-    rate(200)
+while any(positions[:, -1] > 0):
+    if particles:
+        rate(200)
     
-    # update position first
-    positions += velocities*dt
-    velocities += g_E*dt
-    for p,pos in zip(particles, positions):
-        if p.update:
-            p.pos = vec(*pos)
-        if p.pos.z < start.z:
-            p.update = False
+    # find all that are still above ground
+    to_update = positions[:, -1] > 0
+    positions[to_update] += velocities[to_update]*dt
+    velocities[to_update] += g_M*dt
+    if particles:
+        for p,pos in zip(particles, positions):
+            if p.update:
+                p.pos = vec(*pos)
+            if p.pos.z < start.z:
+                p.update = False
     t+=dt
-    if all([not p.update for p in particles]):
-        print('Done.')
-        break
 
 
 # In[ ]:
 
 get_ipython().magic('matplotlib nbagg')
 
-
-# In[ ]:
-
-plt.scatter(positions[:,0], positions[:,1])
+import seaborn as sns
 
 
 # In[ ]:
 
-
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-mean = [0,0]
-cov = [[1, 0], [0, 1]]
+fig, axes = plt.subplots(ncols=2)
+axes[0].scatter(init_pos[:,0], init_pos[:,1], 5)
+axes[1].scatter(positions[:,0], positions[:,1], 5)
+for ax in axes:
+    ax.set_aspect('equal')
+    
 
 
 # In[ ]:
 
-x, y = np.random.multivariate_normal(mean, cov, 5000).T
-
-
-# In[ ]:
-
-plt.figure(figsize=(6,6))
-plt.plot(x, y, 'x')
-# plt.axis('equal')
-
-
-# In[ ]:
-
-
+t
 
