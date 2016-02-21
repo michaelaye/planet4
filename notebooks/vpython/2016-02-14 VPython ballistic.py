@@ -36,6 +36,33 @@ up = vec(0, 0, 1)
 
 # In[ ]:
 
+radius = 0.1  # arbitrary for now
+dt = 1e-2
+start = vec(0, 0, radius)
+g_M = np.array([0, 0, -3.80])
+g_E = np.array([0, 0, -9.81])
+
+N=1000
+
+# positions
+R = 0.5  # vent radius
+radii = np.random.uniform(-R, R, N)
+thetas = np.random.uniform(0, math.tau, N)
+X,Y = uniform_circle_sample(thetas, radii)
+positions = np.stack([X, Y, np.full_like(X, radius/2)], axis=1)
+
+# velocities
+# Using parabolic profile for Hagen-Poiseulle flow
+vmax = 50  # m/s
+vz = vmax * (1 - radii**2/0.6**2)  # 2**2
+velocities = np.zeros((N, 3))
+velocities[:, -1] = vz
+# incline the jet
+velocities[:, 0] = 1  #
+
+
+# In[ ]:
+
 scene = canvas(title="Fans", width=win, height=win, x=0, y=0,
                center=vec(0, 0, 0), forward=vec(1,0,-1),
                up=up)
@@ -45,25 +72,6 @@ scene.range = 25
 h = 0.1
 mybox = box(pos=vec(0, 0, -h/2), length=L, height=h, width=L, up=up, color=color.white)
 
-m = 1  # kg
-radius = 0.1  # arbitrary for now
-dt = 1e-2
-start = vec(0, 0, radius)
-g_M = np.array([0, 0, -3.80])
-g_E = np.array([0, 0, -9.81])
-Fg = m*g_E
-
-N=1000
-# positions
-radii = np.random.uniform(-2, 2, N)
-thetas = np.random.uniform(0, np.tau, N)
-X,Y = uniform_circle_sample(thetas, radii)
-positions = np.stack([X, Y, np.full_like(X, radius/2)], axis=1)
-# velocities
-radii = np.random.uniform(-1, 1, N)
-thetas = np.random.uniform(0, np.tau, N)
-VX, VY = pol2cart(thetas, radii)
-velocities = np.stack([VX, VY, np.full_like(X, 20)], axis=1)
 # create dust particles
 particles =[]
 for pos in positions:
@@ -99,7 +107,7 @@ get_ipython().magic('matplotlib nbagg')
 
 # In[ ]:
 
-
+plt.scatter(positions[:,0], positions[:,1])
 
 
 # In[ ]:
