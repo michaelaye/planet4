@@ -252,5 +252,95 @@ for id in larger.image_id:
 
 # In[ ]:
 
-for id i
+db = io.DBManager()
+
+
+# In[ ]:
+
+data = db.get_image_name_markings('ESP_020049_0985')
+
+
+# In[ ]:
+
+fans = data[data.marking=='fan']
+
+
+# In[ ]:
+
+get_ipython().magic('matplotlib inline')
+
+
+# In[ ]:
+
+fans = pd.read_hdf(db.dbname, 'df', where='marking=fan')
+
+
+# In[ ]:
+
+fans.info()
+
+
+# In[ ]:
+
+plt.hist(fans[fans.distance==10].spread, bins=100, min=0);
+
+
+# In[ ]:
+
+fans[fans.spread<0].spread.hist()
+
+
+# In[ ]:
+
+fans[fans.distance<20].distance.hist(bins=100)
+
+
+# In[ ]:
+
+fans[fans.distance<50].distance.hist(bins=100)
+plt.title("Distance < 50")
+
+
+# In[ ]:
+
+fans[fans.spread<100].spread.hist(bins=100)
+plt.title('Spread < 100')
+
+
+# In[ ]:
+
+fans.spread.value_counts()
+
+
+# In[ ]:
+
+image_ids = data.image_id.unique()
+
+
+# In[ ]:
+
+n_class = []
+for id in image_ids:
+    n_class.append(data[data.image_id==id].classification_id.nunique())
+
+
+# In[ ]:
+
+plt.hist(n_class)
+plt.title('Classification numbers for tiles in ESP_021460_0985')
+
+
+# In[ ]:
+
+from planet4.region_data import Inca
+
+
+# In[ ]:
+
+Inca.season3
+
+
+# In[ ]:
+
+
 
