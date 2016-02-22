@@ -1,8 +1,9 @@
 #!/usr/bin/env python
+"""Module to manage Planet4 markings."""
 import argparse
 import math
 from itertools import cycle
-from math import cos, degrees, radians, sin, pi
+from math import cos, degrees, pi, radians, sin
 
 import matplotlib.lines as lines
 import matplotlib.patches as mpatches
@@ -89,6 +90,7 @@ class ImageID(object):
     data : pd.DataFrame, optional
         If the data was already extracted before init, it can be provided here.
     """
+
     def __init__(self, imgid, database_fname=None, data=None):
         self.imgid = io.check_and_pad_id(imgid)
         if data is not None:
