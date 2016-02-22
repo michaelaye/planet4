@@ -21,6 +21,11 @@ particles = [Particle(*i) for i in start_values]
 
 # In[ ]:
 
+get_ipython().magic('timeit np.linalg.norm(start_values, axis=1)')
+
+
+# In[ ]:
+
 get_ipython().magic('timeit _ = [p.apply_lateral_wind(0.5, 1.2) for p in particles]')
 
 
