@@ -56,3 +56,5 @@ nosetests.xml
 
 notebooks/tests/label_encoder.pkl
 .eggs
+notebooks/vpython/logs
+notebooks/vpython/pypet
