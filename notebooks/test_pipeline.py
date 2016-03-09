@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 # At the beginning of the notebook
 import logging
@@ -11,12 +11,12 @@ handler = logger.handlers[0]
 handler.setLevel(logging.DEBUG)
 
 
-# In[ ]:
+# In[2]:
 
 cd ~/Dropbox/CTX_to_jpg/pipeline_check/
 
 
-# In[ ]:
+# In[3]:
 
 from glob import glob
 
@@ -26,18 +26,18 @@ ids = [i.split('_')[0] for i in fnames]
 ids[:5]
 
 
-# In[ ]:
+# In[4]:
 
 from planet4 import clustering, io, markings, helper_functions as hf
 from pathlib import Path
 
 
-# In[ ]:
+# In[5]:
 
 path = Path("/Users/klay6683/Dropbox/data/planet4/ESP_012322_0985")
 
 
-# In[ ]:
+# In[6]:
 
 path.mkdir(exist_ok=True)
 
@@ -88,7 +88,7 @@ for item in s:
 
 # In[ ]:
 
-get_ipython().magic('matplotlib nbagg')
+get_ipython().magic(u'matplotlib nbagg')
 plt.figure()
 plt.hist(np.array(container), 100);
 
@@ -115,7 +115,7 @@ c = Client()
 
 # In[ ]:
 
-get_ipython().magic('matplotlib None')
+get_ipython().magic(u'matplotlib None')
 
 
 # In[ ]:
@@ -188,7 +188,7 @@ df.head()
 
 # In[ ]:
 
-get_ipython().magic('matplotlib nbagg')
+get_ipython().magic(u'matplotlib nbagg')
 
 
 # In[ ]:
@@ -267,7 +267,7 @@ fans = data[data.marking=='fan']
 
 # In[ ]:
 
-get_ipython().magic('matplotlib inline')
+get_ipython().magic(u'matplotlib inline')
 
 
 # In[ ]:
