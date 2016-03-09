@@ -8,7 +8,7 @@ from pypet import Trajectory
 
 # In[ ]:
 
-traj = Trajectory(filename='./pypet/FanSimulation_2016_02_22_14h46m09s.hdf5')
+traj = Trajectory(filename='./pypet/FanSimulation_2016_02_22_14h50m17s.hdf5')
 
 
 # In[ ]:
@@ -24,11 +24,6 @@ traj.f_get_parameters()
 # In[ ]:
 
 traj.f_get_explored_parameters()
-
-
-# In[ ]:
-
-traj.f_get_run_names()
 
 
 # In[ ]:
@@ -70,11 +65,6 @@ indexes = list(idx_iter)
 
 # In[ ]:
 
-indexes
-
-
-# In[ ]:
-
 get_ipython().magic('matplotlib nbagg')
 
 
@@ -82,7 +72,7 @@ get_ipython().magic('matplotlib nbagg')
 
 def plot_data(i):
 
-    traj.v_idx = indexes[i]
+    traj.v_idx = i
     data = traj.res.crun.positions
     title = ''
     for k,v in traj.f_get_parameters(fast_access=True).items():
@@ -95,7 +85,8 @@ def plot_data(i):
     axes = axes.ravel()
     for ax in axes:
         ax.scatter(data[:, 0], data[:, 1])
-    axes[1].set_xlim(-15, 70)
+        ax.set_aspect('equal')
+    axes[1].set_xlim(-15, 270)
     axes[1].set_ylim(-20, 20)
     fig.suptitle(title[:-2], fontsize=13)
 
@@ -114,7 +105,7 @@ from ipywidgets import interact
 
 # In[ ]:
 
-interact(plot_data, i=(0, len(indexes)-1));
+interact(plot_data, i=(0, len(traj)-1));
 
 
 # In[ ]:

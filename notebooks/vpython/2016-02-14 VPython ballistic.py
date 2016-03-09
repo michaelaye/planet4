@@ -3,171 +3,128 @@
 
 # In[ ]:
 
-from vpython import sphere, canvas, box, vec, color, rate
-import math
-math.tau = np.tau = 2*math.pi
+from planet4 import FanSimulator
 
 
 # In[ ]:
 
-def cart2pol(vec):
-    theta = np.arctan2(vec[:, 1], vec[:, 0])
-    rho = np.hypot(vec[:, 0], vec[:, 1])
-    return theta, rho
-
-def pol2cart(theta, rho):
-    x = rho * np.cos(theta)
-    y = rho * np.sin(theta)
-    return x, y
-
-def uniform_circle_sample(theta, rho):
-    x = np.sqrt(rho) * np.cos(theta)
-    y = np.sqrt(rho) * np.sin(theta)
-    return x, y
+from planet4.fansimulator import cart2pol
 
 
 # In[ ]:
 
-class FanSimulator(object):
-    g_Forces={'mars':np.array([0, 0, -3.80]),
-              'earth':np.array([0, 0, -9.81])}
-    radius = 0.1
-    start = vec(0, 0, radius)
-    win = 600
-    L = 30.
-    gray = vec(0.7, 0.7, 0.7)
-    up = vec(0, 0, 1)
-    
-    def __init__(self, N, vent_radius=0.5, vmax=50, dt=1e-2, location='mars'):
-        np.random.seed(42)
-        self.N = N
-        self.dt = dt
-        self.vent_radius = vent_radius
-        self.vmax = vmax
-        self.particles = []
-        self.t = None  # set to 0 in init_positions
-        self.g = self.g_Forces[location]
-        
-    def init_positions(self, vent_radius=None, N=None):
-        if vent_radius is None:
-            vent_radius = self.vent_radius
-        if N is None:
-            N = self.N
-        radii = np.random.uniform(0, vent_radius, N)
-        thetas = np.random.uniform(0, math.tau, N)
-        X, Y = uniform_circle_sample(thetas, radii)
-        self.positions = np.stack([X, Y, np.full_like(X, self.radius/2)], axis=1)
-        self.radii = radii
-        self.init_pos = self.positions.copy()
-        self.t = 0
-        
-    def init_velocities(self, vmax=None):
-        if vmax is None:
-            vmax = self.vmax
-        # using Hagen-Poiseulle flow's parabolic velocity distribution
-        vz = vmax * (1 - self.radii**2/(self.vent_radius*1.05)**2)
-        velocities = np.zeros((self.N, 3))
-        # setting z-column to vz
-        velocities[:, -1] = vz
-        self.velocities = velocities
-        
-    def incline_and_vary_jet(self, incline=1, jitter=0.1):
-        self.incline = incline
-        self.velocities[:, 0] = incline
-        self.jitter = jitter
-        radii = np.random.uniform(0, jitter, self.N)
-        thetas = np.random.uniform(0, math.tau, self.N)
-        vx, vy = uniform_circle_sample(thetas, radii)
-        self.velocities[:, 0] += vx
-        self.velocities[:, 1] += vy
-        
-    def update(self):
-        to_update = self.positions[:, -1] > 0
-        self.positions[to_update] += self.velocities[to_update]*self.dt
-        self.velocities[to_update] += self.g*self.dt
-        self.t += self.dt
-        
-    @property
-    def something_in_the_air(self):
-        return any(self.positions[:, -1] > 0)
-    
-    def loop(self):
-        while self.something_in_the_air:
-            self.update()
-            if self.particles:
-                rate(200)
-                for p,pos in zip(sim.particles, sim.positions):
-                    if p.update:
-                        p.pos = vec(*pos)
-                    if p.pos.z < start.z:
-                        p.update = False
-
-    def plot(self, save=False, equal=True):
-        fig, axes = plt.subplots(ncols=1, squeeze=False)
-        axes = axes.ravel()
-        axes[0].scatter(self.positions[:,0], self.positions[:,1], 5)
-        for ax in axes:
-            if equal:
-                ax.set_aspect('equal')
-            ax.set_xlabel('Distance [m]')
-            ax.set_ylabel('Spread [m]')
-        ax.set_title("{0} particles, v0_z={1}, v0_x= {2}, jitter={3} [m/s]\n"
-                     "dt={4}"
-                     .format(self.N, self.vmax, self.incline, self.jitter, self.dt))
-        if save:
-            root = "/Users/klay6683/Dropbox/SSW_2015_cryo_venting/figures/"
-            fig.savefig(root+'fan_vmax{}_incline{}_vent_radius{}.png'
-                             .format(self.vmax, self.incline, self.vent_radius),
-                        dpi=150) 
-    
-    def init_vpython(self):
-        scene = canvas(title="Fans", width=self.win, height=self.win, x=0, y=0,
-               center=vec(0, 0, 0), forward=vec(1,0,-1),
-               up=self.up)
-        scene.autoscale = False
-        scene.range = 25
-
-        h = 0.1
-        mybox = box(pos=vec(0, 0, -h/2), length=self.L, height=h, width=L, up=self.up,
-                    color=color.white)
-
-        # create dust particles
-        for pos in self.positions:
-            p = sphere(pos=vec(*pos), radius=self.radius, color=color.red)
-            p.update = True  # to determine if needs position update
-            self.particles.append(p)
-
-
-# In[ ]:
-
-#%matplotlib nbagg
+get_ipython().magic('matplotlib inline')
 
 import seaborn as sns
-sns.set_context('notebook')
+sns.set_context('notebook', font_scale=1.3)
 
 
 # In[ ]:
 
-sim = FanSimulator(5000, vent_radius=0.1, dt=0.01)
-sim.init_positions()
-sim.init_velocities()
-sim.incline_and_vary_jet(jitter=0.2, incline=10.0)
-
-sim.loop()
-
-sim.plot(save=True, equal=False)
+r = np.linspace(0, 0.5, 100)
 
 
 # In[ ]:
 
-sim = FanSimulator(5000, vent_radius=0.1, dt=0.001)
-sim.init_positions()
-sim.init_velocities()
-sim.incline_and_vary_jet(jitter=0.2, incline=10.0)
+v_laminar = FanSimulator.laminar_velocities(50, r, 0.5)
 
-sim.loop()
 
-sim.plot(save=True, equal=False)
+# In[ ]:
+
+v_turb = FanSimulator.turbulent_velocities(50, r, 0.5)
+
+
+# In[ ]:
+
+plt.plot(r, v_laminar, label='laminar')
+plt.plot(r, v_turb, label='turb')
+plt.legend()
+
+
+# In[ ]:
+
+simturb = FanSimulator(N=50000, vent_radius=0.5, vmax=50, is_turbulent=True)
+simturb.init_positions()
+simturb.init_velocities()
+simturb.incline_and_vary_jet(jitter=0.05, incline=2)
+simturb.loop()
+
+
+# In[ ]:
+
+simlam = FanSimulator(N=50000, vent_radius=0.5, vmax=50, is_turbulent=False)
+simlam.init_positions()
+simlam.init_velocities()
+simlam.incline_and_vary_jet(jitter=0.05, incline=2)
+simlam.loop()
+
+
+# In[ ]:
+
+fig, axes = plt.subplots(nrows=2, sharex=True)
+simlam.plot(ax=axes[0], alpha=0.02, label='laminar' )
+axes[0].set_xlabel('')
+simturb.plot(ax=axes[1], alpha=0.02, label='turbulent')
+for ax in axes:
+    ax.legend(fontsize=12)
+
+
+# In[ ]:
+
+fig = plt.figure(figsize=(14,4))
+ax1 = plt.subplot2grid((2, 2), (0, 0), rowspan=2)
+ax2 = plt.subplot2grid((2, 2), (0, 1))
+ax3 = plt.subplot2grid((2, 2), (1, 1))
+ax1.plot(r, v_laminar, '-', color='blue', label='laminar')
+ax1.plot(r, v_turb, '--', color='blue', label='turbulent')
+ax1.set_xlabel('Vent radius [m]')
+ax1.set_ylabel(r'$v_z$', fontsize=20)
+simlam.plot(ax=ax2, xlim=(-10, 80), ylim=(-8,8), alpha=0.02, label='laminar',color='blue')
+axes[0].set_xlabel('')
+simturb.plot(ax=ax3, xlim=(-10, 80), ylim=(-8,8), alpha=0.02, label='turbulent', color='blue')
+for ax in [ax1, ax2, ax3]:
+    ax.legend(fontsize=12)
+ax2.set_xlabel('')
+t = ax3.get_title()
+fig.suptitle(t)
+yloc = plt.MaxNLocator(4)
+for ax in [ax2, ax3]:
+    ax.set_title('')
+    ax.yaxis.set_major_locator(yloc)
+fig.tight_layout()
+fig.subplots_adjust(top=0.9)
+fig.savefig('/Users/klay6683/Dropbox/SSW_2015_cryo_venting/figures/preliminary_jets.png', dpi=200)
+
+
+# In[ ]:
+
+sim_no_jitter = FanSimulator(N=10000, vent_radius=0.5, vmax=10, is_turbulent=True)
+sim_no_jitter.init_positions()
+sim_no_jitter.init_velocities()
+sim_no_jitter.incline_and_vary_jet(jitter=0.00, incline=2)
+sim_no_jitter.loop()
+
+
+# In[ ]:
+
+sim_with_jitter = FanSimulator(N=10000, vent_radius=0.5, vmax=10, is_turbulent=True)
+sim_with_jitter.init_positions()
+sim_with_jitter.init_velocities()
+sim_with_jitter.incline_and_vary_jet(jitter=0.05, incline=2)
+sim_with_jitter.loop()
+
+
+# In[ ]:
+
+fig, axes = plt.subplots(nrows=2, figsize=(12,6), sharex=True)
+xlim = (-2, 13)
+ylim = (-1.5, 1.5)
+sim_no_jitter.plot(ax=axes[0], xlim=xlim, ylim=ylim, alpha=0.3)
+sim_with_jitter.plot(ax=axes[1], xlim=xlim, ylim=ylim, alpha=0.3)
+axes[0].set_xlabel('')
+fig.tight_layout()
+fig.savefig("/Users/klay6683/Dropbox/SSW_2015_cryo_venting/figures/jitter_example.png",
+            dpi=200)
 
 
 # In[ ]:
