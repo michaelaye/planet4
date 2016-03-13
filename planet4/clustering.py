@@ -23,6 +23,7 @@ matplotlib.style.use('bmh')
 
 
 class ClusteringManager(object):
+
     """Control class to manage the clustering pipeline.
 
     Parameters
@@ -213,7 +214,11 @@ class ClusteringManager(object):
         for kind in ['fan', 'blotch']:
             # self.include_angle = False if kind == 'blotch' else True
             current_X = self.pre_processing(data, kind)
-            dbscanner = DBScanner(current_X, eps=self.eps)
+            if current_X is not None:
+                dbscanner = DBScanner(current_X, eps=self.eps)
+            else:
+                self.reduced_data[kind] = []
+                continue
             # storing of clustered data happens in here:
             self.post_processing(dbscanner, kind)
             self.confusion.append((self.pm.id_, kind,
@@ -235,6 +240,14 @@ class ClusteringManager(object):
         markings.Fnotch : The Fnotch object with a `get_marking` method for a
             `cut` value.
         """
+        # check first if both blotchens and fans were found, if not, we don't
+        # need to fnotch.
+        if not all(self.reduced_data.values()):
+            self.fnotches = []
+            self.fnotched_blotches = self.reduced_data['blotch']
+            self.fnotched_fans = self.reduced_data['fan']
+            return
+
         logging.debug("CM: do_the_fnotch")
         from numpy.linalg import norm
         n_close = 0
