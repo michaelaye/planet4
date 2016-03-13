@@ -395,7 +395,7 @@ class ClusteringManager(object):
     def save(self, obj, path):
         try:
             obj.to_hdf(str(path.with_suffix('.hdf')), 'df')
-            obj.to_csv(str(path.with_suffix('.csv')))
+            obj.to_csv(str(path.with_suffix('.csv')), index=False)
         # obj could be NoneType if no blotches or fans were found. Catching it here.
         except AttributeError:
             pass
