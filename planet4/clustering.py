@@ -105,7 +105,11 @@ class ClusteringManager(object):
         self.newfans = None
         self.newblotches = None
 
-        self.pm = pm if pm is not None else io.PathManager(fnotched_dir, id_=id_)
+        if pm is not None:
+            self.pm = pm
+        else:
+            self.pm = io.PathManager(fnotched_dir, id_=id_,
+                                     suffix='.'+output_format)
         self.pm.setup_folders()
 
     def __getattr__(self, name):
