@@ -367,15 +367,15 @@ class ClusteringManager(object):
                                                      'n_cluster_members',
                                                      'n_rejected'])
 
-    def save_confusion_data(self, fname):
-        self.confusion_data.to_csv(fname)
-
     def get_newfans_newblotches(self):
+        logging.debug("Executing get_newfans_newblotches")
         df = self.pm.fnotchdf
 
         # check if we got a fnotch dataframe. If not, we assume none were found.
         if df is None:
-            self.newfans = self.newblotches = []
+            logging.debug("No fnotches found on disk.")
+            self.newfans = []
+            self.newblotches = []
             return
 
         # apply Fnotch method `get_marking` with given cut.
@@ -396,15 +396,8 @@ class ClusteringManager(object):
         self.newblotches = final_clusters[
             final_clusters.apply(filter_for_blotches).notnull()]
 
-    def save(self, obj, path):
-        try:
-            obj.to_hdf(str(path.with_suffix('.hdf')), 'df')
-            obj.to_csv(str(path.with_suffix('.csv')), index=False)
-        # obj could be NoneType if no blotches or fans were found. Catching it here.
-        except AttributeError:
-            pass
-
     def apply_fnotch_cut(self, cut=None):
+        logging.debug("Executing apply_fnotch_cut")
         if cut is None:
             cut = self.cut
 
@@ -422,6 +415,7 @@ class ClusteringManager(object):
             except OSError:
                 completefans = newfans
         else:
+            logging.debug("Apply fnotch cut: No new fans found.")
             completefans = self.pm.fandf
         if len(self.newblotches) > 0:
             newblotches = self.newblotches.apply(lambda x: x.store())
@@ -431,9 +425,24 @@ class ClusteringManager(object):
             except OSError:
                 completeblotches = newblotches
         else:
+            logging.debug('Apply fnotch cut: No new blotches found.')
             completeblotches = self.pm.blotchdf
         self.save(completefans, self.pm.final_fanfile)
         self.save(completeblotches, self.final_blotchfile)
+        logging.debug("Finished apply_fnotch_cut.")
+
+    def save(self, obj, path):
+        try:
+            if self.output_format in ['hdf', 'both']:
+                obj.to_hdf(str(path.with_suffix('.hdf')), 'df')
+            if self.output_format in ['csv', 'both']:
+                obj.to_csv(str(path.with_suffix('.csv')), index=False)
+        # obj could be NoneType if no blotches or fans were found. Catching it here.
+        except AttributeError:
+            pass
+
+    def save_confusion_data(self, fname):
+        self.confusion_data.to_csv(fname)
 
 ######
 # Functions
