@@ -79,9 +79,9 @@ class ClusteringManager(object):
     """
 
     def __init__(self, dbname=None, scope='hirise', min_distance=10, eps=10,
-                 fnotched_dir=None, output_format='hdf', cut=0.5,
+                 fnotched_dir=None, output_format='csv', cut=0.5,
                  include_angle=True, id_=None, pm=None,
-                 include_distance=True, include_radius=True):
+                 include_distance=False, include_radius=False):
         self.db = io.DBManager(dbname)
         self.dbname = dbname
         self.scope = scope
