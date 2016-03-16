@@ -32,31 +32,32 @@ from planet4 import clustering, io, markings, helper_functions as hf
 from pathlib import Path
 
 
-# In[5]:
-
-path = Path("/Users/klay6683/Dropbox/data/planet4/ESP_012322_0985")
-
-
 # In[6]:
+
+obsid = 'ESP_012322_0985'
+path = io.p4data() / obsid
+
+
+# In[7]:
 
 path.mkdir(exist_ok=True)
 
 
-# In[ ]:
+# In[8]:
 
 db = io.DBManager()
-data = db.get_image_name_markings('ESP_012322_0985')
+data = db.get_image_name_markings(obsid)
 
 
-# In[ ]:
+# In[9]:
 
 cm = clustering.ClusteringManager(fnotched_dir=path, include_angle=True, include_distance=False,
-                                  include_radius=False, eps=10, min_distance=20)
+                                  include_radius=False, eps=10, min_distance=10)
 
 
-# In[ ]:
+# In[10]:
 
-cm.cluster_image_name("ESP_012322_0985", data=data)
+cm.cluster_image_name(obsid, data=data)
 
 
 # In[ ]:
@@ -88,7 +89,7 @@ for item in s:
 
 # In[ ]:
 
-get_ipython().magic(u'matplotlib nbagg')
+get_ipython().magic('matplotlib nbagg')
 plt.figure()
 plt.hist(np.array(container), 100);
 
@@ -115,7 +116,7 @@ c = Client()
 
 # In[ ]:
 
-get_ipython().magic(u'matplotlib None')
+get_ipython().magic('matplotlib None')
 
 
 # In[ ]:
@@ -188,7 +189,7 @@ df.head()
 
 # In[ ]:
 
-get_ipython().magic(u'matplotlib nbagg')
+get_ipython().magic('matplotlib nbagg')
 
 
 # In[ ]:
@@ -267,7 +268,7 @@ fans = data[data.marking=='fan']
 
 # In[ ]:
 
-get_ipython().magic(u'matplotlib inline')
+get_ipython().magic('matplotlib inline')
 
 
 # In[ ]:
