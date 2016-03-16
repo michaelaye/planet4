@@ -328,6 +328,7 @@ class ClusteringManager(object):
         """Write out the clustered and fnotched data."""
         logging.debug('CM: Writing output files.')
         logging.debug('CM: Output dir: %s', self.fnotched_dir)
+
         # first write the fnotched data
         for outfname, outdata in zip(['fnotchfile', 'blotchfile', 'fanfile'],
                                      [self.fnotches, self.fnotched_blotches,
@@ -338,6 +339,7 @@ class ClusteringManager(object):
             series = [cluster.store() for cluster in outdata]
             df = pd.DataFrame(series)
             self.save(df, getattr(self.pm, outfname))
+
         # store the unfnotched data as well:
         outdir = self.output_dir_clustered
         outdir.mkdir(exist_ok=True)
