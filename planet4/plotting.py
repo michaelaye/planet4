@@ -97,3 +97,8 @@ def plot_clustered_fans(id_, _dir=None):
 
     imgid.plot_fans(fans=reduced_fans.content)
     plt.show()
+
+
+def scatter_plot_obsid_data(path):
+    df = pd.read_csv(path)
+    df.plot(kind='scatter', x='image_x', y='image_y', figsize=(5, 10))
