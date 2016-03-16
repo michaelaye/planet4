@@ -295,7 +295,9 @@ class Blotch(Ellipse):
         return out
 
     def __str__(self):
-        return self.data.__str__()
+        s = "markings.Blotch object. Input data:\n"
+        s += self.data.__str__()
+        s += "N_members: {}".format(getattr(self, 'n_members', 1))
 
     def __repr__(self):
         return self.__str__()
