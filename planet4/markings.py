@@ -227,6 +227,9 @@ class Blotch(Ellipse):
             print("No x and y attributes in data:\n{}"
                   .format(data))
             raise AttributeError
+        # default member number is 1. This is set to the cluster member inside
+        # clustering execution.
+        self._n_members = 1
         super(Blotch, self).__init__((self.x, self.y),
                                      data.radius_1 * 2, data.radius_2 * 2,
                                      data.angle, alpha=0.65,
@@ -281,6 +284,14 @@ class Blotch(Ellipse):
         for x, y in self.limit_points:
             ax.scatter(x, y, color=color, s=20, c='b', marker='o')
 
+    @property
+    def n_members(self):
+        return self._n_members
+
+    @n_members.setter
+    def n_members(self, value):
+        self._n_members = value
+
     def store(self, fpath=None):
         out = self.data
         for p in range(1, 5):
@@ -292,12 +303,15 @@ class Blotch(Ellipse):
             out['image_id'] = self.image_id
         if fpath is not None:
             out.to_hdf(str(fpath.with_suffix('.hdf')), 'df')
+        out['n_members'] = self.n_members
         return out
 
     def __str__(self):
         s = "markings.Blotch object. Input data:\n"
         s += self.data.__str__()
-        s += "N_members: {}".format(getattr(self, 'n_members', 1))
+        s += '\n'
+        s += "N_members: {}".format(self.n_members)
+        return s
 
     def __repr__(self):
         return self.__str__()
@@ -348,6 +362,8 @@ class Fan(lines.Line2D):
         except KeyError:
             print("No x and y in the data:\n{}".format(data))
             raise KeyError
+        # default n_members value (property)
+        self._n_members = 1
         # angles
         self.inside_half = self.data.spread / 2.0
         alpha = self.data.angle - self.inside_half
@@ -366,6 +382,14 @@ class Fan(lines.Line2D):
         lines.Line2D.__init__(self, self.coords[:, 0], self.coords[:, 1],
                               alpha=0.65, linewidth=linewidth, color='white',
                               **kwargs)
+
+    @property
+    def n_members(self):
+        return self._n_members
+
+    @n_members.setter
+    def n_members(self, value):
+        self._n_members = value
 
     def rotate_vector(self, v, angle):
         """Rotate vector by angle given in degrees."""
@@ -476,6 +500,7 @@ class Fan(lines.Line2D):
             out['image_id'] = self.image_id
         if fpath is not None:
             out.to_hdf(str(fpath.with_suffix('.hdf')), 'df')
+        out['n_members'] = self.n_members
         return out
 
 
