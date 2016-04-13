@@ -5,8 +5,8 @@ from . import markings
 from . import clustering
 
 
-def plot_image_id_pipeline(image_id, **kwargs):
-    pm = io.PathManager(id_=image_id, **kwargs)
+def plot_image_id_pipeline(image_id, cm):
+    pm = cm.pm
 
     imgid = markings.ImageID(image_id)
 

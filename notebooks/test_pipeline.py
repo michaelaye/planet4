@@ -13,49 +13,35 @@ handler.setLevel(logging.DEBUG)
 
 # In[2]:
 
-cd ~/Dropbox/CTX_to_jpg/pipeline_check/
-
-
-# In[3]:
-
-from glob import glob
-
-fnames = glob('*.pdf')
-
-ids = [i.split('_')[0] for i in fnames]
-ids[:5]
-
-
-# In[4]:
-
 from planet4 import clustering, io, markings, helper_functions as hf
 from pathlib import Path
 
 
-# In[6]:
+# # HiRISE image checks
+
+# In[3]:
 
 obsid = 'ESP_012322_0985'
 path = io.p4data() / obsid
 
 
-# In[7]:
+# In[4]:
 
 path.mkdir(exist_ok=True)
 
 
-# In[8]:
+# In[5]:
 
 db = io.DBManager()
 data = db.get_image_name_markings(obsid)
 
 
-# In[9]:
+# In[6]:
 
-cm = clustering.ClusteringManager(fnotched_dir=path, include_angle=True, include_distance=False,
-                                  include_radius=False, eps=10, min_distance=10)
+cm = clustering.ClusteringManager(fnotched_dir=path)
 
 
-# In[10]:
+# In[7]:
 
 cm.cluster_image_name(obsid, data=data)
 
@@ -119,7 +105,9 @@ c = Client()
 get_ipython().magic('matplotlib None')
 
 
-# In[ ]:
+# # Planet4 tiles level checks
+
+# In[5]:
 
 def process_imgid(id_):
     d = {}
@@ -127,27 +115,26 @@ def process_imgid(id_):
     import matplotlib.pyplot as plt
     from planet4 import plotting, io, clustering
     from pathlib import Path
-    path = Path("/Users/klay6683/data/planet4/pipelinecheck3")
-    cm = clustering.ClusteringManager(fnotched_dir=path,
-                                 include_angle=True, include_distance=False, 
-                                 include_radius=False, eps=10, min_distance=20)
+    path = Path("/Users/klay6683/data/planet4/pipelinecheck4")
+    cm = clustering.ClusteringManager(fnotched_dir=path)
     cm.cluster_image_id(id_)
     db = io.DBManager()
     nunique = db.get_image_id_markings(id_).classification_id.nunique()
     d['nunique'] = nunique
-    plotting.plot_image_id_pipeline(id_, title_text="# of class_ids: {}".format(nunique),
-                                    datapath=path, save=True)
-
-    plt.close('all')
-    return d
+    plotting.plot_image_id_pipeline(id_, cm)
 
 
-# In[ ]:
+# In[6]:
 
-imid='1a0'
+imid='1f0'
 
 
-# In[ ]:
+# In[8]:
+
+get_ipython().magic('matplotlib nbagg')
+
+
+# In[9]:
 
 process_imgid(imid)
 
