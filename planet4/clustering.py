@@ -23,6 +23,7 @@ matplotlib.style.use('bmh')
 
 
 class ClusteringManager(object):
+
     """Control class to manage the clustering pipeline.
 
     Parameters
@@ -35,7 +36,7 @@ class ClusteringManager(object):
         'hirise' is required to automatically take care of tile overlaps, while
         'planet4' is required to be able to check the quality of single
         Planet4 tiles.
-    min_distance : int
+    fnotch_distance : int
         Parameter to control the distance below which fans and blotches are
         determined to be 2 markings of the same thing, creating a FNOTCH
         chimera. The ratio between blotch and fan marks determines a fnotch
@@ -80,7 +81,7 @@ class ClusteringManager(object):
         Path to final fan and blotch clusters, after applying `cut`.
     """
 
-    def __init__(self, dbname=None, scope='hirise', min_distance=10, eps=10,
+    def __init__(self, dbname=None, scope='hirise', fnotch_distance=10, eps=10,
                  fnotched_dir=None, output_format='hdf', cut=0.5,
                  min_samples_factor=0.1,
                  include_angle=True, id_=None, pm=None,
@@ -88,7 +89,7 @@ class ClusteringManager(object):
         self.db = io.DBManager(dbname)
         self.dbname = dbname
         self.scope = scope
-        self.min_distance = min_distance
+        self.fnotch_distance = fnotch_distance
         self.eps = eps
         self.cut = cut
         self.include_angle = include_angle
@@ -237,7 +238,7 @@ class ClusteringManager(object):
     def do_the_fnotch(self):
         """Combine fans and blotches if necessary.
 
-        Use `min_distance` as criterion for linear algebraic distance between
+        Use `fnotch_distance` as criterion for linear algebraic distance between
         average cluster markings to determine if they belong to a Fnotch, a
         chimera object of indecision between a Fan and a Blotch, to be decided
         later in the process by applying a `cut` on the resulting Fnotch
@@ -257,7 +258,7 @@ class ClusteringManager(object):
         for blotch in self.reduced_data['blotch']:
             for fan in self.reduced_data['fan']:
                 delta = blotch.center - fan.midpoint
-                if norm(delta) < self.min_distance:
+                if norm(delta) < self.fnotch_distance:
                     fnotch_value = calc_fnotch(fan.n_members, blotch.n_members)
                     fnotch = markings.Fnotch(fnotch_value, fan, blotch)
                     fnotch.n_fan_members = fan.n_members
