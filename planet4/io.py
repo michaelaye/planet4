@@ -389,6 +389,9 @@ class DBManager(object):
         "Alias to self.image_ids."
         return self.image_ids
 
+    def get_all(self):
+        return pd.read_hdf(self.dbname, 'df')
+
     def get_obsid_markings(self, obsid):
         "Return marking data for given HiRISE obsid."
         return pd.read_hdf(self.dbname, 'df', where='image_name=' + obsid)
