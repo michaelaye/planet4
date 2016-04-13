@@ -1,92 +1,43 @@
 
 # coding: utf-8
 
-# In[1]:
+# # are you in the right git branch?
+# As long as the dynamic min_samples feature is not merged into `master`, make sure your code
+# is at the right branch before trying to test dynamic samples.
 
-# At the beginning of the notebook
-import logging
-logger = logging.getLogger()
-assert len(logger.handlers) == 1
-handler = logger.handlers[0]
-handler.setLevel(logging.DEBUG)
+# In[ ]:
+
+cd ~/Dropbox/CTX_to_jpg/pipeline_check/
 
 
-# In[2]:
+# In[ ]:
+
+from glob import glob
+
+fnames = glob('*.pdf')
+
+ids = [i.split('_')[0] for i in fnames]
+ids[:5]
+
+
+# In[ ]:
 
 from planet4 import clustering, io, markings, helper_functions as hf
 from pathlib import Path
 
 
-# # HiRISE image checks
-
-# In[3]:
-
-obsid = 'ESP_012322_0985'
-path = io.p4data() / obsid
-
-
-# In[4]:
-
-path.mkdir(exist_ok=True)
-
-
-# In[5]:
-
-db = io.DBManager()
-data = db.get_image_name_markings(obsid)
-
-
-# In[6]:
-
-cm = clustering.ClusteringManager(fnotched_dir=path)
-
-
-# In[7]:
-
-cm.cluster_image_name(obsid, data=data)
-
-
 # In[ ]:
 
-unique_image_ids = data.image_id.unique()
-
-
-# In[ ]:
-
-len(unique_image_ids)
-
-
-# In[ ]:
-
-s = pd.Series(unique_image_ids)
-
-
-# In[ ]:
-
-s.map(lambda x: data[data.image_id==x].classification_id.nunique())
-
-
-# In[ ]:
-
-container = []
-for item in s:
-    container.append(data[data.image_id==item].classification_id.nunique())
-
-
-# In[ ]:
-
-get_ipython().magic('matplotlib nbagg')
-plt.figure()
-plt.hist(np.array(container), 100);
-
-
-# In[ ]:
-
-path = Path("/Users/klay6683/data/planet4/pipelinecheck3")
+path = Path("/Users/klay6683/data/planet4/ice_free_check")
 path.mkdir(exist_ok=True)
 cm = clustering.ClusteringManager(fnotched_dir=path,
                                  include_angle=True, include_distance=False, 
                                  include_radius=False, eps=10, min_distance=20)
+
+
+# In[ ]:
+
+cm.cluster_image_name('ESP_022699_0985')
 
 
 # In[ ]:
@@ -96,47 +47,130 @@ from planet4 import plotting
 
 # In[ ]:
 
-from ipyparallel import Client
-c = Client()
+db = io.DBManager()
 
 
 # In[ ]:
 
-get_ipython().magic('matplotlib None')
+data = db.get_image_name_markings('ESP_022699_0985')
 
 
-# # Planet4 tiles level checks
+# In[ ]:
 
-# In[5]:
+data.info()
+
+
+# In[ ]:
+
+data[data.marking=='blotch'].info()
+
+
+# In[ ]:
+
+
+
+
+# In[ ]:
+
+from ipyparallel import Client
+c = Client()
+
+
+# In[15]:
 
 def process_imgid(id_):
-    d = {}
-    d['image_id'] = id_
     import matplotlib.pyplot as plt
-    from planet4 import plotting, io, clustering
+    from planet4 import plotting, clustering
     from pathlib import Path
-    path = Path("/Users/klay6683/data/planet4/pipelinecheck4")
+    path = Path("/Users/klay6683/data/planet4/pipelinecheck3")
     cm = clustering.ClusteringManager(fnotched_dir=path)
     cm.cluster_image_id(id_)
-    db = io.DBManager()
-    nunique = db.get_image_id_markings(id_).classification_id.nunique()
-    d['nunique'] = nunique
-    plotting.plot_image_id_pipeline(id_, cm)
+    plotting.plot_image_id_pipeline(id_, datapath=path, save=True)
+#     plt.close('all')
+    return id_
 
 
-# In[6]:
-
-imid='1f0'
-
-
-# In[8]:
+# In[16]:
 
 get_ipython().magic('matplotlib nbagg')
 
 
-# In[9]:
+# In[17]:
 
-process_imgid(imid)
+process_imgid('1f0')
+
+
+# In[18]:
+
+p1 = (221.79, 508.936)
+p2 = (232, 517)
+
+
+# In[19]:
+
+from scipy.linalg import norm
+
+
+# In[23]:
+
+dp = np.array(p1) - np.array(p2)
+
+
+# In[24]:
+
+dp
+
+
+# In[25]:
+
+norm(dp)
+
+
+# In[ ]:
+
+recheck_ids = ['1dn','1k3','1e4','1fe','1aa','225','1pr','19g']
+for imid in recheck_ids:
+    print(imid)
+    cm.cluster_image_id(imid)
+    plotting.plot_image_id_pipeline(imid, datapath=path, save=True)
+
+
+# In[ ]:
+
+db = io.DBManager()
+data = db.get_image_id_markings('1fe')
+
+
+# In[ ]:
+
+data.classification_id.nunique()
+
+
+# In[ ]:
+
+plotting.plot_finals(imid, _dir=path)
+
+
+# In[ ]:
+
+plotting.plot_raw_blotches(imid)
+
+
+# In[ ]:
+
+from planet4.plotting import blotches_all, fans_all
+
+
+# In[ ]:
+
+import seaborn as sns
+sns.set_context('notebook')
+blotches_all(imid)
+
+
+# In[ ]:
+
+fans_all(imid)
 
 
 # In[ ]:
@@ -146,186 +180,17 @@ lbview = c.load_balanced_view()
 
 # In[ ]:
 
-from nbtools import display_multi_progress
+import nbtools.multiprocessing as mptools
 
 
 # In[ ]:
 
-todo = ids
+results = lbview.map_async(process_imgid, ids)
 
 
 # In[ ]:
 
-results = lbview.map_async(process_imgid, todo)
-
-
-# In[ ]:
-
-display_multi_progress(results, todo)
-
-
-# In[ ]:
-
-df = pd.DataFrame(results.result)
-
-
-# In[ ]:
-
-df.head()
-
-
-# In[ ]:
-
-get_ipython().magic('matplotlib nbagg')
-
-
-# In[ ]:
-
-df.nunique.hist(bins=20)
-
-
-# In[ ]:
-
-smaller = df[df.nunique < 40]
-
-
-# In[ ]:
-
-larger = df[(df.nunique > 95)& (df.nunique < 100)]
-
-
-# In[ ]:
-
-path
-
-
-# In[ ]:
-
-smaller_dir = path / 'under_40_class'
-smaller_dir.mkdir(exist_ok=True)
-larger_dir = path / 'between_95_and_100'
-larger_dir.mkdir(exist_ok=True)
-
-
-# In[ ]:
-
-smaller_dir
-
-
-# In[ ]:
-
-import shutil
-
-
-# In[ ]:
-
-list(path.glob(smaller.image_id.iloc[0]+'*.pdf'))
-
-
-# In[ ]:
-
-for id in smaller.image_id:
-    src = list(path.glob(id+'*.pdf'))[0]
-    dst = smaller_dir / src.name
-    shutil.move(str(src), str(dst))
-
-
-# In[ ]:
-
-for id in larger.image_id:
-    src = list(path.glob(id+'*.pdf'))[0]
-    dst = larger_dir / src.name
-    shutil.move(str(src), str(dst))
-
-
-# In[ ]:
-
-db = io.DBManager()
-
-
-# In[ ]:
-
-data = db.get_image_name_markings('ESP_020049_0985')
-
-
-# In[ ]:
-
-fans = data[data.marking=='fan']
-
-
-# In[ ]:
-
-get_ipython().magic('matplotlib inline')
-
-
-# In[ ]:
-
-fans = pd.read_hdf(db.dbname, 'df', where='marking=fan')
-
-
-# In[ ]:
-
-fans.info()
-
-
-# In[ ]:
-
-plt.hist(fans[fans.distance==10].spread, bins=100, min=0);
-
-
-# In[ ]:
-
-fans[fans.spread<0].spread.hist()
-
-
-# In[ ]:
-
-fans[fans.distance<20].distance.hist(bins=100)
-
-
-# In[ ]:
-
-fans[fans.distance<50].distance.hist(bins=100)
-plt.title("Distance < 50")
-
-
-# In[ ]:
-
-fans[fans.spread<100].spread.hist(bins=100)
-plt.title('Spread < 100')
-
-
-# In[ ]:
-
-fans.spread.value_counts()
-
-
-# In[ ]:
-
-image_ids = data.image_id.unique()
-
-
-# In[ ]:
-
-n_class = []
-for id in image_ids:
-    n_class.append(data[data.image_id==id].classification_id.nunique())
-
-
-# In[ ]:
-
-plt.hist(n_class)
-plt.title('Classification numbers for tiles in ESP_021460_0985')
-
-
-# In[ ]:
-
-from planet4.region_data import Inca
-
-
-# In[ ]:
-
-Inca.season3
+mptools.nb_progress_display(results, ids)
 
 
 # In[ ]:
