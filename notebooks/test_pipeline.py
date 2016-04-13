@@ -5,12 +5,12 @@
 # As long as the dynamic min_samples feature is not merged into `master`, make sure your code
 # is at the right branch before trying to test dynamic samples.
 
-# In[8]:
+# In[ ]:
 
 cd ~/Dropbox/CTX_to_jpg/pipeline_check/
 
 
-# In[9]:
+# In[ ]:
 
 from glob import glob
 
@@ -20,13 +20,13 @@ ids = [i.split('_')[0] for i in fnames]
 ids[:5]
 
 
-# In[10]:
+# In[ ]:
 
 from planet4 import clustering, io, markings, helper_functions as hf
 from pathlib import Path
 
 
-# In[26]:
+# In[ ]:
 
 path = Path("/Users/klay6683/data/planet4/ice_free_check")
 path.mkdir(exist_ok=True)
@@ -35,32 +35,32 @@ cm = clustering.ClusteringManager(fnotched_dir=path,
                                  include_radius=False, eps=10, min_distance=20)
 
 
-# In[27]:
+# In[ ]:
 
 cm.cluster_image_name('ESP_022699_0985')
 
 
-# In[12]:
+# In[ ]:
 
 from planet4 import plotting
 
 
-# In[20]:
+# In[ ]:
 
 db = io.DBManager()
 
 
-# In[21]:
+# In[ ]:
 
 data = db.get_image_name_markings('ESP_022699_0985')
 
 
-# In[22]:
+# In[ ]:
 
 data.info()
 
 
-# In[25]:
+# In[ ]:
 
 data[data.marking=='blotch'].info()
 
@@ -76,29 +76,57 @@ from ipyparallel import Client
 c = Client()
 
 
-# In[ ]:
+# In[15]:
 
 def process_imgid(id_):
     import matplotlib.pyplot as plt
     from planet4 import plotting, clustering
     from pathlib import Path
     path = Path("/Users/klay6683/data/planet4/pipelinecheck3")
-    cm = clustering.ClusteringManager(fnotched_dir=path,
-                                 include_angle=True, include_distance=False, 
-                                 include_radius=False, eps=10, min_distance=20)
-    print(id_)
+    cm = clustering.ClusteringManager(fnotched_dir=path)
     cm.cluster_image_id(id_)
     plotting.plot_image_id_pipeline(id_, datapath=path, save=True)
-    plt.close('all')
+#     plt.close('all')
     return id_
 
 
-# In[14]:
+# In[16]:
 
-get_ipython().magic(u'matplotlib nbagg')
+get_ipython().magic('matplotlib nbagg')
+
+
+# In[17]:
+
+process_imgid('1f0')
+
+
+# In[18]:
+
+p1 = (221.79, 508.936)
+p2 = (232, 517)
 
 
 # In[19]:
+
+from scipy.linalg import norm
+
+
+# In[23]:
+
+dp = np.array(p1) - np.array(p2)
+
+
+# In[24]:
+
+dp
+
+
+# In[25]:
+
+norm(dp)
+
+
+# In[ ]:
 
 recheck_ids = ['1dn','1k3','1e4','1fe','1aa','225','1pr','19g']
 for imid in recheck_ids:
