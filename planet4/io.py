@@ -361,6 +361,11 @@ class DBManager(object):
             self.dbname = str(dbname)
 
     @property
+    def orig_csv(self):
+        p = Path(self.dbname)
+        return p.parent / (p.name[:38] + '.csv')
+
+    @property
     def image_names(self):
         """Return list of unique obsids used in database.
 
