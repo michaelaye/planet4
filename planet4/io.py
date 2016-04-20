@@ -8,6 +8,7 @@ import sys
 
 import matplotlib.image as mplimg
 import pandas as pd
+import pkg_resources as pr
 from pathlib import Path
 
 from . import helper_functions as hf
@@ -137,7 +138,8 @@ def get_current_season23_dbase(datadir=None):
 
 
 def get_test_database():
-    return pd.read_hdf(str(data_root / 'test_db_queryable.h5'), 'df')
+    fname = pr.resource_filename('planet4', 'data/test_db.csv')
+    return pd.read_csv(fname)
 
 
 def get_latest_tutorial_data(datadir=None):
@@ -158,10 +160,6 @@ def common_gold_ids():
     gold_ids = gold_ids.split('\n')
     del gold_ids[-1]  # last one is empty
     return gold_ids
-
-
-def get_example_blotches():
-    return pd.read_hdf(str(data_root / 'blotch_data.h5'), 'df')
 
 
 def get_image_names_from_db(dbfname):

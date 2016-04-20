@@ -48,28 +48,35 @@ data_columns = ['classification_id', 'image_id',
                 'acquisition_date', 'local_mars_time']
 
 
-def scan_for_incomplete(df, marking):
-    """scan for incomplete data and remove from dataframe."""
+def filter_data(df):
+    """scan for incomplete data and remove from dataframe.
+
+    This only will work if missing data has been converted to np.NANs.
+    """
+
     # split data into this marking and NOT this marking.
-    marked = df[df.marking == marking]
-    rest = df[df.marking != marking]
+    fans = df[df.marking == 'fan']
+    blotches = df[df.marking == 'blotch']
+    rest = df[(df.marking != 'fan') & (df.marking != 'blotch')]
 
-    if marking == 'fan':
-        data_cols = fan_data_cols
-    elif marking == 'blotch':
-        data_cols = blotch_data_cols
-    else:
-        print("Not supported marking")
-        return
+    # first drop incomplete data
+    fans = fans.dropna(how='any', subset=fan_data_cols)
+    blotches = blotches.dropna(how='any', subset=blotch_data_cols)
 
-    # create index file. basic idea is: from the above defined data cols for
-    # a marking, none of them is allowed to be unfilled. (== isnull )
-    ind = marked[data_cols].isnull().any(axis=1)
-    # select for negated index, as we do NOT want incomplete data
-    marked = marked[~ind]
+    # now filter for default data
+    eps = 0.00001
+    bzero_filter = (blotches.x.abs() < eps) & (blotches.y.abs() < eps)
+    fzero_filter = (fans.x.abs() < eps) & (fans.y.abs() < eps)
+    rest_zero_filter = (rest.x.abs() < eps) & (rest.y.abs() < eps)
+    blotch_defaults = ((blotches.radius_1 - 10) < eps) & ((blotches.radius_2 - 10).abs() < eps)
+    fan_defaults = (fans.angle.abs() < eps) & ((fans.distance - 10).abs() < eps)
+
+    fans = fans[~(fzero_filter & fan_defaults)]
+    blotches = blotches[~(bzero_filter & blotch_defaults)]
+    rest = rest[~rest_zero_filter]
 
     # merge previously splitted together and return
-    return pd.concat([marked, rest])
+    return pd.concat([fans, blotches, rest])
 
 
 def convert_times(df):
@@ -103,28 +110,20 @@ def produce_fast_read(rootpath, df):
 
 
 def convert_ellipse_angles(df):
+    "Normalize angles from -180..180 to 0..180 (due to symmetry)."
     logging.info("Converting ellipse angles.")
 
-    def func(angle):
-        if angle < 0:
-            return angle + 180
-        elif angle > 180:
-            return angle - 180
-        else:
-            return angle
     rowindex = (df.marking == 'blotch')
-    df.loc[rowindex, 'angle'] = df.loc[rowindex, 'angle'].map(func)
+    df.loc[rowindex, 'angle'] = df.loc[rowindex, 'angle'] % 180
     logging.info("Conversion of ellipse angles done.")
 
 
 def normalize_fan_angles(df):
+    """Convert -180..180 angles to 0..360"""
     logging.info("Normalizing fan angles.")
 
-    def func(angle):
-        return angle + 360
-
     rowindex = (df.marking == 'fan')
-    df.loc[rowindex, 'angle'] = df.loc[rowindex, 'angle'].map(func)
+    df.loc[rowindex, 'angle'] = df.loc[rowindex, 'angle'] % 360
     logging.info("Normalizing of fan angles done.")
 
 
@@ -296,6 +295,25 @@ def create_season2_and_3_database():
     logging.info('Finished. Produced %s', newfname)
 
 
+def read_csv_into_df(fname, chunks=1e6, test_n_rows=None):
+    # creating reader object with pandas interface for csv parsing
+    # doing this in chunks as its faster. Also, later will do a split
+    # into multiple processes to do this.
+    reader = pd.read_csv(fname, chunksize=chunks, na_values=['null'],
+                         usecols=analysis_cols, nrows=test_n_rows,
+                         engine='c')
+
+    # read in data chunk by chunk and collect into python list
+    data = [chunk for chunk in reader]
+    logging.info("Data collected into list.")
+
+    # convert list into Pandas dataframe
+    df = pd.concat(data, ignore_index=True)
+    logging.info("Conversion to dataframe complete.")
+    data = 0
+    return df
+
+
 def main():
     import imp
     try:
@@ -353,21 +371,9 @@ def main():
         chunks = None
     else:
         chunks = 1e6
-    # creating reader object with pandas interface for csv parsing
-    # doing this in chunks as its faster. Also, later will do a split
-    # into multiple processes to do this.
-    reader = pd.read_csv(fname, chunksize=chunks, na_values=['null'],
-                         usecols=analysis_cols, nrows=args.test_n_rows,
-                         engine='c')
 
-    # read in data chunk by chunk and collect into python list
-    data = [chunk for chunk in reader]
-    logging.info("Data collected into list.")
-
-    # convert list into Pandas dataframe
-    df = pd.concat(data, ignore_index=True)
-    logging.info("Conversion to dataframe complete.")
-    data = 0
+    # first read CSV into dataframe
+    df = read_csv_into_df(fname, chunks, args.test_n_rows)
 
     # convert times to datetime object
     if not args.raw_times:
@@ -381,9 +387,8 @@ def main():
     logging.info("Dropped empty lines.")
 
     if not args.keep_dirt:
-        logging.info("Now scanning for incomplete marking data.")
-        for marking in ['fan', 'blotch']:
-            df = scan_for_incomplete(df, marking)
+        logging.info("Now filtering for incomplete and default data.")
+        df = filter_data(df)
         logging.info("Done removing incompletes.")
 
     convert_ellipse_angles(df)
