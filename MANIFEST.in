@@ -1,0 +1,2 @@
+include versioneer.py
+include planet4/_version.py

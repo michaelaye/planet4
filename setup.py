@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 
 import sys
-
-from setuptools import setup
-from setuptools.command.test import test as TestCommand
-from os import path
 # To use a consistent encoding
 from codecs import open
+from os import path
+
+import versioneer
+from setuptools import setup
+from setuptools.command.test import test as TestCommand
 
 
 class PyTest(TestCommand):
@@ -32,8 +33,8 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name="planet4",
-    use_scm_version=True,
-    setup_requires=['setuptools_scm'],
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     packages=['planet4'],
     install_requires=['pandas>=0.17.1'],
     tests_require=['pytest', 'pandas', 'pytables'],
