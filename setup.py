@@ -34,7 +34,9 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 setup(
     name="planet4",
     version=versioneer.get_version(),
-    cmdclass=versioneer.get_cmdclass(),
+    # this hack just to combine 2 dictionaries, as versioneer automates the
+    # cmdclass dic generation.
+    cmdclass=versioneer.get_cmdclass().update({'test': PyTest}),
     packages=['planet4'],
     install_requires=['pandas>=0.17.1'],
     tests_require=['pytest', 'pandas', 'pytables'],
@@ -44,8 +46,6 @@ setup(
     package_data={
         'planet4': ['data/*']
     },
-
-    cmdclass={'test': PyTest},
 
     entry_points={
         "console_scripts": [
