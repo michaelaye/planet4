@@ -12,7 +12,9 @@ from ipyparallel import Client
 from odo import odo
 from pathlib import Path
 
+from . import markings
 from .io import DBManager, data_root
+
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
@@ -76,8 +78,15 @@ def filter_data(df):
     rest = rest[~rest_zero_filter]
 
     # merge previously splitted together and return
-    return pd.concat([fans, blotches, rest])
+    df = pd.concat([fans, blotches, rest])
 
+    # filter out markings outside tile frame
+    # delta value is how much I allow x and y positions to be outside the
+    # planet4 tile
+    delta = 25
+    q = "{} < x < {} and {} < y < {}".format(-delta, markings.img_x_size + delta,
+                                         -delta, markings.img_y_size + delta)
+    return df.query(q)
 
 def convert_times(df):
     logging.info("Starting time conversion now.")
@@ -387,15 +396,12 @@ def main():
     logging.info("Dropped empty lines.")
 
     if not args.keep_dirt:
-        logging.info("Now filtering for incomplete and default data.")
+        logging.info("Now filtering for unwanted data.")
         df = filter_data(df)
         logging.info("Done removing incompletes.")
 
     convert_ellipse_angles(df)
     normalize_fan_angles(df)
-
-    # commented out for now as image_x and image_y are already in the data.
-    # df = calculate_hirise_pixels(df)
 
     if args.do_fastread:
         produce_fast_read(rootpath, df)
