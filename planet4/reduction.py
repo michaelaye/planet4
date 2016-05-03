@@ -171,8 +171,12 @@ def remove_duplicates_from_image_name_data(data):
     any later in time classification_ids per user_name and image_id.
     """
     group = data.groupby(['image_id', 'user_name'], sort=False)
-    good_class_ids = group['classification_id'].min()
-    return data[data['classification_id'].isin(good_class_ids)]
+
+    def process_user_group(g):
+        c_id = g[g.created_at == g.created_at.min()].classification_id.min()
+        return g[g.classification_id == c_id]
+
+    return group.apply(process_user_group).reset_index(drop=True)
 
 
 def get_temp_fname(image_name):
