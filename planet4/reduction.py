@@ -85,8 +85,9 @@ def filter_data(df):
     # planet4 tile
     delta = 25
     q = "{} < x < {} and {} < y < {}".format(-delta, markings.img_x_size + delta,
-                                         -delta, markings.img_y_size + delta)
+                                             -delta, markings.img_y_size + delta)
     return df.query(q)
+
 
 def convert_times(df):
     logging.info("Starting time conversion now.")
