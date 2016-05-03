@@ -9,11 +9,15 @@ import time
 
 import pandas as pd
 from ipyparallel import Client
-from odo import odo
 from pathlib import Path
 
 from . import markings
 from .io import DBManager, data_root
+
+try:
+    from odo import odo
+except ImportError:
+    pass
 
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
@@ -80,13 +84,18 @@ def filter_data(df):
     # merge previously splitted together and return
     df = pd.concat([fans, blotches, rest])
 
+    none = df[df.marking == 'none']
+    rest = df[df.marking != 'none']
+
     # filter out markings outside tile frame
     # delta value is how much I allow x and y positions to be outside the
     # planet4 tile
     delta = 25
     q = "{} < x < {} and {} < y < {}".format(-delta, markings.img_x_size + delta,
                                              -delta, markings.img_y_size + delta)
-    return df.query(q)
+
+    rest = rest.query(q)
+    return pd.concat([rest, none])
 
 
 def convert_times(df):
