@@ -86,7 +86,7 @@ _id = imid1
 cm.cluster_image_id(_id, data=data[data.image_id==_id])
 
 for marking in ['blotches', 'fans', 'fnotches']:
-    for ftype in ['.csv', '.hdf']:
+    for ftype in ['.csv']:
         expected = tdir / (_id + '_' + marking + ftype)
         assert expected.exists()
 
@@ -94,7 +94,7 @@ for marking in ['blotches', 'fans', 'fnotches']:
 _id = imid2
 cm.cluster_image_id(_id, data=data[data.image_id==_id])
 for marking in ['blotches']:
-    for ftype in ['.csv', '.hdf']:
+    for ftype in ['.csv']:
         expected = tdir / (_id + '_' + marking + ftype)
         if marking == 'blotches':
             assert expected.exists()
@@ -106,4 +106,9 @@ assert expected.exists() and expected.is_dir()
 expected = tdir / 'just_clustering'    
 
 _tdir.cleanup()
+
+
+# In[ ]:
+
+
 
