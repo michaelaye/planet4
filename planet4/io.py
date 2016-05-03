@@ -57,14 +57,14 @@ def check_and_pad_id(imgid):
 
 
 def get_image_id_data(image_id):
-    return pd.read_hdf(get_current_database_fname(), 'df',
+    return pd.read_hdf(str(get_current_database_fname()), 'df',
                        where='image_id=' + image_id)
 
 
 def get_image_name_data(image_name, feedback=False):
     if feedback:
         print("Getting current data for image_name {}".format(image_name))
-    return pd.read_hdf(get_current_database_fname(), 'df',
+    return pd.read_hdf(str(get_current_database_fname()), 'df',
                        where='image_name=' + image_name)
 
 
@@ -150,7 +150,7 @@ def get_latest_tutorial_data(datadir=None):
     tut_files = [i for i in tut_files if i.parent[:4].isdigit()]
     if not tut_files:
         raise NoFilesFoundError
-    return pd.read_hdf(get_latest_file(tut_files), 'df')
+    return pd.read_hdf(str(get_latest_file(tut_files)), 'df')
 
 
 def common_gold_ids():
@@ -184,7 +184,7 @@ def get_image_names_from_db(dbfname):
 
 
 def get_current_marked():
-    return pd.read_hdf(get_current_database_fname(), 'df',
+    return pd.read_hdf(str(get_current_database_fname()), 'df',
                        where='marking!=None')
 
 
@@ -421,6 +421,9 @@ class DBManager(object):
         metadf = pd.DataFrame(pd.Series(image_names).astype('str'), columns=['image_name'])
         define_season_column(metadf)
         return metadf[(metadf.season > 1) & (metadf.season < 4)].image_name.unique()
+
+    def get_general_filter(self, f):
+        return pd.read_hdf(self.dbname, 'df', where=f)
 
 ###
 # general database helpers
