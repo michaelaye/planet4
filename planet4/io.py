@@ -57,14 +57,14 @@ def check_and_pad_id(imgid):
 
 
 def get_image_id_data(image_id):
-    return pd.read_hdf(str(get_current_database_fname()), 'df',
+    return pd.read_hdf(str(get_latest_cleaned_db()), 'df',
                        where='image_id=' + image_id)
 
 
 def get_image_name_data(image_name, feedback=False):
     if feedback:
         print("Getting current data for image_name {}".format(image_name))
-    return pd.read_hdf(str(get_current_database_fname()), 'df',
+    return pd.read_hdf(str(get_latest_cleaned_db()), 'df',
                        where='image_name=' + image_name)
 
 
@@ -124,13 +124,13 @@ def get_latest_file(filenames):
     return retval.p
 
 
-def get_current_database_fname(datadir=None):
+def get_latest_cleaned_db(datadir=None):
     datadir = data_root if datadir is None else Path(datadir)
     h5files = datadir.glob('201*_queryable_cleaned.h5')
     return get_latest_file(h5files)
 
 
-def get_current_season23_dbase(datadir=None):
+def get_latest_season23_dbase(datadir=None):
     if datadir is None:
         datadir = data_root
     h5files = list(datadir.glob('2015*_seasons2and3.h5'))
@@ -183,8 +183,8 @@ def get_image_names_from_db(dbfname):
         return pd.read_csv(dbfname).image_id.unique()
 
 
-def get_current_marked():
-    return pd.read_hdf(str(get_current_database_fname()), 'df',
+def get_latest_marked():
+    return pd.read_hdf(str(get_latest_cleaned_db()), 'df',
                        where='marking!=None')
 
 
@@ -330,7 +330,7 @@ class DBManager(object):
     Parameters
     ----------
     dbname : str, optional
-        Path to database file to be used. Default: use get_current_database_fname() to
+        Path to database file to be used. Default: use get_latest_cleaned_db() to
         find it.
 
     Attributes
@@ -354,7 +354,7 @@ class DBManager(object):
             database.
         """
         if dbname is None:
-            self.dbname = str(get_current_database_fname())
+            self.dbname = str(get_latest_cleaned_db())
         else:
             self.dbname = str(dbname)
 
@@ -362,6 +362,13 @@ class DBManager(object):
     def orig_csv(self):
         p = Path(self.dbname)
         return p.parent / (p.name[:38] + '.csv')
+
+    def set_latest_with_dupes_db(self, datadir=None):
+        datadir = data_root if datadir is None else Path(datadir)
+        h5files = datadir.glob('201*_queryable.h5')
+        dbname = get_latest_file(h5files)
+        print("Setting {} as dbname.".format(dbname.name))
+        self.dbname = str(dbname)
 
     @property
     def image_names(self):
@@ -392,8 +399,12 @@ class DBManager(object):
         "Alias to self.image_ids."
         return self.image_ids
 
-    def get_all(self):
-        return pd.read_hdf(self.dbname, 'df')
+    def get_all(self, datadir=None):
+        datadir = data_root if datadir is None else Path(datadir)
+        h5files = datadir.glob('201*_fast_all_read.h5')
+        dbname = get_latest_file(h5files)
+        self.dbname = str(dbname)
+        return pd.read_hdf(str(dbname), 'df')
 
     def get_obsid_markings(self, obsid):
         "Return marking data for given HiRISE obsid."
