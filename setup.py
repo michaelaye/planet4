@@ -30,13 +30,15 @@ here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
+cmdclassdic = versioneer.get_cmdclass()
+cmdclassdic.update({'test': PyTest})
 
 setup(
     name="planet4",
     version=versioneer.get_version(),
     # this hack just to combine 2 dictionaries, as versioneer automates the
     # cmdclass dic generation.
-    cmdclass=versioneer.get_cmdclass().update({'test': PyTest}),
+    cmdclass=cmdclassdic,
     packages=['planet4'],
     install_requires=['pandas>=0.17.1'],
     tests_require=['pytest', 'pandas', 'pytables'],
