@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 # setup
 from planet4 import io
@@ -18,7 +18,7 @@ import pkg_resources as pr
 datapath = Path(pr.resource_filename('planet4', 'data'))
 
 
-# In[ ]:
+# In[2]:
 
 # test_P4DBName
 name = '2015-10-21_planet_four_classifications.csv'
@@ -29,7 +29,7 @@ assert p4db.parent == Path('.')
 assert p4db.date == dt.datetime(2015, 10, 21)
 
 
-# In[ ]:
+# In[3]:
 
 # test_get_image_names_from_db
 result = io.get_image_names_from_db(datapath / 'test_db.csv')
@@ -37,7 +37,7 @@ expected = np.array(['APF000012q', 'APF000012w'])
 assert_array_equal(expected, result)
 
 
-# In[ ]:
+# In[4]:
 
 # test_get_latest_file
 l = ['2015-12-01_test.h5','2015-11-01_test.h5']
@@ -47,7 +47,7 @@ with pytest.raises(p4.exceptions.NoFilesFoundError):
     io.get_latest_file([])
 
 
-# In[ ]:
+# In[5]:
 
 # test_PathManager_missing_id_
 pm = io.PathManager('/tmp')
@@ -58,27 +58,27 @@ with pytest.raises(TypeError):
     assert pm.fnotchfile == Path('/tmp/ABC0001234_fnotches.hdf')
 
 
-# In[ ]:
+# In[9]:
 
-# test_PathManager_proper_setup
+# test_PathManager_default_setup
 pm = io.PathManager('/tmp')
+pm.id_ = 'ABC0001234'
+assert pm.fanfile == Path('/tmp/ABC0001234_fans.csv')
+assert pm.blotchfile == Path('/tmp/ABC0001234_blotches.csv')
+assert pm.fnotchfile == Path('/tmp/ABC0001234_fnotches.csv')
+
+
+# In[10]:
+
+# test_PathManager_different_suffix
+pm = io.PathManager('/tmp', suffix='.hdf')
 pm.id_ = 'ABC0001234'
 assert pm.fanfile == Path('/tmp/ABC0001234_fans.hdf')
 assert pm.blotchfile == Path('/tmp/ABC0001234_blotches.hdf')
 assert pm.fnotchfile == Path('/tmp/ABC0001234_fnotches.hdf')
 
 
-# In[ ]:
-
-# test_PathManager_suffix_.h5
-pm = io.PathManager('/tmp', suffix='.h5')
-pm.id_ = 'ABC0001234'
-assert pm.fanfile == Path('/tmp/ABC0001234_fans.h5')
-assert pm.blotchfile == Path('/tmp/ABC0001234_blotches.h5')
-assert pm.fnotchfile == Path('/tmp/ABC0001234_fnotches.h5')
-
-
-# In[ ]:
+# In[11]:
 
 # test_PathManager_suffix_.csv
 pm = io.PathManager('/tmp', suffix='.csv')
@@ -88,7 +88,7 @@ assert pm.blotchfile == Path('/tmp/ABC0001234_blotches.csv')
 assert pm.fnotchfile == Path('/tmp/ABC0001234_fnotches.csv')
 
 
-# In[ ]:
+# In[12]:
 
 # test_PathManager_setup_folders
 tempdir = tempfile.TemporaryDirectory()
