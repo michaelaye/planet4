@@ -214,7 +214,7 @@ class PathManager(object):
         Defined in `create_cut_folder`.
     """
 
-    def __init__(self, datapath=None, id_=None, suffix='.hdf',
+    def __init__(self, datapath=None, id_=None, suffix='.csv',
                  cut=0.5):
         self._id = id_
         self.cut = cut

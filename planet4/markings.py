@@ -97,9 +97,8 @@ class ImageID(object):
             self.data = data
         else:
             if database_fname is None:
-                database_fname = str(io.get_current_database_fname())
-            self.data = pd.read_hdf(database_fname, 'df',
-                                    where='image_id=' + self.imgid)
+                db = io.DBManager()
+            self.data = db.get_image_id_markings(self.imgid)
 
     @property
     def subframe(self):
