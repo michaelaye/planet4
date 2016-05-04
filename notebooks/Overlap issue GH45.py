@@ -1,13 +1,13 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 from pathlib import Path
 from planet4 import clustering, io, markings, region_data
 
 
-# In[ ]:
+# In[2]:
 
 # At the beginning of the notebook
 import logging
@@ -18,7 +18,7 @@ handler = logger.handlers[1]
 handler.setLevel(logging.DEBUG)
 
 
-# In[ ]:
+# In[3]:
 
 obsid = 'ESP_011394_0935'
 #obsid = 'ESP_012821_0865'
@@ -29,7 +29,7 @@ obsid = 'ESP_011394_0935'
 obsids = region_data.Inca.season2
 
 
-# In[ ]:
+# In[4]:
 
 def do_parallel_hirise_scope(obsid):
     from planet4 import clustering, io
@@ -40,9 +40,26 @@ def do_parallel_hirise_scope(obsid):
     return cm
 
 
-# In[ ]:
+# In[5]:
 
 cm = do_parallel_hirise_scope(obsid)
+
+
+# In[6]:
+
+from pathlib import Path
+root = io.dropbox()
+fname = root / "overlap_issue_GH45/hirise_level/ESP_011394_0935/applied_cut_0.5/"
+
+
+# In[ ]:
+
+
+
+
+# In[ ]:
+
+
 
 
 # In[ ]:

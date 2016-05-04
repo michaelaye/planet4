@@ -5,22 +5,12 @@
 # As long as the dynamic min_samples feature is not merged into `master`, make sure your code
 # is at the right branch before trying to test dynamic samples.
 
-# In[ ]:
+# In[1]:
 
 cd ~/Dropbox/CTX_to_jpg/pipeline_check/
 
 
-# In[ ]:
-
-from glob import glob
-
-fnames = glob('*.pdf')
-
-ids = [i.split('_')[0] for i in fnames]
-ids[:5]
-
-
-# In[ ]:
+# In[35]:
 
 from planet4 import clustering, io, markings, helper_functions as hf
 from pathlib import Path
@@ -45,19 +35,35 @@ cm.cluster_image_name('ESP_022699_0985')
 from planet4 import plotting
 
 
-# In[ ]:
+# In[36]:
 
 db = io.DBManager()
 
 
-# In[ ]:
+# In[37]:
 
 data = db.get_image_name_markings('ESP_022699_0985')
 
 
-# In[ ]:
+# In[39]:
 
-data.info()
+blotches = data[data.marking=='blotch']
+
+
+# In[40]:
+
+def is_rad1_larger(x):
+    return x['radius_1']>x['radius_2']
+
+
+# In[43]:
+
+data.loc[data.marking=='blotch', 'rad1larger'] = blotches.apply(is_rad1_larger, axis=1)
+
+
+# In[44]:
+
+data.rad1larger.value_counts()
 
 
 # In[ ]:
@@ -76,7 +82,7 @@ from ipyparallel import Client
 c = Client()
 
 
-# In[15]:
+# In[30]:
 
 def process_imgid(id_):
     import matplotlib.pyplot as plt
@@ -90,38 +96,38 @@ def process_imgid(id_):
     return id_
 
 
-# In[16]:
+# In[31]:
 
 get_ipython().magic('matplotlib nbagg')
 
 
-# In[17]:
+# In[33]:
 
-process_imgid('1f0')
+process_imgid('19g')
 
 
-# In[18]:
+# In[ ]:
 
 p1 = (221.79, 508.936)
 p2 = (232, 517)
 
 
-# In[19]:
+# In[ ]:
 
 from scipy.linalg import norm
 
 
-# In[23]:
+# In[ ]:
 
 dp = np.array(p1) - np.array(p2)
 
 
-# In[24]:
+# In[ ]:
 
 dp
 
 
-# In[25]:
+# In[ ]:
 
 norm(dp)
 
