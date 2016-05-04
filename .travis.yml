@@ -15,7 +15,7 @@ before_install:
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
-  - conda config --set always-yes yes --set changeps1 no
+  - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt
