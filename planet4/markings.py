@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Module to manage Planet4 markings."""
 import argparse
+import logging
 import math
 from itertools import cycle
 from math import cos, degrees, pi, radians, sin
@@ -136,12 +137,15 @@ class ImageID(object):
     def plot_blotches(self, n=None, img=True, user_name=None, ax=None,
                       user_color=None, without_users=None, blotches=None):
         """Plotting blotches using Blotch class and self.subframe."""
+        logging.debug("Entering markings.plot_blotches")
         if blotches is None:
             blotches = [Blotch(i) for _, i in
                         self.get_blotches(user_name, without_users).iterrows()]
         if ax is None:
             _, ax = plt.subplots(figsize=calc_fig_size(8))
+            logging.debug("Created own axis.")
         if img:
+            logging.debug("Plotting background image.")
             self.show_subframe(ax)
         if n is None:
             n = len(blotches)

@@ -441,6 +441,7 @@ class ClusteringManager(object):
                     self.pm.fandf).append(newfans, ignore_index=True)
             except OSError:
                 completefans = newfans
+            logging.debug("No of fans now: %i" % len(completefans))
         else:
             logging.debug("Apply fnotch cut: No new fans found.")
             completefans = self.pm.fandf
@@ -451,8 +452,9 @@ class ClusteringManager(object):
                     self.pm.blotchdf).append(newblotches, ignore_index=True)
             except OSError:
                 completeblotches = newblotches
+            logging.debug("No of blotches now: %i" % len(completefans))
         else:
-            logging.debug('Apply fnotch cut: No new blotches found.')
+            logging.debug('Apply fnotch cut: no blotches survived.')
             completeblotches = self.pm.blotchdf
         self.save(completefans, self.pm.final_fanfile)
         self.save(completeblotches, self.final_blotchfile)
