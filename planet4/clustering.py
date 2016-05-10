@@ -239,7 +239,7 @@ class ClusteringManager(object):
         for kind in ['fan', 'blotch']:
             # self.include_angle = False if kind == 'blotch' else True
             current_X = self.pre_processing(data, kind)
-]            if current_X is not None:
+            if current_X is not None:
                 dbscanner = DBScanner(current_X, eps=self.eps,
                                       min_samples=self.min_samples)
             else:
