@@ -132,21 +132,6 @@ plotting.plot_finals('1dr')
 from planet4.plotting import plot_clustered_blotches, plot_clustered_fans, plot_finals
 
 
-# In[35]:
-
-image_id = '1dr'
-imgid = markings.ImageID(image_id)
-fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(10, 8))
-axes = axes.ravel()
-for ax in axes:
-    imgid.show_subframe(ax=ax)
-imgid.plot_fans(ax=axes[1])
-imgid.plot_blotches(ax=axes[2])
-plot_finals(image_id, ax=axes[3])
-# plot_clustered_fans(image_id, ax=axes[4])
-plot_clustered_blotches(image_id, ax=axes[5])
-
-
 # In[51]:
 
 image_id = '1dr'
