@@ -36,7 +36,7 @@ class ClusteringManager(object):
         'hirise' is required to automatically take care of tile overlaps, while
         'planet4' is required to be able to check the quality of single
         Planet4 tiles.
-    min_distance : int
+    fnotch_distance : int
         Parameter to control the distance below which fans and blotches are
         determined to be 2 markings of the same thing, creating a FNOTCH
         chimera. The ratio between blotch and fan marks determines a fnotch
@@ -49,6 +49,11 @@ class ClusteringManager(object):
         Format to save the output in. Default: 'hdf'
     cut : float
         Value to apply for fnotch cutting.
+    min_samples_factor : float
+        Value to multiply the number of unique classifications per image_id with
+        to determine the `min_samples` value for DBSCAN to use. Default: 0.1
+    do_dynamic_min_samples : bool, default is False
+        Switch to decide if `min_samples` is being dynamically calculated.
 
     Attributes
     ----------
@@ -78,14 +83,16 @@ class ClusteringManager(object):
         Path to final fan and blotch clusters, after applying `cut`.
     """
 
-    def __init__(self, dbname=None, scope='hirise', min_distance=10, eps=10,
+    def __init__(self, dbname=None, scope='hirise', fnotch_distance=10, eps=10,
                  fnotched_dir=None, output_format='csv', cut=0.5,
+                 min_samples_factor=0.1,
                  include_angle=True, id_=None, pm=None,
-                 include_distance=False, include_radius=False):
+                 include_distance=False, include_radius=False,
+                 do_dynamic_min_samples=False):
         self.db = io.DBManager(dbname)
         self.dbname = dbname
         self.scope = scope
-        self.min_distance = min_distance
+        self.fnotch_distance = fnotch_distance
         self.eps = eps
         self.cut = cut
         self.include_angle = include_angle
@@ -93,6 +100,8 @@ class ClusteringManager(object):
         self.include_radius = include_radius
         self.confusion = []
         self.output_format = output_format
+        self.min_samples_factor = min_samples_factor
+        self.do_dynamic_min_samples = do_dynamic_min_samples
 
         # to be defined at runtime:
         self.current_coords = None
@@ -147,6 +156,8 @@ class ClusteringManager(object):
                 coords += ['radius_1', 'radius_2']
         # Determine the clustering input matrix
         current_X = marking_data[coords].values
+
+        # store stuff for later
         self.current_coords = coords
         self.current_markings = marking_data
         return current_X
@@ -215,11 +226,22 @@ class ClusteringManager(object):
         logging.debug('ClusterManager: cluster_data()')
         # reset stored clustered data
         self.reduced_data = {}
+
+        # Calculate the unique classification_ids so that the mininum number of
+        # samples for DBScanner can be calculated (10 % currently)
+        n_classifications = data.classification_id.nunique()
+
+        if self.do_dynamic_min_samples:
+            self.min_samples = round(self.min_samples_factor * n_classifications)
+        else:
+            self.min_samples = 3
+
         for kind in ['fan', 'blotch']:
             # self.include_angle = False if kind == 'blotch' else True
             current_X = self.pre_processing(data, kind)
-            if current_X is not None:
-                dbscanner = DBScanner(current_X, eps=self.eps)
+]            if current_X is not None:
+                dbscanner = DBScanner(current_X, eps=self.eps,
+                                      min_samples=self.min_samples)
             else:
                 self.reduced_data[kind] = []
                 continue
@@ -229,11 +251,14 @@ class ClusteringManager(object):
                                    len(self.current_markings),
                                    len(self.reduced_data[kind]),
                                    dbscanner.n_rejected))
+        self.n_classifications = n_classifications
+        print("n_classifications:", self.n_classifications)
+        print("min_samples:", self.min_samples)
 
     def do_the_fnotch(self):
         """Combine fans and blotches if necessary.
 
-        Use `min_distance` as criterion for linear algebraic distance between
+        Use `fnotch_distance` as criterion for linear algebraic distance between
         average cluster markings to determine if they belong to a Fnotch, a
         chimera object of indecision between a Fan and a Blotch, to be decided
         later in the process by applying a `cut` on the resulting Fnotch
@@ -261,7 +286,7 @@ class ClusteringManager(object):
         for blotch in self.reduced_data['blotch']:
             for fan in self.reduced_data['fan']:
                 delta = blotch.center - fan.midpoint
-                if norm(delta) < self.min_distance:
+                if norm(delta) < self.fnotch_distance:
                     fnotch_value = calc_fnotch(fan.n_members, blotch.n_members)
                     fnotch = markings.Fnotch(fnotch_value, fan, blotch)
                     fnotch.n_fan_members = fan.n_members
@@ -452,6 +477,7 @@ class ClusteringManager(object):
 
 
 def get_mean_position(fan, blotch, scope):
+    """Calculate mean for just the base coordinates of some data."""
     if scope == 'hirise':
         columns = ['hirise_x', 'hirise_y']
     else:
@@ -462,10 +488,12 @@ def get_mean_position(fan, blotch, scope):
 
 
 def calc_fnotch(nfans, nblotches):
+    """Calculate the fnotch value (or fan-ness)."""
     return (nfans) / (nfans + nblotches)
 
 
 def gold_star_plotter(gold_id, axis, kind='blotches'):
+    """Plot gold data."""
     for goldstar, color in zip(markings.gold_members,
                                markings.gold_plot_colors):
         if kind == 'blotches':
@@ -477,6 +505,7 @@ def gold_star_plotter(gold_id, axis, kind='blotches'):
 
 
 def is_catalog_production_good():
+    """A simple quality check for the catalog production."""
     from pandas.core.index import InvalidIndexError
     db = io.DBManager(io.get_current_database_fname())
     not_there = []
@@ -497,6 +526,10 @@ def is_catalog_production_good():
 
 
 def main():
+    """Exeucute gold data plotting by default. Should probably moved elsewhere.
+
+    Also, most likely not working currently.
+    """
     gold_ids = io.common_gold_ids()
 
     p4img = markings.ImageID(gold_ids[10])

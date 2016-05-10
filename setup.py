@@ -56,7 +56,7 @@ setup(
             'create_season2and3 = planet4.reduction:create_season2_and_3_database',
             'p4catalog_production = planet4.catalog_production:main',
             'hdf2csv = planet4.hdf2csv:main'
-            ]
+        ]
     },
 
     # metadata
