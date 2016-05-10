@@ -5,12 +5,12 @@
 # As long as the dynamic min_samples feature is not merged into `master`, make sure your code
 # is at the right branch before trying to test dynamic samples.
 
-# In[1]:
+# In[ ]:
 
 cd ~/Dropbox/CTX_to_jpg/pipeline_check/
 
 
-# In[35]:
+# In[ ]:
 
 from planet4 import clustering, io, markings, helper_functions as hf
 from pathlib import Path
@@ -35,33 +35,33 @@ cm.cluster_image_name('ESP_022699_0985')
 from planet4 import plotting
 
 
-# In[36]:
+# In[ ]:
 
 db = io.DBManager()
 
 
-# In[37]:
+# In[ ]:
 
 data = db.get_image_name_markings('ESP_022699_0985')
 
 
-# In[39]:
+# In[ ]:
 
 blotches = data[data.marking=='blotch']
 
 
-# In[40]:
+# In[ ]:
 
 def is_rad1_larger(x):
     return x['radius_1']>x['radius_2']
 
 
-# In[43]:
+# In[ ]:
 
 data.loc[data.marking=='blotch', 'rad1larger'] = blotches.apply(is_rad1_larger, axis=1)
 
 
-# In[44]:
+# In[ ]:
 
 data.rad1larger.value_counts()
 
@@ -82,7 +82,7 @@ from ipyparallel import Client
 c = Client()
 
 
-# In[30]:
+# In[ ]:
 
 def process_imgid(id_):
     import matplotlib.pyplot as plt
@@ -96,12 +96,12 @@ def process_imgid(id_):
     return id_
 
 
-# In[31]:
+# In[ ]:
 
 get_ipython().magic('matplotlib nbagg')
 
 
-# In[33]:
+# In[ ]:
 
 process_imgid('19g')
 
