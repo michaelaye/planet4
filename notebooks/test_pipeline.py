@@ -1,18 +1,14 @@
 
 # coding: utf-8
 
-# # are you in the right git branch?
-# As long as the dynamic min_samples feature is not merged into `master`, make sure your code
-# is at the right branch before trying to test dynamic samples.
-
-# In[ ]:
+# In[1]:
 
 cd ~/Dropbox/CTX_to_jpg/pipeline_check/
 
 
-# In[ ]:
+# In[23]:
 
-from planet4 import clustering, io, markings, helper_functions as hf
+from planet4 import clustering, io, markings, helper_functions as hf, plotting
 from pathlib import Path
 
 
@@ -82,28 +78,102 @@ from ipyparallel import Client
 c = Client()
 
 
-# In[ ]:
+# In[21]:
 
-def process_imgid(id_):
+# At the beginning of the notebook
+import logging
+logger = logging.getLogger()
+assert len(logger.handlers) == 1
+logger.addHandler(logging.StreamHandler())
+handler = logger.handlers[1]
+handler.setLevel(logging.DEBUG)
+
+
+# In[18]:
+
+def process_imgid(id_, dynamic=False, angle=False, distance=False, radius=False):
     import matplotlib.pyplot as plt
     from planet4 import plotting, clustering
     from pathlib import Path
-    path = Path("/Users/klay6683/data/planet4/pipelinecheck3")
-    cm = clustering.ClusteringManager(fnotched_dir=path)
+    path = Path("/Users/klay6683/data/planet4/pipelinecheck5")
+    cm = clustering.ClusteringManager(fnotched_dir=path,
+                                      do_dynamic_min_samples=dynamic,
+                                      include_angle=angle,
+                                      include_distance=distance,
+                                      include_radius=radius)
     cm.cluster_image_id(id_)
     plotting.plot_image_id_pipeline(id_, datapath=path, save=True)
 #     plt.close('all')
     return id_
 
 
-# In[ ]:
+# In[19]:
 
-get_ipython().magic('matplotlib nbagg')
+get_ipython().magic('matplotlib inline')
 
 
-# In[ ]:
+# In[22]:
 
-process_imgid('19g')
+process_imgid('1dr')
+
+
+# In[24]:
+
+plotting.plot_clustered_blotches('1dr')
+
+
+# In[25]:
+
+plotting.plot_finals('1dr')
+
+
+# In[29]:
+
+from planet4.plotting import plot_clustered_blotches, plot_clustered_fans, plot_finals
+
+
+# In[35]:
+
+image_id = '1dr'
+imgid = markings.ImageID(image_id)
+fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(10, 8))
+axes = axes.ravel()
+for ax in axes:
+    imgid.show_subframe(ax=ax)
+imgid.plot_fans(ax=axes[1])
+imgid.plot_blotches(ax=axes[2])
+plot_finals(image_id, ax=axes[3])
+# plot_clustered_fans(image_id, ax=axes[4])
+plot_clustered_blotches(image_id, ax=axes[5])
+
+
+# In[51]:
+
+image_id = '1dr'
+imgid = markings.ImageID(image_id)
+fig, axes = plt.subplots(ncols=3, figsize=(10, 4))
+axes = axes.ravel()
+# for ax in axes:
+#     imgid.show_subframe(ax=ax)
+# plot_clustered_fans(image_id, ax=axes[1])
+plot_clustered_blotches(image_id, ax=axes[2])
+
+
+# In[50]:
+
+image_id = '1dr'
+imgid = markings.ImageID(image_id)
+fig, axes = plt.subplots(ncols=3, figsize=(10, 4))
+axes = axes.ravel()
+# for ax in axes:
+#     imgid.show_subframe(ax=ax)
+plot_clustered_fans(image_id, ax=axes[1])
+plot_clustered_blotches(image_id, ax=axes[2])
+
+
+# In[12]:
+
+process_imgid('1dr', dynamic=True, angle=True, distance=True)
 
 
 # In[ ]:
