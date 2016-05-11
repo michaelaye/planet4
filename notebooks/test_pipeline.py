@@ -3,32 +3,13 @@
 
 # In[1]:
 
-cd ~/Dropbox/CTX_to_jpg/pipeline_check/
-
-
-# In[23]:
-
 from planet4 import clustering, io, markings, helper_functions as hf, plotting
 from pathlib import Path
 
 
 # In[ ]:
 
-path = Path("/Users/klay6683/data/planet4/ice_free_check")
-path.mkdir(exist_ok=True)
-cm = clustering.ClusteringManager(fnotched_dir=path,
-                                 include_angle=True, include_distance=False, 
-                                 include_radius=False, eps=10, min_distance=20)
-
-
-# In[ ]:
-
 cm.cluster_image_name('ESP_022699_0985')
-
-
-# In[ ]:
-
-from planet4 import plotting
 
 
 # In[ ]:
@@ -43,42 +24,11 @@ data = db.get_image_name_markings('ESP_022699_0985')
 
 # In[ ]:
 
-blotches = data[data.marking=='blotch']
-
-
-# In[ ]:
-
-def is_rad1_larger(x):
-    return x['radius_1']>x['radius_2']
-
-
-# In[ ]:
-
-data.loc[data.marking=='blotch', 'rad1larger'] = blotches.apply(is_rad1_larger, axis=1)
-
-
-# In[ ]:
-
-data.rad1larger.value_counts()
-
-
-# In[ ]:
-
-data[data.marking=='blotch'].info()
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
 from ipyparallel import Client
 c = Client()
 
 
-# In[21]:
+# In[3]:
 
 # At the beginning of the notebook
 import logging
@@ -89,7 +39,7 @@ handler = logger.handlers[1]
 handler.setLevel(logging.DEBUG)
 
 
-# In[18]:
+# In[2]:
 
 def process_imgid(id_, dynamic=False, angle=False, distance=False, radius=False):
     import matplotlib.pyplot as plt
@@ -107,53 +57,76 @@ def process_imgid(id_, dynamic=False, angle=False, distance=False, radius=False)
     return id_
 
 
-# In[19]:
+# In[4]:
 
 get_ipython().magic('matplotlib inline')
 
 
-# In[22]:
+# In[5]:
 
 process_imgid('1dr')
 
 
-# In[24]:
+# In[6]:
+
+plotting.plot_clustered_fans('1dr')
+
+
+# In[7]:
 
 plotting.plot_clustered_blotches('1dr')
 
 
-# In[25]:
+# In[8]:
 
 plotting.plot_finals('1dr')
 
 
-# In[29]:
+# In[9]:
 
 from planet4.plotting import plot_clustered_blotches, plot_clustered_fans, plot_finals
 
 
-# In[51]:
+# In[10]:
 
 image_id = '1dr'
 imgid = markings.ImageID(image_id)
-fig, axes = plt.subplots(ncols=3, figsize=(10, 4))
+fig, axes = plt.subplots(ncols=2, figsize=(10, 4))
 axes = axes.ravel()
-# for ax in axes:
-#     imgid.show_subframe(ax=ax)
-# plot_clustered_fans(image_id, ax=axes[1])
-plot_clustered_blotches(image_id, ax=axes[2])
+for ax in axes:
+    imgid.show_subframe(ax=ax)
+plot_clustered_fans(image_id, ax=axes[0])
+plot_clustered_blotches(image_id, ax=axes[1])
 
 
-# In[50]:
+# In[ ]:
 
-image_id = '1dr'
-imgid = markings.ImageID(image_id)
-fig, axes = plt.subplots(ncols=3, figsize=(10, 4))
-axes = axes.ravel()
-# for ax in axes:
-#     imgid.show_subframe(ax=ax)
-plot_clustered_fans(image_id, ax=axes[1])
-plot_clustered_blotches(image_id, ax=axes[2])
+
+
+
+# In[ ]:
+
+
+
+
+# In[ ]:
+
+
+
+
+# In[ ]:
+
+
+
+
+# In[ ]:
+
+
+
+
+# In[ ]:
+
+
 
 
 # In[12]:
