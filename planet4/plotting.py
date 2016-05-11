@@ -27,7 +27,6 @@ def plot_image_id_pipeline(image_id, **kwargs):
 
     fig.subplots_adjust(left=None, top=None, bottom=None, right=None,
                         wspace=0.001, hspace=0.001)
-    plt.show()
     if save:
         fname = "{}_{}.pdf".format(imgid.imgid, savetitle)
         fpath = pm.fnotched_dir / fname
@@ -38,14 +37,12 @@ def plot_raw_fans(id_, ax=None):
     imgid = markings.ImageID(id_)
 
     imgid.plot_fans(ax=ax)
-    plt.show()
 
 
 def plot_raw_blotches(id_, ax=None):
     imgid = markings.ImageID(id_)
 
     imgid.plot_blotches(ax=ax)
-    plt.show()
 
 
 def plot_finals(id_, _dir=None, ax=None):
@@ -64,10 +61,9 @@ def plot_finals(id_, _dir=None, ax=None):
         _, ax = plt.subplots()
     imgid.plot_fans(ax=ax, fans=finalfans.content)
     imgid.plot_blotches(ax=ax, blotches=finalblotches.content)
-    plt.show()
 
 
-def plot_clustered_blotches(id_, _dir=None, ax=None):
+def plot_clustered_blotches(id_, _dir=None, ax=None, **kwargs):
     pm = io.PathManager(id_=id_, datapath=_dir)
     if not pm.reduced_blotchfile.exists():
         print("Clustered blotchfile not found")
@@ -75,8 +71,7 @@ def plot_clustered_blotches(id_, _dir=None, ax=None):
     reduced_blotches = markings.BlotchContainer.from_fname(pm.reduced_blotchfile)
     imgid = markings.ImageID(id_)
 
-    imgid.plot_blotches(blotches=reduced_blotches.content, ax=ax)
-    plt.show()
+    imgid.plot_blotches(blotches=reduced_blotches.content, ax=ax, **kwargs)
 
 
 def blotches_all(id_, _dir=None):
@@ -85,10 +80,9 @@ def blotches_all(id_, _dir=None):
     plot_clustered_blotches(id_, _dir, ax=axes[1])
     fig.subplots_adjust(left=None, top=None, bottom=None, right=None,
                         wspace=0.001, hspace=0.001)
-    plt.show()
 
 
-def plot_clustered_fans(id_, _dir=None, ax=None):
+def plot_clustered_fans(id_, _dir=None, ax=None, **kwargs):
     pm = io.PathManager(id_=id_, datapath=_dir)
     if not pm.reduced_fanfile.exists():
         print("Clustered/reduced fanfile not found")
@@ -96,8 +90,7 @@ def plot_clustered_fans(id_, _dir=None, ax=None):
     reduced_fans = markings.FanContainer.from_fname(pm.reduced_fanfile)
     imgid = markings.ImageID(id_)
 
-    imgid.plot_fans(fans=reduced_fans.content, ax=ax)
-    plt.show()
+    imgid.plot_fans(fans=reduced_fans.content, ax=ax, **kwargs)
 
 
 def fans_all(id_, _dir=None):
@@ -106,4 +99,3 @@ def fans_all(id_, _dir=None):
     plot_clustered_fans(id_, _dir, ax=axes[1])
     fig.subplots_adjust(left=None, top=None, bottom=None, right=None,
                         wspace=0.001, hspace=0.001)
-    plt.show()
