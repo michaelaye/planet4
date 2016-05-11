@@ -134,57 +134,43 @@ class ImageID(object):
         if fig is not None:
             return fig
 
-    def plot_blotches(self, n=None, img=True, user_name=None, ax=None,
-                      user_color=None, without_users=None, blotches=None):
-        """Plotting blotches using Blotch class and self.subframe."""
-        logging.debug("Entering markings.plot_blotches")
-        if blotches is None:
-            blotches = [Blotch(i) for _, i in
-                        self.get_blotches(user_name, without_users).iterrows()]
+    def plot_objects(self, objects, n=None, img=True, user_name=None, ax=None,
+                     user_color=None, without_users=None):
+        """Plotting either fans or blotches with p4 subframe background."""
+        logging.debug("Entering markings.plot_objects")
         if ax is None:
             _, ax = plt.subplots(figsize=calc_fig_size(8))
             logging.debug("Created own axis.")
         if img:
             logging.debug("Plotting background image.")
             self.show_subframe(ax)
-        if n is None:
-            n = len(blotches)
-        for i, color in zip(range(len(blotches)), colors):
+        counter = 0
+        for obj, color in zip(objects, colors):
             if user_color is not None:
                 color = user_color
-            blotch = blotches[i]
-            blotch.set_color(color)
-            ax.add_patch(blotch)
-            blotch.plot_center(ax, color=color)
-            if i == n - 1:
+            obj.plot(color, ax)
+            counter += 1
+            if counter == n:
                 break
         set_subframe_size(ax)
         ax.set_axis_off()
 
-    def plot_fans(self, n=None, img=True, user_name=None, ax=None,
-                  user_color=None, without_users=None, fans=None):
+    def plot_blotches(self, blotches=None, **kwargs):
+        user_name = kwargs.pop('user_name', None)
+        without_users = kwargs.pop('without_users', None)
+        if blotches is None:
+            blotches = [Blotch(i) for _, i in
+                        self.get_blotches(user_name, without_users).iterrows()]
+        self.plot_objects(blotches, **kwargs)
+
+    def plot_fans(self, fans=None, **kwargs):
         """Plotting fans using Fans class and self.subframe."""
+        user_name = kwargs.pop('user_name', None)
+        without_users = kwargs.pop('without_users', None)
         if fans is None:
             fans = [Fan(i) for _, i in
                     self.get_fans(user_name, without_users).iterrows()]
-        if ax is None:
-            _, ax = plt.subplots(figsize=calc_fig_size(8))
-        if img:
-            self.show_subframe(ax)
-        if n is None:
-            n = len(fans)
-        for i, color in zip(range(len(fans)), colors):
-            if user_color is not None:
-                color = user_color
-            fan = fans[i]
-            fan.set_color(color)
-            ax.add_line(fan)
-            fan.add_semicircle(ax, color=color)
-            fan.plot_center(ax, color=color)
-            if i == n - 1:
-                break
-        set_subframe_size(ax)
-        ax.set_axis_off()
+        self.plot_objects(fans, **kwargs)
 
     def plot_all(self):
         fig, axes = plt.subplots(2, 2, figsize=(10, 8))
@@ -294,6 +280,11 @@ class Blotch(Ellipse):
     @n_members.setter
     def n_members(self, value):
         self._n_members = value
+
+    def plot(self, color, ax):
+        self.set_color(color)
+        ax.add_patch(self)
+        self.plot_center(ax, color=color)
 
     def store(self, fpath=None):
         out = self.data
@@ -450,6 +441,14 @@ class Fan(lines.Line2D):
         pointer.set_color(color)
         ax.add_line(pointer)
 
+    def plot(self, color='blue', ax=None):
+        if ax is None:
+            _, ax = plt.subplots()
+        self.set_color(color)
+        ax.add_line(self)
+        self.add_semicircle(ax, color=color)
+        self.plot_center(ax, color=color)
+
     @property
     def midpoint(self):
         """Calculate vector to half total length.
@@ -477,13 +476,6 @@ class Fan(lines.Line2D):
                                alpha=0.65, linewidth=3, linestyle=ls)
         pointer.set_color(color)
         ax.add_line(pointer)
-
-    def plot(self):
-        _, ax = plt.subplots()
-        img = np.ones(img_shape)
-        ax.imshow(img)
-        ax.add_line(self)
-        plt.show()
 
     def __str__(self):
         out = 'base: {0}\narmlength: {1}\narm1: {2}\narm2: {3}'\
