@@ -281,7 +281,10 @@ class Blotch(Ellipse):
     def n_members(self, value):
         self._n_members = value
 
-    def plot(self, color, ax):
+    def plot(self, color='blue', ax=None):
+        if ax is None:
+            _, ax = plt.subplots()
+
         self.set_color(color)
         ax.add_patch(self)
         self.plot_center(ax, color=color)
