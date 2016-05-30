@@ -5,7 +5,6 @@ import sys
 from codecs import open
 from os import path
 
-import versioneer
 from setuptools import setup
 from setuptools.command.test import test as TestCommand
 
@@ -30,17 +29,13 @@ here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
-cmdclassdic = versioneer.get_cmdclass()
-cmdclassdic.update({'test': PyTest})
 
 setup(
     name="planet4",
     version='0.7.2',
-    # this hack just to combine 2 dictionaries, as versioneer automates the
-    # cmdclass dic generation.
-    cmdclass=cmdclassdic,
+    cmdclass={'test': PyTest},
     packages=['planet4'],
-    install_requires=['pandas>=0.17.1'],
+    install_requires=['pandas'],
     tests_require=['pytest', 'pandas', 'pytables'],
     extras_require={
         'test': ['coverage'],
