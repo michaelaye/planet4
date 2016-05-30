@@ -35,7 +35,7 @@ cmdclassdic.update({'test': PyTest})
 
 setup(
     name="planet4",
-    version='0.7.1',
+    version='0.7.2',
     # this hack just to combine 2 dictionaries, as versioneer automates the
     # cmdclass dic generation.
     cmdclass=cmdclassdic,
