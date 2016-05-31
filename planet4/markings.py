@@ -225,6 +225,16 @@ class Blotch(Ellipse):
                                      fill=False, linewidth=1, color=color)
         self.data = data
 
+    def __eq__(self, other):
+        if self.data.x == other.data.x and\
+           self.data.y == other.data.y and\
+           self.data.radius_1 == other.data.radius_1 and\
+           self.data.radius_2 == other.data.radius_2 and\
+           self.data.angle == other.data.angle:
+            return True
+        else:
+            return False
+
     @property
     def area(self):
         return pi * self.data.radius_1 * self.data.radius_2
@@ -379,6 +389,18 @@ class Fan(lines.Line2D):
         lines.Line2D.__init__(self, self.coords[:, 0], self.coords[:, 1],
                               alpha=0.65, linewidth=linewidth, color='white',
                               **kwargs)
+
+    def __eq__(self, other):
+        if self.data.x == other.data.x and\
+           self.data.y == other.data.y and\
+           self.data.image_x == other.data.image_x and\
+           self.data.image_y == other.data.image_y and\
+           self.data.angle == other.data.angle and\
+           self.data.spread == other.data.spread and\
+           self.data.distance == other.data.distance:
+            return True
+        else:
+            return False
 
     @property
     def n_members(self):
