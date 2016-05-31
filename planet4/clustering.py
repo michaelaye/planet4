@@ -1,17 +1,19 @@
 """Managing clustering, fnotching and cut application here."""
 from __future__ import division, print_function
 
+import logging
+
 import importlib
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+from numpy.linalg import norm
 from pathlib import Path
 from scipy.stats import circmean
-import numpy as np
+
 from . import io, markings
 from .dbscan import DBScanner
-import logging
-
 
 importlib.reload(logging)
 logpath = Path.home() / 'p4reduction.log'
