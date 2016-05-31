@@ -32,7 +32,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name="planet4",
-    version='0.7.2',
+    version='0.7.3',
     cmdclass={'test': PyTest},
     packages=['planet4'],
     install_requires=['pandas'],
