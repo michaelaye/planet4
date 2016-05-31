@@ -92,7 +92,7 @@ class ImageID(object):
         If the data was already extracted before init, it can be provided here.
     """
 
-    def __init__(self, imgid, database_fname=None, data=None):
+    def __init__(self, imgid, database_fname=None, data=None, scope=None):
         self.imgid = io.check_and_pad_id(imgid)
         if data is not None:
             self.data = data
@@ -100,6 +100,7 @@ class ImageID(object):
             if database_fname is None:
                 db = io.DBManager()
             self.data = db.get_image_id_markings(self.imgid)
+        self.scope = scope
 
     @property
     def subframe(self):
@@ -159,7 +160,7 @@ class ImageID(object):
         user_name = kwargs.pop('user_name', None)
         without_users = kwargs.pop('without_users', None)
         if blotches is None:
-            blotches = [Blotch(i) for _, i in
+            blotches = [Blotch(i, self.scope) for _, i in
                         self.get_blotches(user_name, without_users).iterrows()]
         self.plot_objects(blotches, **kwargs)
 
@@ -168,7 +169,7 @@ class ImageID(object):
         user_name = kwargs.pop('user_name', None)
         without_users = kwargs.pop('without_users', None)
         if fans is None:
-            fans = [Fan(i) for _, i in
+            fans = [Fan(i, self.scope) for _, i in
                     self.get_fans(user_name, without_users).iterrows()]
         self.plot_objects(fans, **kwargs)
 
@@ -194,6 +195,8 @@ class Blotch(Ellipse):
     ----------
     data : object with blotch data attributes
         object should provide attributes [`x`, `y`, `radius_1`, `radius_2`, `angle`]
+    scope : {'planet4', 'hirise'}
+        string that decides between using x/y or image_x/image_y as center corods
     color : str, optional
         to control the color of the mpl.Ellipse object
 
@@ -208,10 +211,12 @@ class Blotch(Ellipse):
 
     to_average = 'x y image_x image_y angle radius_1 radius_2'.split()
 
-    def __init__(self, data, color='b'):
+    def __init__(self, data, scope, color='b'):
+        self.data = data
+        self.scope = scope
         try:
-            self.x = data.x
-            self.y = data.y
+            self.x = data.x if scope == 'planet4' else data.image_x
+            self.y = data.y if scope == 'planet4' else data.image_y
         except AttributeError:
             print("No x and y attributes in data:\n{}"
                   .format(data))
@@ -225,9 +230,11 @@ class Blotch(Ellipse):
                                      fill=False, linewidth=1, color=color)
         self.data = data
 
-    def __eq__(self, other):
+    def is_equal(self, other):
         if self.data.x == other.data.x and\
            self.data.y == other.data.y and\
+           self.data.image_x == other.data.image_y and\
+           self.data.image_y == other.data.image_y and\
            self.data.radius_1 == other.data.radius_1 and\
            self.data.radius_2 == other.data.radius_2 and\
            self.data.angle == other.data.angle:
@@ -332,6 +339,8 @@ class Fan(lines.Line2D):
     ----------
     data : object with fan data attributes
         object has to provide [`x`, `y`, `angle`, `spread`, `distance`]
+    scope : {'planet4', 'hirise'}
+        string that decides between using x/y or image_x/image_y as base coords
     kwargs : dictionary, optional
 
     Attributes
@@ -361,11 +370,14 @@ class Fan(lines.Line2D):
 
     to_average = 'x y image_x image_y angle spread distance'.split()
 
-    def __init__(self, data, linewidth=0.5, **kwargs):
+    def __init__(self, data, scope, linewidth=0.5, **kwargs):
         self.data = data
+        self.scope = scope
         # first coordinate is the base of fan
+        actual_x = 'x' if scope == 'planet4' else 'image_x'
+        actual_y = 'y' if scope == 'planet4' else 'image_y'
         try:
-            self.base = self.data.loc[['x', 'y']].values.astype('float')
+            self.base = self.data.loc[[actual_x, actual_y]].values.astype('float')
         except KeyError:
             print("No x and y in the data:\n{}".format(data))
             raise KeyError
@@ -390,7 +402,7 @@ class Fan(lines.Line2D):
                               alpha=0.65, linewidth=linewidth, color='white',
                               **kwargs)
 
-    def __eq__(self, other):
+    def is_equal(self, other):
         if self.data.x == other.data.x and\
            self.data.y == other.data.y and\
            self.data.image_x == other.data.image_x and\
@@ -539,16 +551,19 @@ class Fnotch(object):
     """
 
     @classmethod
-    def from_series(cls, series):
+    def from_series(cls, series, scope):
         "Create Fnotch instance from series with fan_ and blotch_ indices."
-        fan = Fan(series.filter(regex='fan_').rename(lambda x: x[4:]))
-        blotch = Blotch(series.filter(regex='blotch_').rename(lambda x: x[7:]))
-        return cls(series.fnotch_value, fan, blotch)
+        fan = Fan(series.filter(regex='fan_').rename(lambda x: x[4:]),
+                  scope=scope)
+        blotch = Blotch(series.filter(regex='blotch_').rename(lambda x: x[7:]),
+                        scope=scope)
+        return cls(series.fnotch_value, fan, blotch, scope)
 
-    def __init__(self, value, fan, blotch):
+    def __init__(self, value, fan, blotch, scope):
         self.value = value
         self.fandata = fan.data
         self.blotchdata = blotch.data
+        self.scope = scope
 
         fanstore = fan.store().copy()  # copy(),otherwise renaming original
         fanstore.rename_axis(lambda x: 'fan_'+x, inplace=True)
@@ -577,9 +592,9 @@ class Fnotch(object):
         `Fan` or `Blotch` object, depending on `cut`
         """
         if cut > self.value:
-            return Blotch(self.blotchdata)
+            return self.blotch
         else:
-            return Fan(self.fandata)
+            return self.fan
 
     def __str__(self):
         out = "Fnotch value: {:.2f}\n\n".format(self.value)
@@ -620,20 +635,20 @@ class Container(object):
 
 class FanContainer(Container):
 
-    def __init__(self, iterable):
-        self.content = [Fan(item) for item in iterable]
+    def __init__(self, iterable, scope):
+        self.content = [Fan(item, scope) for item in iterable]
 
 
 class BlotchContainer(Container):
 
-    def __init__(self, iterable):
-        self.content = [Blotch(item) for item in iterable]
+    def __init__(self, iterable, scope):
+        self.content = [Blotch(item, scope) for item in iterable]
 
 
-class FnotchContainer(Container):
-
-    def __init__(self, iterable):
-        super().__init__(iterable, Fnotch.from_series)
+# class FnotchContainer(Container):
+#     pass
+#     def __init__(self, iterable, scope):
+#         super().__init__(iterable, Fnotch.from_series)
 
 
 def main():

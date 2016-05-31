@@ -194,7 +194,7 @@ class ClusteringManager(object):
             clusterdata = data[cols].iloc[cluster_members]
             meandata = clusterdata.mean()
             meandata.angle = np.rad2deg(circmean(np.deg2rad(clusterdata.angle)))
-            cluster = Marking(meandata)
+            cluster = Marking(meandata, scope=self.scope)
             # storing n_members into the object for later.
             cluster.n_members = len(cluster_members)
             # storing this saved marker for later in ClusteringManager
@@ -274,13 +274,13 @@ class ClusteringManager(object):
         # check first if both blotchens and fans were found, if not, we don't
         # need to fnotch.
         if not all(self.reduced_data.values()):
+            logging.debug("CM: no fnotching required.")
             self.fnotches = []
             self.fnotched_blotches = self.reduced_data['blotch']
             self.fnotched_fans = self.reduced_data['fan']
             return
 
         logging.debug("CM: do_the_fnotch")
-        from numpy.linalg import norm
         n_close = 0
         fnotches = []
         blotches = []
@@ -290,7 +290,8 @@ class ClusteringManager(object):
                 delta = blotch.center - fan.midpoint
                 if norm(delta) < self.fnotch_distance:
                     fnotch_value = calc_fnotch(fan.n_members, blotch.n_members)
-                    fnotch = markings.Fnotch(fnotch_value, fan, blotch)
+                    fnotch = markings.Fnotch(fnotch_value, fan, blotch,
+                                             scope=self.scope)
                     fnotch.n_fan_members = fan.n_members
                     fnotch.n_blotch_members = blotch.n_members
                     fnotches.append(fnotch)
@@ -408,8 +409,9 @@ class ClusteringManager(object):
             return
 
         # apply Fnotch method `get_marking` with given cut.
-        final_clusters = df.apply(markings.Fnotch.from_series, axis=1).\
-            apply(lambda x: x.get_marking(self.cut))
+        fnotches = df.apply(markings.Fnotch.from_series, axis=1,
+                            args=(self.scope,))
+        final_clusters = fnotches.apply(lambda x: x.get_marking(self.cut))
 
         def filter_for_fans(x):
             if isinstance(x, markings.Fan):
