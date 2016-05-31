@@ -56,25 +56,6 @@ def check_and_pad_id(imgid):
     return imgid
 
 
-def get_image_id_data(image_id):
-    return pd.read_hdf(str(get_latest_cleaned_db()), 'df',
-                       where='image_id=' + image_id)
-
-
-def get_image_name_data(image_name, feedback=False):
-    if feedback:
-        print("Getting current data for image_name {}".format(image_name))
-    return pd.read_hdf(str(get_latest_cleaned_db()), 'df',
-                       where='image_name=' + image_name)
-
-
-def get_list_of_image_names_data(image_names):
-    dfs = []
-    for image_name in image_names:
-        dfs.append(get_image_name_data(image_name))
-    return pd.concat(dfs)
-
-
 def get_subframe(url):
     """Download image if not there yet and return numpy array.
 
