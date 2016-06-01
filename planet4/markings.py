@@ -214,6 +214,8 @@ class Blotch(Ellipse):
     def __init__(self, data, scope, color='b'):
         self.data = data
         self.scope = scope
+        if scope not in ['hirise', 'planet4']:
+            raise TypeError('Unknown scope')
         try:
             self.x = data.x if scope == 'planet4' else data.image_x
             self.y = data.y if scope == 'planet4' else data.image_y
@@ -373,6 +375,8 @@ class Fan(lines.Line2D):
     def __init__(self, data, scope, linewidth=0.5, **kwargs):
         self.data = data
         self.scope = scope
+        if scope not in ['hirise', 'planet4']:
+            raise TypeError('Unknown scope')
         # first coordinate is the base of fan
         actual_x = 'x' if scope == 'planet4' else 'image_x'
         actual_y = 'y' if scope == 'planet4' else 'image_y'
@@ -616,21 +620,20 @@ class Fnotch(object):
 class Container(object):
 
     @classmethod
-    def from_df(cls, df):
+    def from_df(cls, df, scope):
         rows = [i for _, i in df.iterrows()]
-        return cls(rows)
+        return cls(rows, scope)
 
     @classmethod
-    def from_fname(cls, fname):
+    def from_fname(cls, fname, scope):
         if str(fname).endswith('.hdf'):
             readfunc = pd.read_hdf
         elif str(fname).endswith('.csv'):
             readfunc = pd.read_csv
         else:
-            print("Can only work with '.csv' or '.hdf' files.")
-            return
+            raise TypeError("Can only work with '.csv' or '.hdf' files.")
         df = readfunc(str(fname))
-        return cls.from_df(df)
+        return cls.from_df(df, scope)
 
 
 class FanContainer(Container):

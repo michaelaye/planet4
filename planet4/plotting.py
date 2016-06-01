@@ -34,26 +34,27 @@ def plot_image_id_pipeline(image_id, **kwargs):
 
 
 def plot_raw_fans(id_, ax=None):
-    imgid = markings.ImageID(id_)
+    imgid = markings.ImageID(id_, scope='planet4')
 
     imgid.plot_fans(ax=ax)
 
 
 def plot_raw_blotches(id_, ax=None):
-    imgid = markings.ImageID(id_)
+    imgid = markings.ImageID(id_, scope='planet4')
 
     imgid.plot_blotches(ax=ax)
 
 
-def plot_finals(id_, _dir=None, ax=None):
+def plot_finals(id_, scope='planet4', _dir=None, ax=None):
     pm = io.PathManager(id_=id_, datapath=_dir)
-    if not all([pm.reduced_blotchfile.exists(),
-                pm.reduced_fanfile.exists()]):
+    if not all([pm.final_blotchfile.exists(),
+                pm.final_fanfile.exists()]):
         print("Some files not found.")
         return
 
-    finalfans = markings.FanContainer.from_fname(pm.final_fanfile)
-    finalblotches = markings.BlotchContainer.from_fname(pm.final_blotchfile)
+    finalfans = markings.FanContainer.from_fname(pm.final_fanfile, scope)
+    finalblotches = markings.BlotchContainer.from_fname(pm.final_blotchfile,
+                                                        scope)
 
     imgid = markings.ImageID(id_)
 
@@ -63,12 +64,13 @@ def plot_finals(id_, _dir=None, ax=None):
     imgid.plot_blotches(ax=ax, blotches=finalblotches.content)
 
 
-def plot_clustered_blotches(id_, _dir=None, ax=None, **kwargs):
+def plot_clustered_blotches(id_, scope='planet4', _dir=None, ax=None, **kwargs):
     pm = io.PathManager(id_=id_, datapath=_dir)
     if not pm.reduced_blotchfile.exists():
         print("Clustered blotchfile not found")
         return
-    reduced_blotches = markings.BlotchContainer.from_fname(pm.reduced_blotchfile)
+    reduced_blotches = markings.BlotchContainer.from_fname(pm.reduced_blotchfile,
+                                                           scope)
     imgid = markings.ImageID(id_)
 
     imgid.plot_blotches(blotches=reduced_blotches.content, ax=ax, **kwargs)
@@ -82,12 +84,13 @@ def blotches_all(id_, _dir=None):
                         wspace=0.001, hspace=0.001)
 
 
-def plot_clustered_fans(id_, _dir=None, ax=None, **kwargs):
+def plot_clustered_fans(id_, scope='planet4', _dir=None, ax=None, **kwargs):
     pm = io.PathManager(id_=id_, datapath=_dir)
     if not pm.reduced_fanfile.exists():
         print("Clustered/reduced fanfile not found")
         return
-    reduced_fans = markings.FanContainer.from_fname(pm.reduced_fanfile)
+    reduced_fans = markings.FanContainer.from_fname(pm.reduced_fanfile,
+                                                    scope)
     imgid = markings.ImageID(id_)
 
     imgid.plot_fans(fans=reduced_fans.content, ax=ax, **kwargs)
