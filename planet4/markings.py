@@ -159,8 +159,9 @@ class ImageID(object):
         user_name = kwargs.pop('user_name', None)
         without_users = kwargs.pop('without_users', None)
         if blotches is None:
-            blotches = [Blotch(i, self.scope) for _, i in
-                        self.get_blotches(user_name, without_users).iterrows()]
+            blotches = self.get_blotches(user_name, without_users)
+        if type(blotches) == pd.core.frame.DataFrame:
+            blotches = [Blotch(i, self.scope) for _, i in blotches.iterrows()]
         self.plot_objects(blotches, **kwargs)
 
     def plot_fans(self, fans=None, **kwargs):
@@ -168,8 +169,9 @@ class ImageID(object):
         user_name = kwargs.pop('user_name', None)
         without_users = kwargs.pop('without_users', None)
         if fans is None:
-            fans = [Fan(i, self.scope) for _, i in
-                    self.get_fans(user_name, without_users).iterrows()]
+            fans = self.get_fans(user_name, without_users)
+        if type(fans) == pd.core.frame.DataFrame:
+            fans = [Fan(i, self.scope) for _, i in fans.iterrows()]
         self.plot_objects(fans, **kwargs)
 
     def plot_all(self):

@@ -40,7 +40,7 @@ assert_array_equal(expected, result)
 # In[4]:
 
 # test_get_latest_file
-l = ['2015-12-01_test.h5','2015-11-01_test.h5']
+l = ['2015-12-01_test.h5', '2015-11-01_test.h5']
 assert io.get_latest_file(l) == Path(l[0])
 # empty list should raise NoFilesFoundError
 with pytest.raises(p4.exceptions.NoFilesFoundError):
@@ -94,6 +94,5 @@ assert pm.fnotchfile == Path('/tmp/ABC0001234_fnotches.csv')
 tempdir = tempfile.TemporaryDirectory()
 pm = io.PathManager(tempdir.name)
 pm.setup_folders()
-assert pm.fnotched_dir == Path(tempdir.name)
+assert pm.output_dir == Path(tempdir.name)
 assert pm.output_dir_clustered == Path(tempdir.name) / 'just_clustering'
-
