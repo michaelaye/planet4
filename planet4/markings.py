@@ -85,20 +85,19 @@ class ImageID(object):
     ----------
     imgid : str
         Planet4 image_id
-    database_fname : str, optional
+    dbname : str, optional
         Filepath to database name. The marking data for `imgid` will be extracted.
         Default: Latest one.
     data : pd.DataFrame, optional
         If the data was already extracted before init, it can be provided here.
     """
 
-    def __init__(self, imgid, database_fname=None, data=None, scope=None):
+    def __init__(self, imgid, dbname=None, data=None, scope=None):
         self.imgid = io.check_and_pad_id(imgid)
         if data is not None:
             self.data = data
         else:
-            if database_fname is None:
-                db = io.DBManager()
+            db = io.DBManager(dbname)
             self.data = db.get_image_id_markings(self.imgid)
         self.scope = scope
 

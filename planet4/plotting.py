@@ -29,12 +29,12 @@ def plot_image_id_pipeline(image_id, **kwargs):
                         wspace=0.001, hspace=0.001)
     if save:
         fname = "{}_{}.pdf".format(imgid.imgid, savetitle)
-        fpath = pm.fnotched_dir / fname
+        fpath = pm.output_dir / fname
         plt.savefig(str(fpath))
 
 
-def plot_raw_fans(id_, ax=None):
-    imgid = markings.ImageID(id_, scope='planet4')
+def plot_raw_fans(id_, ax=None, dbname=None):
+    imgid = markings.ImageID(id_, scope='planet4', dbname=dbname)
 
     imgid.plot_fans(ax=ax)
 

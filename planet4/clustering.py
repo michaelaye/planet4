@@ -45,7 +45,7 @@ class ClusteringManager(object):
         value that can be used as a discriminator for the final object catalog.
     eps : int
         Parameter to control the exclusion distance for the DBSCAN
-    fnotched_dir : str or pathlib.Path
+    output_dir : str or pathlib.Path
         Path to folder where to store output. Default: io.data_root / 'output'
     output_format : {'hdf', 'csv', 'both'}
         Format to save the output in. Default: 'hdf'
@@ -86,7 +86,7 @@ class ClusteringManager(object):
     """
 
     def __init__(self, dbname=None, scope='hirise', fnotch_distance=10, eps=10,
-                 fnotched_dir=None, output_format='csv', cut=0.5,
+                 output_dir=None, output_format='csv', cut=0.5,
                  min_samples_factor=0.1,
                  include_angle=True, id_=None, pm=None,
                  include_distance=False, include_radius=False,
@@ -119,7 +119,7 @@ class ClusteringManager(object):
         if pm is not None:
             self.pm = pm
         else:
-            self.pm = io.PathManager(fnotched_dir, id_=id_,
+            self.pm = io.PathManager(output_dir, id_=id_,
                                      suffix='.'+output_format)
         self.pm.setup_folders()
 
@@ -355,7 +355,7 @@ class ClusteringManager(object):
     def store_output(self):
         """Write out the clustered and fnotched data."""
         logging.debug('CM: Writing output files.')
-        logging.debug('CM: Output dir: %s', self.fnotched_dir)
+        logging.debug('CM: Output dir: %s', self.output_dir)
 
         # first write the fnotched data
         for outfname, outdata in zip(['fnotchfile', 'blotchfile', 'fanfile'],

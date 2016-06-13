@@ -199,7 +199,7 @@ class PathManager(object):
                  cut=0.5):
         self._id = id_
         self.cut = cut
-        self.fnotched_dir = datapath
+        self.output_dir = datapath
         self.suffix = suffix
 
         self.cut_dir = None  # defined at run time
@@ -225,16 +225,16 @@ class PathManager(object):
 
     def setup_folders(self):
         "Setup folder paths and create them if required."
-        fnotched_dir = self.fnotched_dir
-        if fnotched_dir is None:
-            fnotched_dir = Path(data_root) / 'clustering'
+        output_dir = self.output_dir
+        if output_dir is None:
+            output_dir = Path(data_root) / 'clustering'
         else:
-            fnotched_dir = Path(fnotched_dir)
-        fnotched_dir.mkdir(exist_ok=True)
-        self.fnotched_dir = fnotched_dir
+            output_dir = Path(output_dir)
+        output_dir.mkdir(exist_ok=True)
+        self.output_dir = output_dir
 
         # storage path for the clustered data before fnotching
-        output_dir_clustered = fnotched_dir / 'just_clustering'
+        output_dir_clustered = output_dir / 'just_clustering'
         output_dir_clustered.mkdir(exist_ok=True)
         self.output_dir_clustered = output_dir_clustered
 
@@ -242,7 +242,7 @@ class PathManager(object):
 
     def create_cut_folder(self, cut):
         # storage path for the final catalog after applying `cut`
-        cut_dir = self.fnotched_dir / 'applied_cut_{:.1f}'.format(cut)
+        cut_dir = self.output_dir / 'applied_cut_{:.1f}'.format(cut)
         cut_dir.mkdir(exist_ok=True)
         self.cut_dir = cut_dir
         return cut_dir
@@ -263,7 +263,7 @@ class PathManager(object):
 
     @property
     def fanfile(self):
-        return self.create_path('fans', self.fnotched_dir)
+        return self.create_path('fans', self.output_dir)
 
     @property
     def reduced_fanfile(self):
@@ -279,7 +279,7 @@ class PathManager(object):
 
     @property
     def blotchfile(self):
-        return self.create_path('blotches', self.fnotched_dir)
+        return self.create_path('blotches', self.output_dir)
 
     @property
     def reduced_blotchfile(self):
@@ -295,7 +295,7 @@ class PathManager(object):
 
     @property
     def fnotchfile(self):
-        return self.create_path('fnotches', self.fnotched_dir)
+        return self.create_path('fnotches', self.output_dir)
 
     @property
     def fnotchdf(self):
