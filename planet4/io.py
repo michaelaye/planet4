@@ -211,7 +211,7 @@ class PathManager(object):
                  cut=0.5):
         self._id = id_
         self.cut = cut
-        self.output_dir = datapath
+        self.datapath = datapath
         self.suffix = suffix
 
         self.cut_dir = None  # defined at run time
@@ -237,16 +237,16 @@ class PathManager(object):
 
     def setup_folders(self):
         "Setup folder paths and create them if required."
-        output_dir = self.output_dir
-        if output_dir is None:
-            output_dir = Path(data_root) / 'clustering'
+        datapath = self.datapath
+        if datapath is None:
+            datapath = Path(data_root) / 'clustering'
         else:
-            output_dir = Path(output_dir)
-        output_dir.mkdir(exist_ok=True)
-        self.output_dir = output_dir
+            datapath = Path(data_root) / datapath
+        datapath.mkdir(exist_ok=True)
+        self.datapath = datapath
 
         # storage path for the clustered data before fnotching
-        output_dir_clustered = output_dir / 'just_clustering'
+        output_dir_clustered = datapath / 'just_clustering'
         output_dir_clustered.mkdir(exist_ok=True)
         self.output_dir_clustered = output_dir_clustered
 
@@ -254,7 +254,7 @@ class PathManager(object):
 
     def create_cut_folder(self, cut):
         # storage path for the final catalog after applying `cut`
-        cut_dir = self.output_dir / 'applied_cut_{:.1f}'.format(cut)
+        cut_dir = self.datapath / 'applied_cut_{:.1f}'.format(cut)
         cut_dir.mkdir(exist_ok=True)
         self.cut_dir = cut_dir
         return cut_dir

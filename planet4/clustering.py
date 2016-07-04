@@ -355,7 +355,7 @@ class ClusteringManager(object):
     def store_output(self):
         """Write out the clustered and fnotched data."""
         logging.debug('CM: Writing output files.')
-        logging.debug('CM: Output dir: %s', self.output_dir)
+        logging.debug('CM: Output dir: %s', self.datapath)
 
         # first write the fnotched data
         for outfname, outdata in zip(['fnotchfile', 'blotchfile', 'fanfile'],

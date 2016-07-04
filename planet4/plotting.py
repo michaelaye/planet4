@@ -1,15 +1,13 @@
 import matplotlib.pyplot as plt
+from pathlib import Path
 
-from . import io
-from . import markings
+from . import io, markings
 
 
-def plot_image_id_pipeline(image_id, **kwargs):
-    save = kwargs.pop('save', False)
-    savetitle = kwargs.pop('savetitle', '')
-    pm = io.PathManager(id_=image_id, **kwargs)
-
-    imgid = markings.ImageID(image_id)
+def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
+                           savetitle='', figtitle=''):
+    datapath = Path(datapath)
+    imgid = markings.ImageID(image_id, dbname=dbname, scope='planet4')
 
     fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(10, 8))
     axes = axes.ravel()
@@ -18,9 +16,9 @@ def plot_image_id_pipeline(image_id, **kwargs):
     imgid.plot_fans(ax=axes[1])
     imgid.plot_blotches(ax=axes[2])
 
-    plot_clustered_fans(image_id, ax=axes[4])
-    plot_clustered_blotches(image_id, ax=axes[5])
-    plot_finals(image_id, ax=axes[3])
+    plot_clustered_fans(image_id, ax=axes[4], datapath=datapath)
+    plot_clustered_blotches(image_id, ax=axes[5], datapath=datapath)
+    plot_finals(image_id, ax=axes[3], datapath=datapath)
 
     for ax in axes:
         ax.set_axis_off()
@@ -45,8 +43,8 @@ def plot_raw_blotches(id_, ax=None):
     imgid.plot_blotches(ax=ax)
 
 
-def plot_finals(id_, scope='planet4', _dir=None, ax=None):
-    pm = io.PathManager(id_=id_, datapath=_dir)
+def plot_finals(id_, scope='planet4', datapath=None, ax=None):
+    pm = io.PathManager(id_=id_, datapath=datapath)
     if not all([pm.final_blotchfile.exists(),
                 pm.final_fanfile.exists()]):
         print("Some files not found.")
@@ -64,8 +62,8 @@ def plot_finals(id_, scope='planet4', _dir=None, ax=None):
     imgid.plot_blotches(ax=ax, blotches=finalblotches.content)
 
 
-def plot_clustered_blotches(id_, scope='planet4', _dir=None, ax=None, **kwargs):
-    pm = io.PathManager(id_=id_, datapath=_dir)
+def plot_clustered_blotches(id_, scope='planet4', datapath=None, ax=None, **kwargs):
+    pm = io.PathManager(id_=id_, datapath=datapath)
     if not pm.reduced_blotchfile.exists():
         print("Clustered blotchfile not found")
         return
@@ -76,10 +74,10 @@ def plot_clustered_blotches(id_, scope='planet4', _dir=None, ax=None, **kwargs):
     imgid.plot_blotches(blotches=reduced_blotches.content, ax=ax, **kwargs)
 
 
-def blotches_all(id_, _dir=None):
+def blotches_all(id_, datapath=None):
     fig, axes = plt.subplots(ncols=2)
     plot_raw_blotches(id_, ax=axes[0])
-    plot_clustered_blotches(id_, _dir, ax=axes[1])
+    plot_clustered_blotches(id_, datapath, ax=axes[1])
     fig.subplots_adjust(left=None, top=None, bottom=None, right=None,
                         wspace=0.001, hspace=0.001)
 
@@ -99,6 +97,6 @@ def plot_clustered_fans(id_, scope='planet4', _dir=None, ax=None, **kwargs):
 def fans_all(id_, _dir=None):
     fig, axes = plt.subplots(ncols=2)
     plot_raw_fans(id_, ax=axes[0])
-    plot_clustered_fans(id_, _dir, ax=axes[1])
+    plot_clustered_fans(id_, datapath, ax=axes[1])
     fig.subplots_adjust(left=None, top=None, bottom=None, right=None,
                         wspace=0.001, hspace=0.001)
