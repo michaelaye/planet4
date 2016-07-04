@@ -175,6 +175,18 @@ def get_and_save_done(df, limit=30):
     df[df.image_id.isin(ids_done)].to_hdf(done_path, 'df')
 
 
+def get_image_id_from_fname(fname):
+    "Return image_id from beginning of Path(fname).name"
+    fname = Path(fname)
+    name = fname.name
+    return name.split('_')[0]
+
+
+def get_image_ids_in_folder(folder, extension='.csv'):
+    fnames = Path(folder).glob('*'+extension)
+    return [get_image_id_from_fname(i) for i in fnames]
+
+
 class PathManager(object):
 
     """Manage file paths and folders related to the analysis pipeline.
