@@ -90,7 +90,8 @@ class ClusteringManager(object):
                  min_samples_factor=0.1,
                  include_angle=True, id_=None, pm=None,
                  include_distance=False, include_radius=False,
-                 do_dynamic_min_samples=False):
+                 do_dynamic_min_samples=False,
+                 quiet=True):
         self.db = io.DBManager(dbname)
         self.dbname = dbname
         self.scope = scope
@@ -104,6 +105,7 @@ class ClusteringManager(object):
         self.output_format = output_format
         self.min_samples_factor = min_samples_factor
         self.do_dynamic_min_samples = do_dynamic_min_samples
+        self.quiet = quiet
 
         # to be defined at runtime:
         self.current_coords = None
@@ -210,6 +212,8 @@ class ClusteringManager(object):
             reduced_data.append(cluster)
 
         self.reduced_data[kind] = reduced_data
+        if not self.quiet:
+            print("Reduced data to %i %s(e)s." % (len(reduced_data), kind))
         logging.debug("Reduced data to %i %s(e)s.", len(reduced_data), kind)
 
     def cluster_data(self, data):
@@ -456,7 +460,7 @@ class ClusteringManager(object):
                     self.pm.blotchdf).append(newblotches, ignore_index=True)
             except OSError:
                 completeblotches = newblotches
-            logging.debug("No of blotches now: %i" % len(completefans))
+            logging.debug("No of blotches now: %i" % len(completeblotches))
         else:
             logging.debug('Apply fnotch cut: no blotches survived.')
             completeblotches = self.pm.blotchdf
