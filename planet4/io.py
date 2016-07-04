@@ -11,7 +11,7 @@ import pandas as pd
 import pkg_resources as pr
 from pathlib import Path
 
-from . import helper_functions as hf
+from . import stats
 from .exceptions import NoFilesFoundError
 
 try:
@@ -170,7 +170,7 @@ def get_latest_marked():
 
 
 def get_and_save_done(df, limit=30):
-    counts = hf.classification_counts_per_image(df)
+    counts = stats.classification_counts_per_image(df)
     ids_done = counts[counts >= limit].index
     df[df.image_id.isin(ids_done)].to_hdf(done_path, 'df')
 
