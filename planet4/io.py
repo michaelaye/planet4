@@ -275,39 +275,55 @@ class PathManager(object):
 
     @property
     def fanfile(self):
-        return self.create_path('fans', self.output_dir)
-
-    @property
-    def reduced_fanfile(self):
-        return self.create_path('fans', self.output_dir_clustered)
-
-    @property
-    def final_fanfile(self):
-        return self.create_path('fans', self.cut_dir)
+        return self.create_path('fans', self.datapath)
 
     @property
     def fandf(self):
         return self.get_df(self.fanfile)
 
     @property
+    def reduced_fanfile(self):
+        return self.create_path('fans', self.output_dir_clustered)
+
+    @property
+    def reduced_fandf(self):
+        return self.get_df(self.reduced_fanfile)
+
+    @property
+    def final_fanfile(self):
+        return self.create_path('fans', self.cut_dir)
+
+    @property
+    def final_fandf(self):
+        return self.get_df(self.final_fanfile)
+
+    @property
     def blotchfile(self):
-        return self.create_path('blotches', self.output_dir)
-
-    @property
-    def reduced_blotchfile(self):
-        return self.create_path('blotches', self.output_dir_clustered)
-
-    @property
-    def final_blotchfile(self):
-        return self.create_path('blotches', self.cut_dir)
+        return self.create_path('blotches', self.datapath)
 
     @property
     def blotchdf(self):
         return self.get_df(self.blotchfile)
 
     @property
+    def reduced_blotchfile(self):
+        return self.create_path('blotches', self.output_dir_clustered)
+
+    @property
+    def reduced_blotchdf(self):
+        return self.get_df(self.reduced_blotchfile)
+
+    @property
+    def final_blotchfile(self):
+        return self.create_path('blotches', self.cut_dir)
+
+    @property
+    def final_blotchdf(self):
+        return self.get_df(self.final_blotchfile)
+
+    @property
     def fnotchfile(self):
-        return self.create_path('fnotches', self.output_dir)
+        return self.create_path('fnotches', self.datapath)
 
     @property
     def fnotchdf(self):
