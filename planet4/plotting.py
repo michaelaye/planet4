@@ -48,18 +48,15 @@ def plot_finals(id_, scope='planet4', datapath=None, ax=None):
     if not all([pm.final_blotchfile.exists(),
                 pm.final_fanfile.exists()]):
         print("Some files not found.")
-        return
 
-    finalfans = markings.FanContainer.from_fname(pm.final_fanfile, scope)
-    finalblotches = markings.BlotchContainer.from_fname(pm.final_blotchfile,
-                                                        scope)
-
-    imgid = markings.ImageID(id_)
+    imgid = markings.ImageID(id_, scope=scope)
 
     if ax is None:
         _, ax = plt.subplots()
-    imgid.plot_fans(ax=ax, fans=finalfans.content)
-    imgid.plot_blotches(ax=ax, blotches=finalblotches.content)
+    if pm.final_fanfile.exists():
+        imgid.plot_fans(ax=ax, fans=pm.final_fandf)
+    if pm.final_blotchfile.exists():
+        imgid.plot_blotches(ax=ax, blotches=pm.final_blotchdf)
 
 
 def plot_clustered_blotches(id_, scope='planet4', datapath=None, ax=None, **kwargs):
