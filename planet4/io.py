@@ -114,8 +114,8 @@ def get_latest_cleaned_db(datadir=None):
 def get_latest_season23_dbase(datadir=None):
     if datadir is None:
         datadir = data_root
-    h5files = list(datadir.glob('2015*_seasons2and3.h5'))
-    return DBManager(get_latest_file(h5files))
+    h5files = list(datadir.glob('201*_queryable_cleaned_seasons2and3.h5'))
+    return get_latest_file(h5files)
 
 
 def get_test_database():
@@ -353,7 +353,7 @@ class DBManager(object):
 
     """
 
-    def __init__(self, dbname=None):
+    def __init__(self, dbname=None, s23=False):
         """Initialize DBManager class.
 
         Parameters
@@ -363,7 +363,10 @@ class DBManager(object):
             database.
         """
         if dbname is None:
-            self.dbname = str(get_latest_cleaned_db())
+            if s23:
+                self.dbname = str(get_latest_season23_dbase())
+            else:
+                self.dbname = str(get_latest_cleaned_db())
         else:
             self.dbname = str(dbname)
 
