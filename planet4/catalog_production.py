@@ -7,7 +7,7 @@ import logging
 from ipyparallel import Client
 from ipyparallel.util import interactive
 
-from .io import get_image_names_from_db, DBManager
+from .io import DBManager
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
