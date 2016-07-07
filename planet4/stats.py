@@ -2,6 +2,19 @@ import numpy as np
 from math import pi
 
 
+def get_fan_and_blotch_nunique_cids(data):
+    f1 = data.marking == 'fan'
+    f2 = data.marking == 'blotch'
+    return data[f1 | f2].classification_id.nunique()
+
+
+def get_fb_to_all_ratio(data):
+    n_classifications = data.classification_id.nunique()
+    n_class_fb = get_fan_and_blotch_nunique_cids(data)
+    ratio = (n_class_fb / n_classifications)
+    return ratio
+
+
 def size_of_unique(x):
     return x.unique().size
 
