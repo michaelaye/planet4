@@ -353,7 +353,7 @@ class DBManager(object):
 
     """
 
-    def __init__(self, dbname=None, s23=False):
+    def __init__(self, dbname=None, s23=True):
         """Initialize DBManager class.
 
         Parameters
@@ -369,6 +369,11 @@ class DBManager(object):
                 self.dbname = str(get_latest_cleaned_db())
         else:
             self.dbname = str(dbname)
+
+    def __repr__(self):
+        s = "Database root: {}\n".format(Path(self.dbname).parent)
+        s += "Database name: {}\n".format(Path(self.dbname).name)
+        return s
 
     @property
     def orig_csv(self):
