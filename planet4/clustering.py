@@ -258,6 +258,7 @@ class ClusteringManager(object):
                                    len(self.reduced_data[kind]),
                                    dbscanner.n_rejected))
         self.n_classifications = n_classifications
+        self.dbscanner = dbscanner
         print("n_classifications:", self.n_classifications)
         print("min_samples:", self.min_samples)
 
