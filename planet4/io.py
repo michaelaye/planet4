@@ -204,14 +204,19 @@ class PathManager(object):
     Attributes
     ----------
     cut_dir : pathlib.Path
-        Defined in `create_cut_folder`.
+        Defined in `get_cut_folder`.
     """
 
     def __init__(self, datapath=None, id_=None, suffix='.csv',
                  cut=0.5):
         self._id = id_
         self.cut = cut
-        self.datapath = datapath
+        if datapath is None:
+            self.datapath = Path(data_root) / 'clustering'
+        else:
+            self.datapath = Path(data_root) / datapath
+        self.datapath.mkdir(exist_ok=True)
+
         self.suffix = suffix
 
         self.cut_dir = None  # defined at run time
@@ -221,8 +226,6 @@ class PathManager(object):
             self.reader = pd.read_hdf
         elif suffix == '.csv':
             self.reader = pd.read_csv
-
-        self.setup_folders()
 
     @property
     def id_(self):
@@ -235,37 +238,29 @@ class PathManager(object):
     def id_(self, value):
         self._id = value
 
-    def setup_folders(self):
-        "Setup folder paths and create them if required."
-        datapath = self.datapath
-        if datapath is None:
-            datapath = Path(data_root) / 'clustering'
-        else:
-            datapath = Path(data_root) / datapath
-        datapath.mkdir(exist_ok=True)
-        self.datapath = datapath
-
-        # storage path for the clustered data before fnotching
-        output_dir_clustered = datapath / 'just_clustering'
+    @property
+    def output_dir_clustered(self):
+        "Storage path for the clustered data before fnotching."
+        output_dir_clustered = self.datapath / 'just_clustering'
         output_dir_clustered.mkdir(exist_ok=True)
-        self.output_dir_clustered = output_dir_clustered
+        return output_dir_clustered
 
-        self.create_cut_folder(self.cut)
-
-    def create_cut_folder(self, cut):
+    def get_cut_folder(self, cut):
         # storage path for the final catalog after applying `cut`
         cut_dir = self.datapath / 'applied_cut_{:.1f}'.format(cut)
         cut_dir.mkdir(exist_ok=True)
         self.cut_dir = cut_dir
         return cut_dir
 
-    def create_path(self, marking, path):
+    def get_path(self, marking, path):
         if path is None:
             raise TypeError('path needs to be set.')
         if self.id_ is None:
             raise TypeError('self.id_ needs to be set.')
 
-        return Path(path) / (self.id_ + '_' + str(marking) + self.suffix)
+        p = Path(path) / (self.id_ + '_' + str(marking) + self.suffix)
+        p.parent.mkdir(exist_ok=True)
+        return p
 
     def get_df(self, fpath):
         try:
@@ -275,7 +270,7 @@ class PathManager(object):
 
     @property
     def fanfile(self):
-        return self.create_path('fans', self.datapath)
+        return self.get_path('fans', self.datapath)
 
     @property
     def fandf(self):
@@ -283,7 +278,7 @@ class PathManager(object):
 
     @property
     def reduced_fanfile(self):
-        return self.create_path('fans', self.output_dir_clustered)
+        return self.get_path('fans', self.output_dir_clustered)
 
     @property
     def reduced_fandf(self):
@@ -291,7 +286,7 @@ class PathManager(object):
 
     @property
     def final_fanfile(self):
-        return self.create_path('fans', self.cut_dir)
+        return self.get_path('fans', self.cut_dir)
 
     @property
     def final_fandf(self):
@@ -299,7 +294,7 @@ class PathManager(object):
 
     @property
     def blotchfile(self):
-        return self.create_path('blotches', self.datapath)
+        return self.get_path('blotches', self.datapath)
 
     @property
     def blotchdf(self):
@@ -307,7 +302,7 @@ class PathManager(object):
 
     @property
     def reduced_blotchfile(self):
-        return self.create_path('blotches', self.output_dir_clustered)
+        return self.get_path('blotches', self.output_dir_clustered)
 
     @property
     def reduced_blotchdf(self):
@@ -315,7 +310,7 @@ class PathManager(object):
 
     @property
     def final_blotchfile(self):
-        return self.create_path('blotches', self.cut_dir)
+        return self.get_path('blotches', self.cut_dir)
 
     @property
     def final_blotchdf(self):
@@ -323,7 +318,7 @@ class PathManager(object):
 
     @property
     def fnotchfile(self):
-        return self.create_path('fnotches', self.datapath)
+        return self.get_path('fnotches', self.datapath)
 
     @property
     def fnotchdf(self):

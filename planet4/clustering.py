@@ -33,11 +33,6 @@ class ClusteringManager(object):
     dbname : str or pathlib.Path, optional
         Path to the database used by DBManager. If not provided, DBManager
         will find the most recent one and use that.
-    scope : {'hirise', 'planet4'}
-        Switch to control in what coordinates the clustering is happening.
-        'hirise' is required to automatically take care of tile overlaps, while
-        'planet4' is required to be able to check the quality of single
-        Planet4 tiles.
     fnotch_distance : int
         Parameter to control the distance below which fans and blotches are
         determined to be 2 markings of the same thing, creating a FNOTCH
@@ -85,24 +80,24 @@ class ClusteringManager(object):
         Path to final fan and blotch clusters, after applying `cut`.
     """
 
-    def __init__(self, dbname=None, scope='hirise', fnotch_distance=10, eps=10,
+    def __init__(self, dbname=None, fnotch_distance=10, eps=10,
                  output_dir=None, output_format='csv', cut=0.5,
-                 min_samples_factor=0.1,
+                 min_samples_factor=0.15,
                  include_angle=True, id_=None, pm=None,
                  include_distance=False, include_radius=False,
                  do_dynamic_min_samples=False,
                  quiet=True):
         self.db = io.DBManager(dbname)
-        self.dbname = dbname
-        self.scope = scope
+        self.dbname = self.db.dbname
         self.fnotch_distance = fnotch_distance
+        self.output_dir = output_dir
+        self.output_format = output_format
         self.eps = eps
         self.cut = cut
         self.include_angle = include_angle
         self.include_distance = include_distance
         self.include_radius = include_radius
         self.confusion = []
-        self.output_format = output_format
         self.min_samples_factor = min_samples_factor
         self.do_dynamic_min_samples = do_dynamic_min_samples
         self.quiet = quiet
@@ -118,12 +113,12 @@ class ClusteringManager(object):
         self.newfans = None
         self.newblotches = None
 
+
         if pm is not None:
             self.pm = pm
         else:
             self.pm = io.PathManager(output_dir, id_=id_,
-                                     suffix='.'+output_format)
-        self.pm.setup_folders()
+                                     suffix='.'+self.output_format)
 
     def __getattr__(self, name):
         """Search for attributes in PathManager if not offered in this object."""
@@ -145,10 +140,7 @@ class ClusteringManager(object):
         if len(marking_data) == 0:
             return None
 
-        if self.scope == 'planet4':
-            coords = ['x', 'y']
-        elif self.scope == 'hirise':
-            coords = ['image_x', 'image_y']
+        coords = ['x', 'y']
 
         if kind == 'fan':
             if self.include_distance:
@@ -196,7 +188,7 @@ class ClusteringManager(object):
             clusterdata = data[cols].iloc[cluster_members]
             meandata = clusterdata.mean()
             meandata.angle = np.rad2deg(circmean(np.deg2rad(clusterdata.angle)))
-            cluster = Marking(meandata, scope=self.scope)
+            cluster = Marking(meandata, scope='planet4')
             # storing n_members into the object for later.
             cluster.n_members = len(cluster_members)
             # storing this saved marker for later in ClusteringManager
@@ -220,9 +212,9 @@ class ClusteringManager(object):
         """Basic clustering.
 
         For each fan and blotch markings in `data` a DBScanner object is
-        created that executes the actual clustering. Depending on `scope`, this
-        could be over marking data for one image_id only, or for all data for
-        one HiRISE image_name.
+        created that executes the actual clustering.
+        To be able to apply dynamic calculation of `min_samples`, this will
+        always be on 'planet4' tile coordinates.
 
         Parameters
         ----------
@@ -234,12 +226,19 @@ class ClusteringManager(object):
         self.reduced_data = {}
 
         # Calculate the unique classification_ids so that the mininum number of
-        # samples for DBScanner can be calculated (10 % currently)
-        n_classifications = data.classification_id.nunique()
+        # samples for DBScanner can be calculated (15 % currently)
+        # use only class_ids that actually contain fan and blotch markings
+        f1 = data.marking == 'fan'   # this creates a boolean filter
+        f2 = data.marking == 'blotch'
+        # combine filters with logical OR:
+        n_classifications = data[f1 | f2].classification_id.nunique()
 
         if self.do_dynamic_min_samples:
             self.min_samples = round(self.min_samples_factor * n_classifications)
+            # ensure that min_samples is at least 3:
+            self.min_samples = max(self.min_samples, 3)
         else:
+            # 3 turned out to be a well working default min_samples requirement
             self.min_samples = 3
 
         for kind in ['fan', 'blotch']:
@@ -248,6 +247,7 @@ class ClusteringManager(object):
             if current_X is not None:
                 dbscanner = DBScanner(current_X, eps=self.eps,
                                       min_samples=self.min_samples)
+                self.dbscanner = dbscanner
             else:
                 self.reduced_data[kind] = []
                 continue
@@ -258,7 +258,6 @@ class ClusteringManager(object):
                                    len(self.reduced_data[kind]),
                                    dbscanner.n_rejected))
         self.n_classifications = n_classifications
-        self.dbscanner = dbscanner
         print("n_classifications:", self.n_classifications)
         print("min_samples:", self.min_samples)
 
@@ -296,7 +295,7 @@ class ClusteringManager(object):
                 if norm(delta) < self.fnotch_distance:
                     fnotch_value = calc_fnotch(fan.n_members, blotch.n_members)
                     fnotch = markings.Fnotch(fnotch_value, fan, blotch,
-                                             scope=self.scope)
+                                             scope='hirise')
                     fnotch.n_fan_members = fan.n_members
                     fnotch.n_blotch_members = blotch.n_members
                     fnotches.append(fnotch)
@@ -319,19 +318,19 @@ class ClusteringManager(object):
         self.fnotched_fans = fans
         logging.debug("CM: do_the_fnotch: Found %i fnotches.", n_close)
 
-    def execute_pipeline(self, data):
-        """Execute the standard list of methods for catalog production.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame
-            The dataframe containing the data to be clustered.
-        """
-        self.cluster_data(data)
-        self.do_the_fnotch()
-        logging.debug("Clustering and fnotching completed.")
-        self.store_output()
-        self.apply_fnotch_cut()
+    # def execute_pipeline(self, data):
+    #     """Execute the standard list of methods for catalog production.
+    #
+    #     Parameters
+    #     ----------
+    #     data : pandas.DataFrame
+    #         The dataframe containing the data to be clustered.
+    #     """
+    #     self.cluster_data(data)
+    #     # self.do_the_fnotch()
+    #     # self.apply_fnotch_cut()
+    #     self.store_clustered()
+    #     # self.store_fnotched()
 
     def cluster_image_id(self, image_id, data=None):
         """Process the clustering for one image_id.
@@ -340,24 +339,46 @@ class ClusteringManager(object):
         ----------
         image_id : str
             Planetfour `image_id`
+        data : pd.DataFrame, optional
+            Dataframe with data for this clustering run
         """
         image_id = io.check_and_pad_id(image_id)
         logging.info("Clustering data for %s", image_id)
         self.pm.id_ = image_id
         if data is None:
-            self.p4id = markings.ImageID(image_id, self.dbname)
-            data = self.p4id.data
-        self.execute_pipeline(data)
+            data = self.db.get_image_id_markings(image_id)
+        self.cluster_data(data)
+        logging.debug("Clustering completed.")
+        self.store_clustered()
 
     def cluster_image_name(self, image_name, data=None):
-        """Process the clustering and fnoching pipeline for a HiRISE image_name."""
+        """Process the clustering and fnotching pipeline for a HiRISE image_name.
+
+        Parameters
+        ----------
+        image_name : str
+            HiRISE image_name (= obsid in HiLingo) to cluster on.
+            Used for storing the data in `obsid` indicated subfolders.
+        data : pd.DataFrame
+            Dataframe containing the data to cluster on.
+        """
         logging.info("Clustering data for %s", image_name)
         if data is None:
             data = self.db.get_image_name_markings(image_name)
-        self.pm.id_ = image_name
-        self.execute_pipeline(data)
+        image_ids = data.image_id.unique()
+        self.pm = io.PathManager(self.output_dir / image_name,
+                                 id_=image_ids[0], suffix='.'+self.output_format)
+        for image_id in image_ids:
+            self.pm.id_ = image_id
+            img_id_data = data[data.image_id==image_id]
+            self.cluster_data(img_id_data)
+            self.store_clustered()
 
-    def store_output(self):
+    def cluster_obsid(self, *args, **kwargs):
+        "Alias to cluster_image_name."
+        self.cluster_image_name(*args, **kwargs)
+
+    def store_fnotched(self):
         """Write out the clustered and fnotched data."""
         logging.debug('CM: Writing output files.')
         logging.debug('CM: Output dir: %s', self.datapath)
@@ -373,7 +394,8 @@ class ClusteringManager(object):
             df = pd.DataFrame(series)
             self.save(df, getattr(self.pm, outfname))
 
-        # store the unfnotched data as well:
+    def store_clustered(self):
+        "Store the unfnotched data."
         outdir = self.output_dir_clustered
         outdir.mkdir(exist_ok=True)
         for outfname, outdata in zip(['reduced_blotchfile', 'reduced_fanfile'],
@@ -415,7 +437,7 @@ class ClusteringManager(object):
 
         # apply Fnotch method `get_marking` with given cut.
         fnotches = df.apply(markings.Fnotch.from_series, axis=1,
-                            args=(self.scope,))
+                            args=('hirise',))
         final_clusters = fnotches.apply(lambda x: x.get_marking(self.cut))
 
         def filter_for_fans(x):
@@ -439,7 +461,7 @@ class ClusteringManager(object):
 
         # storage path for the final catalog after applying `cut`
         # PathManager self.pm is doing that.
-        self.pm.create_cut_folder(cut)
+        self.pm.get_cut_folder(cut)
 
         self.get_newfans_newblotches()
 
