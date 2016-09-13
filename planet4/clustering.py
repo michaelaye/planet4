@@ -120,10 +120,6 @@ class ClusteringManager(object):
             self.pm = io.PathManager(output_dir, id_=id_,
                                      suffix='.'+self.output_format)
 
-    def __getattr__(self, name):
-        """Search for attributes in PathManager if not offered in this object."""
-        return getattr(self.pm, name)
-
     @property
     def n_clustered_fans(self):
         """int : Number of clustered fans."""
@@ -396,7 +392,7 @@ class ClusteringManager(object):
 
     def store_clustered(self):
         "Store the unfnotched data."
-        outdir = self.output_dir_clustered
+        outdir = self.pm.output_dir_clustered
         outdir.mkdir(exist_ok=True)
         for outfname, outdata in zip(['reduced_blotchfile', 'reduced_fanfile'],
                                      [self.reduced_data['blotch'],
