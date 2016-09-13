@@ -193,7 +193,7 @@ class PathManager(object):
 
     Parameters
     ----------
-    datapath : str or path.Path
+    datapath : str or pathlib.Path
         the base path from where to manage all derived paths. No default assumed
         to prevent errors.
     id_ : str
