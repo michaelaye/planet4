@@ -5,8 +5,35 @@ from . import io, markings
 
 
 def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
-                           savetitle='', figtitle=''):
-    datapath = Path(datapath)
+                           savetitle='', figtitle='', cm=None):
+    """Plotting tool to show the results along the P4 pipeline.
+
+    Parameters
+    ----------
+    image_id : str
+        String in full or short form (without APF000x in front) of the
+        P4 image id.
+    dbname : {str, pathlib.Path}
+        Path to database file to be used for plotting the raw data.
+    datapath : {str, pathlib.Path}
+        Path to directory where the clustering results are stored.
+    save : bool
+        Flag controlling if plots should be saved.
+    savetitle : str
+        Additional filename postfix string for plot filenames.
+        The filename will be "{0}_{1}.pdf", with {0} being the `image_id`
+        and {1} being `savetitle`
+    figtitle : str
+        Additional figure title to be displayed.
+    cm : clustering.ClusteringManager
+        Object that can be used to fish out current path informations
+    """
+    if cm is not None:
+        datapath = cm.pm.datapath
+    else:
+        datapath = Path(datapath)
+    if cm is not None and dbname is None:
+        dbname = cm.dbname
     imgid = markings.ImageID(image_id, dbname=dbname, scope='planet4')
 
     fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(10, 8))
@@ -23,6 +50,8 @@ def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
     for ax in axes:
         ax.set_axis_off()
 
+    if figtitle == '' and cm is not None:
+        figtitle = "min_samples: {}".format(cm.min_samples)
     fig.suptitle(image_id + ', ' + str(figtitle))
     fig.subplots_adjust(left=None, top=None, bottom=None, right=None,
                         wspace=0.001, hspace=0.001)
@@ -48,9 +77,13 @@ def plot_raw_blotches(id_, ax=None):
 
 def plot_finals(id_, scope='planet4', datapath=None, ax=None):
     pm = io.PathManager(id_=id_, datapath=datapath)
-    if not all([pm.final_blotchfile.exists(),
-                pm.final_fanfile.exists()]):
-        print("Some files not found.")
+    try:
+        if not all([pm.final_blotchfile.exists(),
+                    pm.final_fanfile.exists()]):
+            print("Some files not found.")
+    except TypeError:
+        print("Error while trying to plot finals.")
+        return
 
     imgid = markings.ImageID(id_, scope=scope)
 
