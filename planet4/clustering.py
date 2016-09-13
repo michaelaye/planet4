@@ -11,6 +11,10 @@ import pandas as pd
 from numpy.linalg import norm
 from pathlib import Path
 from scipy.stats import circmean
+from sklearn.preprocessing import (normalize,
+                                   robust_scale,
+                                   minmax_scale,
+                                   scale)
 
 from . import io, markings
 from .dbscan import DBScanner
@@ -79,14 +83,20 @@ class ClusteringManager(object):
     cut_dir : pathlib.Path
         Path to final fan and blotch clusters, after applying `cut`.
     """
-
+    scalers = {'norm':normalize,
+               'robust': robust_scale,
+               'minmax': minmax_scale,
+               'scale': scale}
     def __init__(self, dbname=None, fnotch_distance=10, eps=10,
                  output_dir=None, output_format='csv', cut=0.5,
                  min_samples_factor=0.15,
                  include_angle=True, id_=None, pm=None,
                  include_distance=False, include_radius=False,
                  do_dynamic_min_samples=False,
-                 quiet=True):
+                 quiet=True, normalize=False,
+                 scaler='robust',
+                 use_DBSCAN=True,
+                 hdbscan_min_samples=1):
         self.db = io.DBManager(dbname)
         self.dbname = self.db.dbname
         self.fnotch_distance = fnotch_distance
@@ -101,6 +111,10 @@ class ClusteringManager(object):
         self.min_samples_factor = min_samples_factor
         self.do_dynamic_min_samples = do_dynamic_min_samples
         self.quiet = quiet
+        self.normalize = normalize
+        self.scaler = scaler
+        self.use_DBSCAN = use_DBSCAN
+        self.hdbscan_min_samples = hdbscan_min_samples
 
         # to be defined at runtime:
         self.current_coords = None
@@ -147,7 +161,11 @@ class ClusteringManager(object):
             if self.include_radius:
                 coords += ['radius_1', 'radius_2']
         # Determine the clustering input matrix
-        current_X = marking_data[coords].values
+        if self.normalize:
+            f = self.scalers[self.scaler]
+            current_X = f(marking_data[coords].values, axis=0)
+        else:
+            current_X = marking_data[coords].values
 
         # store stuff for later
         self.current_coords = coords
