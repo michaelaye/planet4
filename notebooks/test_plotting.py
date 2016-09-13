@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 # setup
 get_ipython().magic('matplotlib nbagg')
@@ -11,24 +11,34 @@ from planet4 import plotting, io, markings, clustering
 from pathlib import Path
 
 
+# In[2]:
+
+id = 'ESP_021520_0925'
+
+
+# In[3]:
+
+db = io.DBManager('/Users/klay6683/data/planet4/2016-05-29_planet_four_classifications_queryable_cleaned_seasons2and3.h5')
+
+
+# In[4]:
+
+db.dbname
+
+
+# In[5]:
+
+data = db.get_image_name_markings(id)
+
+
+# In[6]:
+
+data.image_id.unique()
+
+
 # In[ ]:
 
-id_ = '1dk'
-
-
-# In[ ]:
-
-cm = clustering.ClusteringManager()
-
-
-# In[ ]:
-
-cm.cluster_image_id(id_)
-
-
-# In[ ]:
-
-plotting.plot_raw_fans(id_)
+plotting.plot_raw_fans(
 
 
 # In[ ]:
