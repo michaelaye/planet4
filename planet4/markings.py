@@ -155,23 +155,26 @@ class ImageID(object):
         set_subframe_size(ax)
         ax.set_axis_off()
 
-    def plot_blotches(self, blotches=None, **kwargs):
+    def plot_blotches(self, blotches=None, with_center=False, **kwargs):
         user_name = kwargs.pop('user_name', None)
         without_users = kwargs.pop('without_users', None)
         if blotches is None:
             blotches = self.get_blotches(user_name, without_users)
         if type(blotches) == pd.core.frame.DataFrame:
-            blotches = [Blotch(i, self.scope) for _, i in blotches.iterrows()]
+            blotches = [Blotch(i, self.scope, with_center=with_center) for _, i in blotches.iterrows()]
         self.plot_objects(blotches, **kwargs)
 
-    def plot_fans(self, fans=None, **kwargs):
+    def plot_fans(self, fans=None, with_center=False, **kwargs):
         """Plotting fans using Fans class and self.subframe."""
         user_name = kwargs.pop('user_name', None)
         without_users = kwargs.pop('without_users', None)
+        linewidth = kwargs.pop('linewidth', None)
         if fans is None:
             fans = self.get_fans(user_name, without_users)
         if type(fans) == pd.core.frame.DataFrame:
-            fans = [Fan(i, self.scope) for _, i in fans.iterrows()]
+            fans = [Fan(i, self.scope,
+                        with_center=with_center,
+                        linewidth=linewidth) for _, i in fans.iterrows()]
         self.plot_objects(fans, **kwargs)
 
     def plot_all(self):
@@ -212,9 +215,10 @@ class Blotch(Ellipse):
 
     to_average = 'x y image_x image_y angle radius_1 radius_2'.split()
 
-    def __init__(self, data, scope, color='b'):
+    def __init__(self, data, scope, color='b', with_center=False):
         self.data = data
         self.scope = scope
+        self.with_center = with_center
         if scope not in ['hirise', 'planet4']:
             raise TypeError('Unknown scope')
         try:
@@ -307,7 +311,8 @@ class Blotch(Ellipse):
 
         self.set_color(color)
         ax.add_patch(self)
-        self.plot_center(ax, color=color)
+        if self.with_center:
+            self.plot_center(ax, color=color)
 
     def store(self, fpath=None):
         out = self.data
@@ -373,9 +378,10 @@ class Fan(lines.Line2D):
 
     to_average = 'x y image_x image_y angle spread distance'.split()
 
-    def __init__(self, data, scope, linewidth=0.5, **kwargs):
+    def __init__(self, data, scope, linewidth=0.5, with_center=False, **kwargs):
         self.data = data
         self.scope = scope
+        self.with_center = with_center
         if scope not in ['hirise', 'planet4']:
             raise TypeError('Unknown scope')
         # first coordinate is the base of fan
@@ -489,7 +495,8 @@ class Fan(lines.Line2D):
         self.set_color(color)
         ax.add_line(self)
         self.add_semicircle(ax, color=color)
-        self.plot_center(ax, color=color)
+        if self.with_center:
+            self.plot_center(ax, color=color)
 
     @property
     def midpoint(self):
