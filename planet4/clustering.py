@@ -17,7 +17,7 @@ from sklearn.preprocessing import (normalize,
                                    scale)
 
 from . import io, markings
-from .dbscan import DBScanner
+from .dbscan import DBScanner, HDBScanner
 
 importlib.reload(logging)
 logpath = Path.home() / 'p4reduction.log'
@@ -145,6 +145,24 @@ class ClusteringManager(object):
         return len(self.clustered_data['blotch'])
 
     def pre_processing(self, data, kind):
+        """Preprocess before clustering.
+
+        Depending on the flags used when constructing this manager,
+        different columns end up being clustered on.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            Dataframe with data to cluster on
+        kind : str
+            String indicating if to cluster on blotch or fan data
+        """
+
+        # add unit circle coordinates for angles
+        angles = data['angle']
+        data['xang'] = np.cos(np.deg2rad(angles))
+        data['yang'] = np.sin(np.deg2rad(angles))
+
         # filter for the marking for `kind`
         marking_data = data[data.marking == kind]
         if len(marking_data) == 0:
@@ -156,10 +174,13 @@ class ClusteringManager(object):
             if self.include_distance:
                 coords.append('distance')
             if self.include_angle:
-                coords.append('angle')
-        else:
+                coords += ['xang', 'yang']
+
+        elif kind == 'blotch':
             if self.include_radius:
                 coords += ['radius_1', 'radius_2']
+            if self.include_angle:
+                coords.append('yang')
         # Determine the clustering input matrix
         if self.normalize:
             f = self.scalers[self.scaler]
@@ -199,9 +220,15 @@ class ClusteringManager(object):
         reduced_data = []
         data = self.current_markings
         for cluster_members in dbscanner.reduced_data:
-            clusterdata = data[cols].iloc[cluster_members]
+            if self.use_DBSCAN:
+                clusterdata = data[cols].iloc[cluster_members]
+            else:
+                clusterdata = data[cols].loc[cluster_members]
             meandata = clusterdata.mean()
-            meandata.angle = np.rad2deg(circmean(np.deg2rad(clusterdata.angle)))
+            meandata.angle = np.rad2deg(
+                circmean(
+                np.deg2rad(
+                clusterdata.angle)))
             cluster = Marking(meandata, scope='planet4')
             # storing n_members into the object for later.
             cluster.n_members = len(cluster_members)
@@ -259,9 +286,14 @@ class ClusteringManager(object):
             # self.include_angle = False if kind == 'blotch' else True
             current_X = self.pre_processing(data, kind)
             if current_X is not None:
-                dbscanner = DBScanner(current_X, eps=self.eps,
-                                      min_samples=self.min_samples)
-                self.dbscanner = dbscanner
+                if self.use_DBSCAN:
+                    dbscanner = DBScanner(current_X, eps=self.eps,
+                                          min_samples=self.min_samples)
+                    self.dbscanner = dbscanner
+                else:
+                    dbscanner = HDBScanner(current_X,
+                                           min_cluster_size=self.min_samples,
+                                           min_samples=self.hdbscan_min_samples)
             else:
                 self.reduced_data[kind] = []
                 continue
