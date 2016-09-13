@@ -1,6 +1,6 @@
 import numpy as np
 from math import pi
-
+tau = 2 * pi
 
 def get_fan_and_blotch_nunique_cids(data):
     f1 = data.marking == 'fan'
@@ -74,7 +74,7 @@ def get_blotch_area(record):
     if record.marking != 'blotch':
         return 0
     else:
-        return pi*record.radius_1*record.radius_2
+        return 0.5*tau*record.radius_1*record.radius_2
 
 
 ###
