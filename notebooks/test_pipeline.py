@@ -46,7 +46,7 @@ def process_imgid(id_, dynamic=False, angle=False, distance=False, radius=False)
     from planet4 import plotting, clustering
     from pathlib import Path
     path = Path("/Users/klay6683/data/planet4/pipelinecheck5")
-    cm = clustering.ClusteringManager(fnotched_dir=path,
+    cm = clustering.ClusteringManager(output_dir=path,
                                       do_dynamic_min_samples=dynamic,
                                       include_angle=angle,
                                       include_distance=distance,
