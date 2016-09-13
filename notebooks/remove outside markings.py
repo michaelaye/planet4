@@ -28,14 +28,9 @@ data = db.get_all()
 data.info()
 
 
-# In[15]:
+# In[6]:
 
 get_ipython().magic('matplotlib nbagg')
-
-
-# In[7]:
-
-data.x.hist(bins=100, log=True)
 
 
 # In[8]:
@@ -59,7 +54,7 @@ q = '{} < x < {} and {} < y < {}'.format(-delta, markings.img_x_size + delta,
 subdata = data.query(q)
 
 
-# In[12]:
+# In[ ]:
 
 from pathlib import Path
 
@@ -67,7 +62,7 @@ folder = Path('./plots/new_data_file')
 folder.mkdir(exist_ok=True)
 
 
-# In[13]:
+# In[ ]:
 
 def do_2d_hist(cols, data, bins=500, pretext=''):
     plt.figure(figsize=(8.4, 6.48))
@@ -77,53 +72,53 @@ def do_2d_hist(cols, data, bins=500, pretext=''):
     plt.savefig(str(folder / (pretext + '{}_{}_2dhist.png'.format(cols[0], cols[1]))), dpi=150)
 
 
-# In[16]:
+# In[ ]:
 
 do_2d_hist(['x','y'], data)
 
 
-# In[91]:
+# In[ ]:
 
 do_2d_hist('radius_1 radius_2'.split(), blotches, pretext='blotches_')
 
 
-# In[43]:
+# In[ ]:
 
 data.columns
 
 
-# In[86]:
+# In[ ]:
 
 do_2d_hist(['distance','angle'], data)
 
 
-# In[88]:
+# In[ ]:
 
 do_2d_hist('spread angle'.split(), data)
 
 
-# In[89]:
+# In[ ]:
 
 fans = data[data.marking=='fan']
 blotches = data[data.marking=='blotch']
 
 
-# In[72]:
+# In[ ]:
 
 do_2d_hist('x y'.split(), fans, pretext='fans_')
 
 
-# In[73]:
+# In[ ]:
 
 do_2d_hist('x y'.split(), blotches, pretext='blotches_')
 
 
-# In[74]:
+# In[ ]:
 
 do_2d_hist('radius_1 radius_2'.split(), blotches, pretext='blotches_')
 
 
-# In[90]:
+# In[ ]:
 
 do_2d_hist('spread angle'.split(), fans, pretext='fans_')
 
