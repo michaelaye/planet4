@@ -129,11 +129,23 @@ def produce_fast_read(rootpath, df):
 
 
 def convert_ellipse_angles(df):
-    "Normalize angles from -180..180 to 0..180 (due to symmetry)."
+    """Normalize blotch/ellipse angles.
+
+    First we sort for radius_1 to be bigger than radius_2, including
+    a correction on the angle, then we do a module 180
+    to force the angles to be from 0..180 instead of -180..180.
+    This is supported by the symmetry of ellipses.
+    """
     logging.info("Converting ellipse angles.")
 
-    rowindex = (df.marking == 'blotch')
-    df.loc[rowindex, 'angle'] = df.loc[rowindex, 'angle'] % 180
+    blotchindex = (df.marking == 'blotch')
+    radindex = (df.radius_1 < df.radius_2)
+    both = blotchindex & radindex
+    col_orig = ['radius_1', 'radius_2']
+    col_reversed = ['radius_2', 'radius_1']
+    df.loc[both, col_orig] = df.loc[both, col_reversed].values
+    df.loc[both, 'angle'] += 90
+    df.loc[blotchindex, 'angle'] = df.loc[blotchindex, 'angle'] % 180
     logging.info("Conversion of ellipse angles done.")
 
 
