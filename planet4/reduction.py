@@ -82,7 +82,7 @@ def filter_data(df):
     rest = rest[~rest_zero_filter]
 
     # merge previously splitted together and return
-    df = pd.concat([fans, blotches, rest])
+    df = pd.concat([fans, blotches, rest], ignore_index=True)
 
     none = df[df.marking == 'none']
     rest = df[df.marking != 'none']
@@ -95,7 +95,7 @@ def filter_data(df):
                                              -delta, markings.img_y_size + delta)
 
     rest = rest.query(q)
-    return pd.concat([rest, none])
+    return pd.concat([rest, none], ignore_index=True)
 
 
 def convert_times(df):
