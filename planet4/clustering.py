@@ -25,6 +25,11 @@ logging.basicConfig(filename=str(logpath), filemode='w', level=logging.DEBUG,
 matplotlib.style.use('bmh')
 
 
+class NotEnoughMarkingData(Exception):
+    def __init__(self):
+        Exception.__init__(self, "Not enough data to cluster (< 3 items).")
+
+
 class ClusteringManager(object):
 
     """Control class to manage the clustering pipeline.
@@ -159,6 +164,9 @@ class ClusteringManager(object):
         angles = data['angle']
         data['xang'] = np.cos(np.deg2rad(angles))
         data['yang'] = np.sin(np.deg2rad(angles))
+        if len(marking_data) < 3:
+            raise NotEnoughMarkingData
+            # return None
 
         # filter for the marking for `kind`
         marking_data = data[data.marking == kind]
