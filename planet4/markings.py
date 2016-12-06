@@ -155,17 +155,22 @@ class ImageID(object):
         set_subframe_size(ax)
         ax.set_axis_off()
 
-    def plot_blotches(self, blotches=None, with_center=False, **kwargs):
+    def plot_blotches(self, blotches=None, **kwargs):
+        with_center = kwargs.pop('with_center', False)
         user_name = kwargs.pop('user_name', None)
+        lw = kwargs.pop('lw', 1)
         without_users = kwargs.pop('without_users', None)
         if blotches is None:
             blotches = self.get_blotches(user_name, without_users)
         if type(blotches) == pd.core.frame.DataFrame:
-            blotches = [Blotch(i, self.scope, with_center=with_center) for _, i in blotches.iterrows()]
+            blotches = [Blotch(i, self.scope,
+                               with_center=with_center, lw=lw)
+                        for _, i in blotches.iterrows()]
         self.plot_objects(blotches, **kwargs)
 
-    def plot_fans(self, fans=None, with_center=False, **kwargs):
+    def plot_fans(self, fans=None, **kwargs):
         """Plotting fans using Fans class and self.subframe."""
+        with_center = kwargs.pop('with_center', False)
         user_name = kwargs.pop('user_name', None)
         without_users = kwargs.pop('without_users', None)
         linewidth = kwargs.pop('linewidth', None)
@@ -215,7 +220,8 @@ class Blotch(Ellipse):
 
     to_average = 'x y image_x image_y angle radius_1 radius_2'.split()
 
-    def __init__(self, data, scope, color='b', with_center=False):
+    def __init__(self, data, scope, color='b', with_center=False,
+                 lw=1):
         self.data = data
         self.scope = scope
         self.with_center = with_center
@@ -234,7 +240,7 @@ class Blotch(Ellipse):
         super(Blotch, self).__init__((self.x, self.y),
                                      data.radius_1 * 2, data.radius_2 * 2,
                                      data.angle, alpha=0.65,
-                                     fill=False, linewidth=1, color=color)
+                                     fill=False, linewidth=lw, color=color)
         self.data = data
 
     def is_equal(self, other):
@@ -291,11 +297,11 @@ class Blotch(Ellipse):
 
     def plot_center(self, ax, color='b'):
         ax.scatter(self.x, self.y, color=color,
-                   s=20, c='b', marker='.')
+                   s=20, marker='.')
 
     def plot_limit_points(self, ax, color='b'):
         for x, y in self.limit_points:
-            ax.scatter(x, y, color=color, s=20, c='b', marker='o')
+            ax.scatter(x, y, color=color, s=20, marker='o')
 
     @property
     def n_members(self):
@@ -512,7 +518,7 @@ class Fan(lines.Line2D):
 
     def plot_center(self, ax, color='b'):
         ax.scatter(self.midpoint[0], self.midpoint[1], color=color,
-                   s=20, c='b', marker='.')
+                   s=20, marker='.')
 
     @property
     def base_to_midpoint_vec(self):
