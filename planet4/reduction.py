@@ -14,12 +14,6 @@ from pathlib import Path
 from . import markings
 from .io import DBManager, data_root
 
-try:
-    from odo import odo
-except ImportError:
-    pass
-
-
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
 # the split trick creates lists when u don't want to break ur fingers with
@@ -236,10 +230,6 @@ def get_image_names(dbname):
 
 
 def merge_temp_files(dbname, image_names=None, do_odo=False):
-    if do_odo:
-        logging.info('Merging temp files with odo.')
-    else:
-        logging.info('Merging temp files manually.')
 
     if image_names is None:
         image_names = get_image_names(dbname)
@@ -248,19 +238,6 @@ def merge_temp_files(dbname, image_names=None, do_odo=False):
     newname = dbname.stem + '_cleaned' + dbname.suffix
     dbnamenew = dbname.with_name(newname)
     logging.info('Creating concatenated db file %s', dbnamenew)
-    if not do_odo:
-        df = []
-    for image_name in image_names:
-        try:
-            if do_odo:
-                odo('hdfstore://{}::df'.format(get_temp_fname(image_name)),
-                    'hdfstore://{}::df'.format(dbnamenew))
-            else:
-                df.append(pd.read_hdf(get_temp_fname(image_name), 'df'))
-        except OSError:
-            continue
-        else:
-            os.remove(get_temp_fname(image_name))
     df = pd.concat(df, ignore_index=True)
 
     df.to_hdf(str(dbnamenew), 'df',
