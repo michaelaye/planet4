@@ -6,10 +6,11 @@ import logging
 import os
 import sys
 import time
+from pathlib import Path
 
 import pandas as pd
+import progressbar
 from ipyparallel import Client
-from pathlib import Path
 
 from . import markings
 from .io import DBManager, data_root
@@ -160,6 +161,97 @@ def calculate_hirise_pixels(df):
     return df
 
 
+def get_temp_fname(image_name, root=None):
+    if root is None:
+        root = data_root
+    return str(root / ('temp_' + image_name + '.h5'))
+
+
+def get_image_names(dbname):
+    logging.info('Reading image_names from disk.')
+    store = pd.HDFStore(dbname)
+    image_names = store.select_column('df', 'image_name').unique()
+    logging.info('Got image_names')
+    return image_names
+
+
+def get_cleaned_dbname(dbname):
+    dbname = Path(dbname)
+    newname = dbname.stem + '_cleaned' + dbname.suffix
+    return dbname.with_name(newname)
+
+
+def merge_temp_files(dbname, image_names=None):
+    logging.info('Merging temp files manually.')
+
+    if image_names is None:
+        image_names = get_image_names(dbname)
+
+    dbnamenew = get_cleaned_dbname(dbname)
+    logging.info('Creating concatenated db file %s', dbnamenew)
+    df = []
+    for image_name in image_names:
+        try:
+            df.append(pd.read_hdf(get_temp_fname(image_name, dbname.parent), 'df'))
+        except OSError:
+            continue
+        else:
+            os.remove(get_temp_fname(image_name, dbname.parent))
+    df = pd.concat(df, ignore_index=True)
+
+    df.to_hdf(str(dbnamenew), 'df',
+              format='table',
+              data_columns=data_columns)
+    logging.info('Duplicates removal complete.')
+    return dbnamenew
+
+
+def remove_duplicates(df):
+    logging.info('Removing duplicates.')
+
+    image_names = df.image_name.unique()
+
+    def process_image_name(image_name):
+        data = df[df.image_name == image_name]
+        data = remove_duplicates_from_image_name_data(data)
+        data.to_hdf(get_temp_fname(image_name), 'df')
+
+    # parallel approach, u need to launch an ipcluster/controller for this work!
+    lbview = setup_parallel()
+    lbview.map_sync(process_image_name, image_names)
+
+    df = []
+    for image_name in image_names:
+        try:
+            df.append(pd.read_hdf(get_temp_fname(image_name), 'df'))
+        except OSError:
+            continue
+        else:
+            os.remove(get_temp_fname(image_name))
+    df = pd.concat(df, ignore_index=True)
+    logging.info('Duplicates removal complete.')
+    return df
+
+
+def display_multi_progress(results, objectlist, sleep=1):
+    with progressbar.ProgressBar(min_value=0, max_value=len(list(objectlist))-1) as bar:
+        while not results.ready():
+            bar.update(results.progress)
+            time.sleep(sleep)
+
+
+def setup_parallel(dbname):
+    c = Client()
+    dview = c.direct_view()
+    dview.push({'dbname': str(dbname)})
+    # dview.push({'remove_duplicates_from_image_name_data':
+    #             remove_duplicates_from_image_name_data,
+    #             'get_temp_fname': get_temp_fname,
+    #             'dbname': dbname})
+    lbview = c.load_balanced_view()
+    return lbview
+
+
 def remove_duplicates_from_image_name_data(data):
     """remove duplicates from this data.
 
@@ -176,101 +268,41 @@ def remove_duplicates_from_image_name_data(data):
     presented the same image_id more than once to the same users. This removes
     any later in time classification_ids per user_name and image_id.
     """
-    group = data.groupby(['image_id', 'user_name'], sort=False)
+
+    c_ids = []
 
     def process_user_group(g):
-        c_id = g[g.created_at == g.created_at.min()].classification_id.min()
-        return g[g.classification_id == c_id]
+        c_ids.append(g[g.created_at == g.created_at.min()].classification_id.min())
 
-    return group.apply(process_user_group).reset_index(drop=True)
-
-
-def get_temp_fname(image_name):
-    return str(data_root / ('temp_' + image_name + '.h5'))
+    data.groupby(['image_id', 'user_name'], sort=False).apply(process_user_group)
+    return data.set_index('classification_id').loc[set(c_ids)].reset_index()
 
 
-def remove_duplicates(df):
-    logging.info('Removing duplicates.')
-
-    image_names = df.image_name.unique()
-
-    def process_image_name(image_name):
-        data = df[df.image_name == image_name]
-        data = remove_duplicates_from_image_name_data(data)
-        data.to_hdf(get_temp_fname(image_name), 'df')
-
-    # parallel approach, u need to launch an ipcluster/controller for this work!
-    c = Client()
-    dview = c.direct_view()
-    dview.push({'remove_duplicates_from_image_name_data':
-                remove_duplicates_from_image_name_data,
-                'data_root': data_root})
-    lbview = c.load_balanced_view()
-    lbview.map_sync(process_image_name, image_names)
-
-    df = []
-    for image_name in image_names:
-        try:
-            df.append(pd.read_hdf(get_temp_fname(image_name), 'df'))
-        except OSError:
-            continue
-        else:
-            os.remove(get_temp_fname(image_name))
-    df = pd.concat(df, ignore_index=True)
-    logging.info('Duplicates removal complete.')
-    return df
-
-
-def get_image_names(dbname):
-    logging.info('Reading image_names from disk.')
-    store = pd.HDFStore(dbname)
-    image_names = store.select_column('df', 'image_name').unique()
-    logging.info('Got image_names')
-    return image_names
-
-
-def merge_temp_files(dbname, image_names=None, do_odo=False):
-
-    if image_names is None:
-        image_names = get_image_names(dbname)
-
-    dbname = Path(dbname)
-    newname = dbname.stem + '_cleaned' + dbname.suffix
-    dbnamenew = dbname.with_name(newname)
-    logging.info('Creating concatenated db file %s', dbnamenew)
-    df = pd.concat(df, ignore_index=True)
-
-    df.to_hdf(str(dbnamenew), 'df',
-              format='table',
-              data_columns=data_columns)
-    logging.info('Duplicates removal complete.')
-    return dbnamenew
-
-
-def remove_duplicates_from_file(dbname, do_odo=False):
+def remove_duplicates_from_file(dbname):
     logging.info('Removing duplicates.')
 
     image_names = get_image_names(dbname)
+    dbname = Path(dbname)
 
     def process_image_name(image_name):
-        import pandas as pd
-        data = pd.read_hdf(dbname, 'df', where='image_name==' + image_name)
-        data = remove_duplicates_from_image_name_data(data)
-        data.to_hdf(get_temp_fname(image_name), 'df')
+        from pandas import read_hdf
+        # the where string fishes `image_name` from this scope
+        data = read_hdf(dbname, 'df', where='image_name=image_name')
+        tmp = remove_duplicates_from_image_name_data(data)
+        # data.to_hdf(get_temp_fname(image_name, dbname.parent), 'df')
+        return tmp
 
     # parallel approach, u need to launch an ipcluster/controller for this work!
-    c = Client()
-    dview = c.direct_view()
-    dview.push({'remove_duplicates_from_image_name_data':
-                remove_duplicates_from_image_name_data,
-                'data_root': data_root,
-                'get_temp_fname': get_temp_fname})
-    lbview = c.load_balanced_view()
+    lbview = setup_parallel(dbname)
     logging.info('Starting parallel processing.')
-    lbview.map_sync(process_image_name, image_names)
+    results = lbview.map_async(process_image_name, image_names)
+    display_multi_progress(results, image_names)
     logging.info('Done clean up. Now concatenating results.')
-
-    merge_temp_files(dbname, image_names, do_odo)
+    all_df = pd.concat(results, ignore_index=True)
+    logging.info("Writing cleaned database file.")
+    all_df.to_hdf(get_cleaned_dbname(dbname), 'df', format='table', data_columns=data_columns)
+    # merge_temp_files(dbname, image_names)
+    logging.info("Done.")
 
 
 def create_season2_and_3_database():
@@ -309,12 +341,17 @@ def read_csv_into_df(fname, chunks=1e6, test_n_rows=None):
                          usecols=analysis_cols, nrows=test_n_rows,
                          engine='c')
 
-    # read in data chunk by chunk and collect into python list
-    data = [chunk for chunk in reader]
-    logging.info("Data collected into list.")
+    # if chunks were None and test_n_rows were given, then I already
+    # have the data frame:
+    if chunks is None:
+        df = reader
+    else:
+        # read in data chunk by chunk and collect into python list
+        data = [chunk for chunk in reader]
+        logging.info("Data collected into list.")
 
-    # convert list into Pandas dataframe
-    df = pd.concat(data, ignore_index=True)
+        # convert list into Pandas dataframe
+        df = pd.concat(data, ignore_index=True)
     logging.info("Conversion to dataframe complete.")
     data = 0
     return df
