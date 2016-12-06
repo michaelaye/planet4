@@ -1,10 +1,9 @@
-from __future__ import division, print_function
-
 import datetime as dt
 import logging
 import os
 import shutil
 import sys
+import yaml
 
 import matplotlib.image as mplimg
 import pandas as pd
@@ -19,11 +18,49 @@ try:
 except ImportError:
     from urllib.request import urlretrieve
 
-HOME = Path(os.environ["HOME"])
-if os.environ['USER'] == 'gapo7695':
-    data_root = Path('/Users/gapo7695/Dropbox/myPy/others/P4_sandbox/databaseP4')
+configpath = Path.home() / '.planet4.yaml'
+
+
+def get_config():
+    if not configpath.exists():
+        raise IOError("Config file .pyciss.yaml not found.")
+    else:
+        with open(str(configpath)) as f:
+            return yaml.load(f)
+
+if not configpath.exists():
+    print("No configuration file {} found.\n".format(configpath))
+    print("Please run `planet4.io.set_database_path()` and provide the path where\n"
+          "you want to keep your automatically downloaded images.")
+    print("`planet4` will store this path in {}, where you can easily change it later."
+          .format(configpath))
 else:
-    data_root = HOME / 'Dropbox' / 'data' / 'planet4'
+    config = get_config()
+
+
+def set_database_path(dbfolder):
+    """Use to write the database path into the config.
+
+    Using the socket module to determine the host/node name and
+    creating a new section in the config file.
+
+    Parameters
+    ----------
+    dbfolder : str or pathlib.Path
+        Path to where pyciss will store the ISS images it downloads and receives.
+    """
+    try:
+        d = get_config()
+    except IOError:
+        d = {}
+    d['planet4_db_path'] = dbfolder
+    with configpath.open('w') as f:
+        yaml.dump(d, f, default_flow_style=False)
+    print("Saved database path into {}.".format(configpath))
+
+
+HOME = Path(os.environ["HOME"])
+data_root = HOME / 'Dropbox' / 'data' / 'planet4'
 
 done_path = data_root / 'done.h5'
 
@@ -412,11 +449,7 @@ class DBManager(object):
         return self.image_ids
 
     def get_all(self, datadir=None):
-        datadir = data_root if datadir is None else Path(datadir)
-        h5files = datadir.glob('201*_fast_all_read.h5')
-        dbname = get_latest_file(h5files)
-        self.dbname = str(dbname)
-        return pd.read_hdf(str(dbname), 'df')
+        return pd.read_hdf(str(self.dbname), 'df')
 
     def get_obsid_markings(self, obsid):
         "Return marking data for given HiRISE obsid."
