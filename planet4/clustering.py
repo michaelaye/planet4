@@ -233,12 +233,8 @@ class ClusteringManager(object):
             if self.use_DBSCAN:
                 clusterdata = data[cols].iloc[cluster_members]
             else:
-                clusterdata = data[cols].loc[cluster_members]
-            meandata = clusterdata.mean()
-            meandata.angle = np.rad2deg(
-                circmean(
-                np.deg2rad(
-                clusterdata.angle)))
+                clusterdata = data.loc[cluster_members, cols]
+            meandata = self.get_average_object(clusterdata, kind)
             cluster = Marking(meandata, scope='planet4')
             # storing n_members into the object for later.
             cluster.n_members = len(cluster_members)
@@ -259,7 +255,16 @@ class ClusteringManager(object):
             print("Reduced data to %i %s(e)s." % (len(reduced_data), kind))
         logging.debug("Reduced data to %i %s(e)s.", len(reduced_data), kind)
 
-    def cluster_data(self, data):
+    def get_average_object(self, clusterdata, kind):
+        "Create the average object out of a cluster of data."
+        meandata = clusterdata.mean()
+        # this determines the upper limit for circular mean
+        high = 180 if kind == 'blotch' else 360
+        avg = circmean(clusterdata.angle, high=high)
+        meandata.angle = avg
+        return meandata
+
+    def cluster_data(self):
         """Basic clustering.
 
         For each fan and blotch markings in `data` a DBScanner object is
