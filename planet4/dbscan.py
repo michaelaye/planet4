@@ -38,9 +38,9 @@ class DBScanner(object):
     def _run_DBSCAN(self):
         """Perform the DBSCAN clustering."""
         logging.debug("Running DBSCAN")
-        db = DBSCAN(self.eps, self.min_samples).fit(self.current_X)
-        labels = db.labels_.astype('int')
-        self.core_samples = db.core_sample_indices_
+        clusterer = DBSCAN(self.eps, self.min_samples).fit(self.current_X)
+        labels = clusterer.labels_.astype('int')
+        self.core_samples = clusterer.core_sample_indices_
         unique_labels = set(labels)
         self.n_clusters = len(unique_labels) - (1 if -1 in labels else 0)
         self.labels = labels
@@ -86,10 +86,11 @@ class HDBScanner(object):
     """
 
     def __init__(self, current_X, min_cluster_size=3,
-                 min_samples=1):
+                 min_samples=1, proba_cut=0.0):
         self.current_X = current_X
         self.min_cluster_size = min_cluster_size
         self.min_samples = min_samples
+        self.proba_cut = proba_cut
         # these lines execute the clustering
         self._run_HDBSCAN()
         self._post_analysis()
@@ -97,11 +98,11 @@ class HDBScanner(object):
     def _run_HDBSCAN(self):
         """Perform the HDBSCAN clustering."""
         logging.debug("Running HDBSCAN")
-        db = HDBSCAN(min_cluster_size= self.min_cluster_size,
-                     min_samples=self.min_samples).fit(self.current_X)
-        labels = db.labels_
-        core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
-        core_samples_mask[db.probabilities_ > 0.75] = True
+        clusterer = HDBSCAN(min_cluster_size=self.min_cluster_size,
+                            min_samples=self.min_samples).fit(self.current_X)
+        labels = clusterer.labels_
+        core_samples_mask = np.zeros_like(clusterer.labels_, dtype=bool)
+        core_samples_mask[clusterer.probabilities_ > self.proba_cut] = True
         self.core_samples_mask = core_samples_mask
         unique_labels = set(labels)
         self.n_clusters = len(unique_labels) - (1 if -1 in labels else 0)
