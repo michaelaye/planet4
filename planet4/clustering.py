@@ -85,10 +85,11 @@ class ClusteringManager(object):
     cut_dir : pathlib.Path
         Path to final fan and blotch clusters, after applying `cut`.
     """
-    scalers = {'norm':normalize,
+    scalers = {'norm': normalize,
                'robust': robust_scale,
                'minmax': minmax_scale,
                'scale': scale}
+
     def __init__(self, dbname=None, fnotch_distance=10, eps=10,
                  output_dir=None, output_format='csv', cut=0.5,
                  min_samples_factor=0.15,
