@@ -99,7 +99,9 @@ class ClusteringManager(object):
                  quiet=True, normalize=False,
                  scaler='robust',
                  use_DBSCAN=True,
-                 hdbscan_min_samples=1):
+                 hdbscan_min_samples=None,
+                 min_samples=None,
+                 proba_cut=0.0):
         self.db = io.DBManager(dbname)
         self.dbname = self.db.dbname
         self.fnotch_distance = fnotch_distance
@@ -118,6 +120,8 @@ class ClusteringManager(object):
         self.scaler = scaler
         self.use_DBSCAN = use_DBSCAN
         self.hdbscan_min_samples = hdbscan_min_samples
+        self.min_samples = min_samples
+        self.proba_cut = proba_cut
 
         # to be defined at runtime:
         self.current_coords = None
