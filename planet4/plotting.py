@@ -102,7 +102,7 @@ def plot_clustered_blotches(id_, scope='planet4', datapath=None, ax=None, **kwar
         return
     reduced_blotches = markings.BlotchContainer.from_fname(pm.reduced_blotchfile,
                                                            scope)
-    imgid = markings.ImageID(id_)
+    imgid = markings.ImageID(id_, scope=scope)
 
     imgid.plot_blotches(blotches=reduced_blotches.content, ax=ax, **kwargs)
 
