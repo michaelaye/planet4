@@ -92,7 +92,7 @@ class ImageID(object):
         If the data was already extracted before init, it can be provided here.
     """
 
-    def __init__(self, imgid, dbname=None, data=None, scope=None):
+    def __init__(self, imgid, scope, dbname=None, data=None):
         self.imgid = io.check_and_pad_id(imgid)
         if data is not None:
             self.data = data
