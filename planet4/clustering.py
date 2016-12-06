@@ -1,20 +1,17 @@
 """Managing clustering, fnotching and cut application here."""
 from __future__ import division, print_function
 
-import logging
-
 import importlib
+import logging
+from pathlib import Path
+
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from numpy.linalg import norm
-from pathlib import Path
 from scipy.stats import circmean
-from sklearn.preprocessing import (normalize,
-                                   robust_scale,
-                                   minmax_scale,
-                                   scale)
+from sklearn.preprocessing import minmax_scale, normalize, robust_scale, scale
 
 from . import io, markings
 from .dbscan import DBScanner, HDBScanner
