@@ -1,13 +1,13 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 from pathlib import Path
 from planet4 import clustering, io, markings, region_data
 
 
-# In[2]:
+# In[ ]:
 
 # At the beginning of the notebook
 import logging
@@ -18,7 +18,7 @@ handler = logger.handlers[1]
 handler.setLevel(logging.DEBUG)
 
 
-# In[3]:
+# In[ ]:
 
 obsid = 'ESP_011394_0935'
 #obsid = 'ESP_012821_0865'
@@ -29,23 +29,23 @@ obsid = 'ESP_011394_0935'
 obsids = region_data.Inca.season2
 
 
-# In[4]:
+# In[ ]:
 
 def do_parallel_hirise_scope(obsid):
     from planet4 import clustering, io
     path = io.p4data() / ('overlap_issue_GH45/hirise_level/' + obsid)
     path.mkdir(exist_ok=True, parents=True)
-    cm = clustering.ClusteringManager(fnotched_dir=path, scope='hirise')
+    cm = clustering.ClusteringManager(output_dir=path, scope='hirise')
     cm.cluster_image_name(obsid)
     return cm
 
 
-# In[5]:
+# In[ ]:
 
 cm = do_parallel_hirise_scope(obsid)
 
 
-# In[6]:
+# In[ ]:
 
 from pathlib import Path
 root = io.dropbox()
@@ -108,7 +108,7 @@ def do_in_parallel_p4scope(obsid):
     
     path = io.p4data() / ('overlap_issue_GH45/p4_level_p4_coords/' + obsid)
     path.mkdir(exist_ok=True, parents=True)
-    cm = clustering.ClusteringManager(fnotched_dir=path, scope='planet4',
+    cm = clustering.ClusteringManager(output_dir=path, scope='planet4',
                                  include_angle=True, include_distance=False, 
                                  include_radius=False, eps=10, min_distance=10)
     try:
@@ -187,19 +187,19 @@ class Comparer(object):
     def fnotches_iter(self):
         return self.path.glob('*_fnotches.csv')
             
-    def get_length(self, theiter):
+    def get_counts(self, theiter):
         return sum([len(pd.read_csv(str(f))) for f in theiter])
 
     @property
-    def blotches_lengths(self):
-        return self.get_length(self.blotches_iter)
+    def n_blotches(self):
+        return self.get_counts(self.blotches_iter)
     
     @property
-    def fans_lengths(self):
-        return self.get_length(self.fans_iter)
+    def n_fans(self):
+        return self.get_counts(self.fans_iter)
     
     @property
-    def fnotches_lengths(self):
+    def n_fnotches(self):
         return self.get_length(self.fnotches_iter)
 
     @property
@@ -286,7 +286,7 @@ results.sort_index(inplace=True)
 
 # In[ ]:
 
-results
+get_ipython().magic('matplotlib inline')
 
 
 # In[ ]:
