@@ -1,11 +1,12 @@
-from planet4 import io, clustering, plotting
+from planet4 import io
 import numpy as np
 import matplotlib.pyplot as plt
 
 db = io.DBManager()
 
+
 def cluster_and_plot(image_id, hdbscan_min_samples=None, scaler='robust', normalize=False,
-                     min_samples=4, proba_cut=0.9, dir_ext='ms4_pc0.9'):
+                     min_samples=4, proba_cut=0.9, dir_ext=''):
     from planet4 import plotting, clustering
     cm = clustering.ClusteringManager(do_dynamic_min_samples=False,
                                       include_angle=True,
@@ -23,7 +24,7 @@ def cluster_and_plot(image_id, hdbscan_min_samples=None, scaler='robust', normal
                                     save=True,
                                     savetitle='hdbscan_',
                                     cm=cm,
-                                   )
+                                    )
     plt.close('all')
     return dict(id_=image_id)
 
@@ -32,5 +33,5 @@ myids = np.load('../notebooks/myids.npy')
 
 for id_ in myids:
     print(id_)
-    cluster_and_plot(id_, min_samples=4, proba_cut=0.9, dir_ext='ms4_pc0.9_',
-                     normalize=True, scaler=)
+    cluster_and_plot(id_, min_samples=4, proba_cut=0.9, dir_ext='ms4_pc0.9_scale',
+                     normalize=True, scaler='scale')
