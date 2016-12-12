@@ -34,7 +34,7 @@ fans2 = imid2data[imid2data.marking=='fan']
 blotches2 = imid2data[imid2data.marking=='blotch']
 
 # basic clustering manager
-cm = clustering.ClusteringManager(dbname='ignore', fnotched_dir=tdir)
+cm = clustering.ClusteringManager(dbname='ignore', output_dir=tdir)
 
 
 # In[ ]:
@@ -145,14 +145,14 @@ from planet4 import clustering
 
 # image_name = 'ESP_011394_0935'
 image_name = 'ESP_011350_0945'
-cm = clustering.ClusteringManager(dbname=dbname, fnotched_dir=tdir, scope='hirise')
+cm = clustering.ClusteringManager(dbname=dbname, output_dir=tdir, scope='hirise')
 cm.cluster_image_name(image_name)
 
 
 # In[ ]:
 
-cm = clustering.ClusteringManager(dbname='ignore', fnotched_dir=tdir, scope='planet4')
-cm.cluster_image_id('apx', data=data)
+cm = clustering.ClusteringManager(dbname='ignore', output_dir=tdir, scope='planet4')
+cm.cluster_image_id('ani', data=data)
 
 
 # In[ ]:
@@ -193,22 +193,47 @@ df
 
 # In[ ]:
 
+get_ipython().magic('matplotlib nbagg')
+
+
+# In[ ]:
+
+db.get_image_id_markings('apx').iloc[0]
+
+
+# In[ ]:
+
+db.get_image_id_markings('ani').iloc[0]
+
+
+# In[ ]:
+
+plotting.plot_clustered_fans('apx', _dir=tdir)
+
+
+# In[ ]:
+
+plotting.plot_clustered_fans('ani', _dir=tdir)
+
+
+# In[ ]:
+
+plotting.plot_raw_fans('ani')
+
+
+# In[ ]:
+
 newblotches = cm.newblotches.apply(lambda x: x.store())
 
 
 # In[ ]:
 
-newblotches[newblotches.duplicated(keep=False)]
+newblotches[newblotches.duplicated(keep=False)].head()
 
 
 # In[ ]:
 
 cm.pm.fnotchdf.head()
-
-
-# In[ ]:
-
-cm.newblotches.duplicated().value_counts()
 
 
 # In[ ]:
