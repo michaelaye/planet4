@@ -49,7 +49,7 @@ class DBScanner(object):
 
     def _post_analysis(self):
         """Use clustering results to create mean markings."""
-        self.reduced_data = []  # list of `kind` cluster average objects
+        self.clustered_data = []  # list of `kind` cluster average objects
         self.n_rejected = 0
         # loop over unique labels.
         for label in self.unique_labels:
@@ -61,7 +61,7 @@ class DBScanner(object):
                 self.n_rejected = len(cluster_members)
             # if label is a cluster member:
             else:
-                self.reduced_data.append(cluster_members)
+                self.clustered_data.append(cluster_members)
 
 
 class HDBScanner(object):
@@ -112,7 +112,7 @@ class HDBScanner(object):
 
     def _post_analysis(self):
         """Use clustering results to create mean markings."""
-        self.reduced_data = []  # list of `kind` cluster average objects
+        self.clustered_data = []  # list of `kind` cluster average objects
         self.n_rejected = 0
 
         # loop over unique labels.
@@ -125,4 +125,4 @@ class HDBScanner(object):
                 self.n_rejected = len(cluster_members)
             # if label is a cluster member:
             else:
-                self.reduced_data.append(cluster_members)
+                self.clustered_data.append(cluster_members)
