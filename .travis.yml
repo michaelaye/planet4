@@ -18,8 +18,8 @@ before_install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
 install:
-  - conda install --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt
-  - conda install --yes pytest
+  - conda install python=3.5 --file requirements.txt
+  - conda install pytest
   # - pip install codecov
   # - pip install pytest-cov
   - pip install coveralls
