@@ -533,7 +533,9 @@ class Fan(lines.Line2D):
         ax.add_line(pointer)
 
     def __str__(self):
-        out = 'base: {0}\narmlength: {1}\narm1: {2}\narm2: {3}'\
+        out = "markings.Fan object. Input data:\n"
+
+        out += 'base: {0}\narmlength: {1}\narm1: {2}\narm2: {3}'\
             .format(self.base, self.armlength, self.base+self.v1,
                     self.base+self.v2)
         return out
