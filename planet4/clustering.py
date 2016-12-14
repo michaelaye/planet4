@@ -134,7 +134,6 @@ class ClusteringManager(object):
         self.newfans = None
         self.newblotches = None
 
-
         if pm is not None:
             self.pm = pm
         else:
@@ -151,7 +150,7 @@ class ClusteringManager(object):
         """int : Number of clustered blotches."""
         return len(self.clustered_data['blotch'])
 
-    def pre_processing(self, data, kind):
+    def pre_processing(self):
         """Preprocess before clustering.
 
         Depending on the flags used when constructing this manager,
@@ -166,27 +165,23 @@ class ClusteringManager(object):
         """
 
         # add unit circle coordinates for angles
-        angles = data['angle']
-        data['xang'] = np.cos(np.deg2rad(angles))
-        data['yang'] = np.sin(np.deg2rad(angles))
-        if len(marking_data) < 3:
-            raise NotEnoughMarkingData
-            # return None
+        angles = self.marking_data['angle']
+        marking_data = self.marking_data.assign(xang=np.cos(np.deg2rad(angles)))
+        marking_data = marking_data.assign(yang=np.sin(np.deg2rad(angles)))
 
-        # filter for the marking for `kind`
-        marking_data = data[data.marking == kind]
-        if len(marking_data) == 0:
+        if len(marking_data) < 3:
             return None
 
         coords = ['x', 'y']
 
-        if kind == 'fan':
+        # now marking kind dependent additions:
+        if self.kind == 'fan':
             if self.include_distance:
                 coords.append('distance')
             if self.include_angle:
                 coords += ['xang', 'yang']
 
-        elif kind == 'blotch':
+        elif self.kind == 'blotch':
             if self.include_radius:
                 coords += ['radius_1', 'radius_2']
             if self.include_angle:
@@ -203,7 +198,7 @@ class ClusteringManager(object):
         self.current_markings = marking_data
         return current_X
 
-    def post_processing(self, dbscanner, kind):
+    def post_processing(self):
         """Create mean objects out of cluster label members.
 
         Note: I take the image_id of the marking of the first member of
@@ -211,27 +206,16 @@ class ClusteringManager(object):
         this could be wrong for clusters in the overlap region.
 
         Stores output in self.reduced_data dictionary
-
-        Parameters
-        ----------
-        dbscanner : dbscan.DBScanner
-            DBScanner object
-        kind : {'fan', 'blotch'}
-            current kind of marking to post-process.
-
         """
-        if kind == 'fan':
-            cols = markings.Fan.to_average
-            Marking = markings.Fan
-        elif kind == 'blotch':
-            cols = markings.Blotch.to_average
-            Marking = markings.Blotch
+        kind = self.kind
+        Marking = markings.Fan if kind == 'fan' else markings.Blotch
+        cols = Marking.to_average
 
         reduced_data = []
         data = self.current_markings
-        for cluster_members in dbscanner.reduced_data:
+        for cluster_members in self.clusterer.clustered_data:
             if self.use_DBSCAN:
-                clusterdata = data[cols].iloc[cluster_members]
+                clusterdata = data[cols+['user_name']].iloc[cluster_members]
             else:
                 clusterdata = data.loc[cluster_members, cols]
             meandata = self.get_average_object(clusterdata, kind)
@@ -240,13 +224,7 @@ class ClusteringManager(object):
             cluster.n_members = len(cluster_members)
             # storing this saved marker for later in ClusteringManager
             cluster.saved = False
-            # store the image_id from first cluster member for whole cluster
-            try:
-                image_id = data['image_id'].iloc[cluster_members][0]
-            # inelegant fudge to account for Categories not having iloc.
-            except KeyError:
-                image_id = data['image_id'].iloc[cluster_members].values[0]
-            cluster.image_id = image_id
+            cluster.image_id = self.pm.id_
 
             reduced_data.append(cluster)
 
@@ -255,11 +233,11 @@ class ClusteringManager(object):
             print("Reduced data to %i %s(e)s." % (len(reduced_data), kind))
         logging.debug("Reduced data to %i %s(e)s.", len(reduced_data), kind)
 
-    def get_average_object(self, clusterdata, kind):
+    def get_average_object(self, clusterdata):
         "Create the average object out of a cluster of data."
         meandata = clusterdata.mean()
         # this determines the upper limit for circular mean
-        high = 180 if kind == 'blotch' else 360
+        high = 180 if self.kind == 'blotch' else 360
         avg = circmean(clusterdata.angle, high=high)
         meandata.angle = avg
         return meandata
@@ -284,43 +262,53 @@ class ClusteringManager(object):
         # Calculate the unique classification_ids so that the mininum number of
         # samples for DBScanner can be calculated (15 % currently)
         # use only class_ids that actually contain fan and blotch markings
-        f1 = data.marking == 'fan'   # this creates a boolean filter
-        f2 = data.marking == 'blotch'
+        f1 = self.data.marking == 'fan'   # this creates a boolean filter
+        f2 = self.data.marking == 'blotch'
         # combine filters with logical OR:
-        n_classifications = data[f1 | f2].classification_id.nunique()
+        n_classifications = self.data[f1 | f2].classification_id.nunique()
 
         if self.do_dynamic_min_samples:
-            self.min_samples = round(self.min_samples_factor * n_classifications)
+            min_samples = round(self.min_samples_factor * n_classifications)
             # ensure that min_samples is at least 3:
-            self.min_samples = max(self.min_samples, 3)
-        else:
+            min_samples = max(min_samples, 3)
+            self.min_samples = min_samples
+        elif self.min_samples is None:
             # 3 turned out to be a well working default min_samples requirement
-            self.min_samples = 3
+            min_samples = 3
+            self.min_samples = min_samples
+        else:
+            min_samples = self.min_samples
 
         for kind in ['fan', 'blotch']:
-            # self.include_angle = False if kind == 'blotch' else True
-            current_X = self.pre_processing(data, kind)
+            # what is included for clustering is decided in pre_processing
+            self.marking_data = self.data[self.data.marking == kind]
+            self.kind = kind
+            current_X = self.pre_processing()
             if current_X is not None:
                 if self.use_DBSCAN:
-                    dbscanner = DBScanner(current_X, eps=self.eps,
-                                          min_samples=self.min_samples)
-                    self.dbscanner = dbscanner
+                    clusterer = DBScanner(current_X, eps=self.eps,
+                                          min_samples=min_samples)
                 else:
-                    dbscanner = HDBScanner(current_X,
-                                           min_cluster_size=self.min_samples,
-                                           min_samples=self.hdbscan_min_samples)
+                    clusterer = HDBScanner(current_X,
+                                           min_cluster_size=min_samples,
+                                           min_samples=self.hdbscan_min_samples,
+                                           proba_cut=self.proba_cut)
+                # store the scanner object in both cases into `self`
+                self.clusterer = clusterer
             else:
+                # current_X is empty so store empty results and skip to next `kind`
                 self.reduced_data[kind] = []
                 continue
             # storing of clustered data happens in here:
-            self.post_processing(dbscanner, kind)
+            self.post_processing()
             self.confusion.append((self.pm.id_, kind,
                                    len(self.current_markings),
                                    len(self.reduced_data[kind]),
-                                   dbscanner.n_rejected))
+                                   clusterer.n_rejected))
         self.n_classifications = n_classifications
-        print("n_classifications:", self.n_classifications)
-        print("min_samples:", self.min_samples)
+        if not self.quiet:
+            print("n_classifications:", self.n_classifications)
+            print("min_samples:", self.min_samples)
 
     def do_the_fnotch(self):
         """Combine fans and blotches if necessary.
@@ -407,8 +395,10 @@ class ClusteringManager(object):
         logging.info("Clustering data for %s", image_id)
         self.pm.id_ = image_id
         if data is None:
-            data = self.db.get_image_id_markings(image_id)
-        self.cluster_data(data)
+            self.data = self.db.get_image_id_markings(image_id)
+        else:
+            self.data = data.copy()
+        self.cluster_data()
         logging.debug("Clustering completed.")
         self.store_clustered()
 
@@ -425,14 +415,16 @@ class ClusteringManager(object):
         """
         logging.info("Clustering data for %s", image_name)
         if data is None:
-            data = self.db.get_image_name_markings(image_name)
-        image_ids = data.image_id.unique()
+            namedata = self.db.get_image_name_markings(image_name)
+        else:
+            namedata = data.copy()
+        image_ids = namedata.image_id.unique()
         self.pm = io.PathManager(self.output_dir / image_name,
                                  id_=image_ids[0], suffix='.'+self.output_format)
         for image_id in image_ids:
             self.pm.id_ = image_id
-            img_id_data = data[data.image_id==image_id]
-            self.cluster_data(img_id_data)
+            self.data = data[data.image_id == image_id]
+            self.cluster_data()
             self.store_clustered()
 
     def cluster_obsid(self, *args, **kwargs):
