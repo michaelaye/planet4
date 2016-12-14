@@ -217,8 +217,11 @@ class ClusteringManager(object):
             if self.use_DBSCAN:
                 clusterdata = data[cols+['user_name']].iloc[cluster_members]
             else:
-                clusterdata = data.loc[cluster_members, cols]
-            meandata = self.get_average_object(clusterdata, kind)
+                clusterdata = data.loc[cluster_members, cols+['user_name']]
+            # if the same user is inside one cluster, just take
+            # the first entry per user:
+            filtered = clusterdata.groupby('user_name').first()
+            meandata = self.get_average_object(filtered)
             cluster = Marking(meandata, scope='planet4')
             # storing n_members into the object for later.
             cluster.n_members = len(cluster_members)
