@@ -91,10 +91,13 @@ class ClusteringManager(object):
                  include_angle=True, id_=None, pm=None,
                  include_distance=False, include_radius=False,
                  do_dynamic_min_samples=False,
+                 quiet=True,
                  use_DBSCAN=True,
                  hdbscan_min_samples=None,
                  min_samples=None,
-                 proba_cut=0.0):
+                 proba_cut=0.0,
+                 eps_fanangle=20,
+                 eps_blotchangle=20):
         self.db = io.DBManager(dbname)
         self.dbname = self.db.dbname
         self.fnotch_distance = fnotch_distance
@@ -113,6 +116,8 @@ class ClusteringManager(object):
         self.hdbscan_min_samples = hdbscan_min_samples
         self.min_samples = min_samples
         self.proba_cut = proba_cut
+        self.eps_fanangle = eps_fanangle
+        self.eps_blotchangle = eps_blotchangle
 
         # to be defined at runtime:
         self.current_coords = None
@@ -129,7 +134,7 @@ class ClusteringManager(object):
             self.pm = pm
         else:
             self.pm = io.PathManager(output_dir, id_=id_,
-                                     suffix='.'+self.output_format)
+                                     suffix='.' + self.output_format)
 
     @property
     def n_clustered_fans(self):
@@ -163,6 +168,7 @@ class ClusteringManager(object):
         if len(marking_data) < 3:
             return None
 
+        # basic coordinates to cluster on
         coords = ['x', 'y']
 
         # now marking kind dependent additions:
@@ -177,6 +183,7 @@ class ClusteringManager(object):
                 coords += ['radius_1', 'radius_2']
             if self.include_angle:
                 coords.append('yang')
+
         # Determine the clustering input matrix
         current_X = marking_data[coords].values
 
@@ -184,6 +191,23 @@ class ClusteringManager(object):
         self.current_coords = coords
         self.current_markings = marking_data
         return current_X
+
+    def angle_to_xy(self, angle):
+        y = np.sin(np.deg2rad(angle))
+        out = [y]
+        if self.kind == 'fan':
+            x = np.cos(np.deg2rad(angle))
+            out = [x] + out
+        return np.vstack(out).T
+
+    def cluster_angles(self, filtered):
+        # calculated value of euclidean distance of unit vector end points per degree
+        dist_per_degree = 0.017453070996747883
+        X = self.angle_to_xy(filtered.angle)
+        delta = self.eps_fanangle if self.kind == 'fan' else self.eps_blotchangle
+        clusterer = DBScanner(X, eps=delta * dist_per_degree,
+                              min_samples=self.min_samples)
+        return clusterer.clustered_indices
 
     def post_processing(self):
         """Create mean objects out of cluster label members.
@@ -200,23 +224,27 @@ class ClusteringManager(object):
 
         reduced_data = []
         data = self.current_markings
-        for cluster_members in self.clusterer.clustered_data:
-            if self.use_DBSCAN:
-                clusterdata = data[cols+['user_name']].iloc[cluster_members]
-            else:
-                clusterdata = data.loc[cluster_members, cols+['user_name']]
+        for cluster_members in self.clusterer.clustered_indices:
+            clusterdata = data.loc[cluster_members, cols + ['user_name']]
             # if the same user is inside one cluster, just take
             # the first entry per user:
             filtered = clusterdata.groupby('user_name').first()
-            meandata = self.get_average_object(filtered)
-            cluster = Marking(meandata, scope='planet4')
-            # storing n_members into the object for later.
-            cluster.n_members = len(cluster_members)
-            # storing this saved marker for later in ClusteringManager
-            cluster.saved = False
-            cluster.image_id = self.pm.id_
-
-            reduced_data.append(cluster)
+            # still only taking stuff if it has more than min_samples markings.
+            if len(filtered) < self.min_samples:
+                continue
+            # now sub-cluster on angles, to distinguish between different fans
+            # and to increase precision on blotch alignments
+            angle_clustered = self.cluster_angles(filtered)
+            for indices in angle_clustered:
+                angle_cluster_data = clusterdata.loc[indices, cols]
+                meandata = self.get_average_object(angle_cluster_data)
+                cluster = Marking(meandata, scope='planet4', with_center=True)
+                # storing n_members into the object for later.
+                cluster.n_members = len(cluster_members)
+                # storing this saved marker for later in ClusteringManager
+                cluster.saved = False
+                cluster.image_id = self.pm.id_
+                reduced_data.append(cluster)
 
         self.reduced_data[kind] = reduced_data
         if not self.quiet:
@@ -410,7 +438,7 @@ class ClusteringManager(object):
             namedata = data.copy()
         image_ids = namedata.image_id.unique()
         self.pm = io.PathManager(self.output_dir / image_name,
-                                 id_=image_ids[0], suffix='.'+self.output_format)
+                                 id_=image_ids[0], suffix='.' + self.output_format)
         for image_id in image_ids:
             self.pm.id_ = image_id
             self.data = data[data.image_id == image_id]
