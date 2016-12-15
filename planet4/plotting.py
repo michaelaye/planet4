@@ -5,7 +5,7 @@ from . import io, markings
 
 
 def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
-                           savetitle='', figtitle='', cm=None):
+                           savetitle='', figtitle='', cm=None, **kwargs):
     """Plotting tool to show the results along the P4 pipeline.
 
     Parameters
@@ -36,25 +36,29 @@ def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
         dbname = cm.dbname
     imgid = markings.ImageID(image_id, dbname=dbname, scope='planet4')
 
-    fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(10, 8))
+    fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(10, 5))
     axes = axes.ravel()
     for ax in axes:
         imgid.show_subframe(ax=ax)
     imgid.plot_fans(ax=axes[1])
     imgid.plot_blotches(ax=axes[2])
 
-    plot_clustered_fans(image_id, ax=axes[4], datapath=datapath)
-    plot_clustered_blotches(image_id, ax=axes[5], datapath=datapath)
+    plot_clustered_fans(image_id, ax=axes[4], datapath=datapath, **kwargs)
+    plot_clustered_blotches(image_id, ax=axes[5], datapath=datapath, **kwargs)
     plot_finals(image_id, ax=axes[3], datapath=datapath)
 
-    for ax in axes:
-        ax.set_axis_off()
+    # for ax in axes:
+    #     ax.set_axis_off()
 
     if figtitle == '' and cm is not None:
         figtitle = "min_samples: {}".format(cm.min_samples)
+        figtitle += ", dynamic: {}".format(cm.do_dynamic_min_samples)
+        figtitle += ", n_(blotch|fan) markings: {}".format(cm.n_classifications)
+        figtitle += ("\nn_clustered_fans: {}, n_clustered_blotches: {}"
+                     .format(cm.n_clustered_fans, cm.n_clustered_blotches))
     fig.suptitle(image_id + ', ' + str(figtitle))
     fig.subplots_adjust(left=None, top=None, bottom=None, right=None,
-                        wspace=0.001, hspace=0.001)
+                        wspace=0.01, hspace=0.01)
     if save:
         fname = "{}_{}.pdf".format(imgid.imgid, savetitle)
         saveroot = datapath / 'plots'
@@ -100,11 +104,12 @@ def plot_clustered_blotches(id_, scope='planet4', datapath=None, ax=None, **kwar
     if not pm.reduced_blotchfile.exists():
         print("Clustered blotchfile not found")
         return
-    reduced_blotches = markings.BlotchContainer.from_fname(pm.reduced_blotchfile,
-                                                           scope)
+    # reduced_blotches = markings.BlotchContainer.from_fname(pm.reduced_blotchfile,
+    #                                                        scope)
+    data = pm.reduced_blotchdf
     imgid = markings.ImageID(id_, scope=scope)
 
-    imgid.plot_blotches(blotches=reduced_blotches.content, ax=ax, **kwargs)
+    imgid.plot_blotches(blotches=data, ax=ax, **kwargs)
 
 
 def blotches_all(id_, datapath=None):
