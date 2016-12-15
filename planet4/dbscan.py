@@ -33,35 +33,34 @@ class DBScanner(object):
 
         # these lines execute the clustering
         self._run_DBSCAN()
-        self._post_analysis()
 
     def _run_DBSCAN(self):
         """Perform the DBSCAN clustering."""
         logging.debug("Running DBSCAN")
-        clusterer = DBSCAN(self.eps, self.min_samples).fit(self.current_X)
-        labels = clusterer.labels_.astype('int')
-        self.core_samples = clusterer.core_sample_indices_
-        unique_labels = set(labels)
-        self.n_clusters = len(unique_labels) - (1 if -1 in labels else 0)
-        self.labels = labels
-        self.unique_labels = unique_labels
-        logging.debug("Estimated number of clusters: %i", self.n_clusters)
+        db = DBSCAN(self.eps, self.min_samples).fit(self.current_X)
+        core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
+        core_samples_mask[db.core_sample_indices_] = True
 
-    def _post_analysis(self):
-        """Use clustering results to create mean markings."""
-        self.clustered_data = []  # list of `kind` cluster average objects
+        labels = db.labels_
+        unique_labels = set(labels)
+
+        self.n_clusters_ = len(unique_labels) - (1 if -1 in labels else 0)
+
+        self.clustered_indices = []  # list of `kind` cluster average objects
         self.n_rejected = 0
         # loop over unique labels.
-        for label in self.unique_labels:
+        for k in unique_labels:
             # get indices for members of this cluster
-            cluster_members = [i[0] for i in np.argwhere(self.labels == label)]
-
+            class_member_mask = (labels == k)
+            cluster_members = (class_member_mask & core_samples_mask)
             # treat noise
-            if label == -1:
+            if k == -1:
                 self.n_rejected = len(cluster_members)
             # if label is a cluster member:
             else:
-                self.clustered_data.append(cluster_members)
+                self.clustered_indices.append(cluster_members)
+
+        self.db = db
 
 
 class HDBScanner(object):
