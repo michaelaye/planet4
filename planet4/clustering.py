@@ -73,8 +73,6 @@ class ClusteringManager(object):
         List of clustered Blotch objects after clustering and averaging.
     current_coords : list
         List of coordinate columns currently used for clustering
-    current_markings : pandas.DataFrame
-        Dataframe with the currently to-be-clustered marking data
     reduced_data : dictionary
         Stores reduced average cluster markings
     n_clustered_fans
@@ -89,9 +87,7 @@ class ClusteringManager(object):
                  output_dir=None, output_format='csv', cut=0.5,
                  min_samples_factor=0.15,
                  include_angle=True, id_=None, pm=None,
-                 include_distance=False, include_radius=False,
                  do_dynamic_min_samples=False,
-                 quiet=True,
                  use_DBSCAN=True,
                  hdbscan_min_samples=None,
                  min_samples=None,
@@ -106,12 +102,9 @@ class ClusteringManager(object):
         self.eps = eps
         self.cut = cut
         self.include_angle = include_angle
-        self.include_distance = include_distance
-        self.include_radius = include_radius
         self.confusion = []
         self.min_samples_factor = min_samples_factor
         self.do_dynamic_min_samples = do_dynamic_min_samples
-        self.quiet = quiet
         self.use_DBSCAN = use_DBSCAN
         self.hdbscan_min_samples = hdbscan_min_samples
         self.min_samples = min_samples
@@ -121,7 +114,6 @@ class ClusteringManager(object):
 
         # to be defined at runtime:
         self.current_coords = None
-        self.current_markings = None
         self.reduced_data = None
         self.fnotches = None
         self.fnotched_blotches = None
@@ -139,12 +131,12 @@ class ClusteringManager(object):
     @property
     def n_clustered_fans(self):
         """int : Number of clustered fans."""
-        return len(self.clustered_data['fan'])
+        return len(self.reduced_data['fan'])
 
     @property
     def n_clustered_blotches(self):
         """int : Number of clustered blotches."""
-        return len(self.clustered_data['blotch'])
+        return len(self.reduced_data['blotch'])
 
     def pre_processing(self):
         """Preprocess before clustering.
@@ -161,9 +153,7 @@ class ClusteringManager(object):
         """
 
         # add unit circle coordinates for angles
-        angles = self.marking_data['angle']
-        marking_data = self.marking_data.assign(xang=np.cos(np.deg2rad(angles)))
-        marking_data = marking_data.assign(yang=np.sin(np.deg2rad(angles)))
+        marking_data = self.marking_data
 
         if len(marking_data) < 3:
             return None
@@ -171,25 +161,11 @@ class ClusteringManager(object):
         # basic coordinates to cluster on
         coords = ['x', 'y']
 
-        # now marking kind dependent additions:
-        if self.kind == 'fan':
-            if self.include_distance:
-                coords.append('distance')
-            if self.include_angle:
-                coords += ['xang', 'yang']
-
-        elif self.kind == 'blotch':
-            if self.include_radius:
-                coords += ['radius_1', 'radius_2']
-            if self.include_angle:
-                coords.append('yang')
-
         # Determine the clustering input matrix
         current_X = marking_data[coords].values
 
         # store stuff for later
         self.current_coords = coords
-        self.current_markings = marking_data
         return current_X
 
     def angle_to_xy(self, angle):
@@ -223,7 +199,7 @@ class ClusteringManager(object):
         cols = Marking.to_average
 
         reduced_data = []
-        data = self.current_markings
+        data = self.marking_data
         for cluster_members in self.clusterer.clustered_indices:
             clusterdata = data.loc[cluster_members, cols + ['user_name']]
             # if the same user is inside one cluster, just take
@@ -247,8 +223,6 @@ class ClusteringManager(object):
                 reduced_data.append(cluster)
 
         self.reduced_data[kind] = reduced_data
-        if not self.quiet:
-            print("Reduced data to %i %s(e)s." % (len(reduced_data), kind))
         logging.debug("Reduced data to %i %s(e)s.", len(reduced_data), kind)
 
     def get_average_object(self, clusterdata):
@@ -320,13 +294,12 @@ class ClusteringManager(object):
             # storing of clustered data happens in here:
             self.post_processing()
             self.confusion.append((self.pm.id_, kind,
-                                   len(self.current_markings),
+                                   len(self.marking_data),
                                    len(self.reduced_data[kind]),
                                    clusterer.n_rejected))
         self.n_classifications = n_classifications
-        if not self.quiet:
-            print("n_classifications:", self.n_classifications)
-            print("min_samples:", self.min_samples)
+        logging.info("n_classifications: %i", self.n_classifications)
+        logging.info("min_samples: %i", self.min_samples)
 
     def do_the_fnotch(self):
         """Combine fans and blotches if necessary.
