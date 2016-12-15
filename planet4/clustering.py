@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 from numpy.linalg import norm
 from scipy.stats import circmean
-from sklearn.preprocessing import minmax_scale, normalize, robust_scale, scale
 
 from . import io, markings
 from .dbscan import DBScanner, HDBScanner
@@ -85,10 +84,6 @@ class ClusteringManager(object):
     cut_dir : pathlib.Path
         Path to final fan and blotch clusters, after applying `cut`.
     """
-    scalers = {'norm': normalize,
-               'robust': robust_scale,
-               'minmax': minmax_scale,
-               'scale': scale}
 
     def __init__(self, dbname=None, fnotch_distance=10, eps=10,
                  output_dir=None, output_format='csv', cut=0.5,
@@ -96,8 +91,6 @@ class ClusteringManager(object):
                  include_angle=True, id_=None, pm=None,
                  include_distance=False, include_radius=False,
                  do_dynamic_min_samples=False,
-                 quiet=True, normalize=False,
-                 scaler='robust',
                  use_DBSCAN=True,
                  hdbscan_min_samples=None,
                  min_samples=None,
@@ -116,8 +109,6 @@ class ClusteringManager(object):
         self.min_samples_factor = min_samples_factor
         self.do_dynamic_min_samples = do_dynamic_min_samples
         self.quiet = quiet
-        self.normalize = normalize
-        self.scaler = scaler
         self.use_DBSCAN = use_DBSCAN
         self.hdbscan_min_samples = hdbscan_min_samples
         self.min_samples = min_samples
@@ -187,11 +178,7 @@ class ClusteringManager(object):
             if self.include_angle:
                 coords.append('yang')
         # Determine the clustering input matrix
-        if self.normalize:
-            f = self.scalers[self.scaler]
-            current_X = f(marking_data[coords].values, axis=0)
-        else:
-            current_X = marking_data[coords].values
+        current_X = marking_data[coords].values
 
         # store stuff for later
         self.current_coords = coords
