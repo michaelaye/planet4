@@ -28,6 +28,7 @@ def get_config():
         with open(str(configpath)) as f:
             return yaml.load(f)
 
+
 if not configpath.exists():
     print("No configuration file {} found.\n".format(configpath))
     print("Please run `planet4.io.set_database_path()` and provide the path where\n"
@@ -220,7 +221,7 @@ def get_image_id_from_fname(fname):
 
 
 def get_image_ids_in_folder(folder, extension='.csv'):
-    fnames = Path(folder).glob('*'+extension)
+    fnames = Path(folder).glob('*' + extension)
     return [get_image_id_from_fname(i) for i in fnames]
 
 
