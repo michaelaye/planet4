@@ -214,13 +214,14 @@ class ClusteringManager(object):
             for indices in angle_clustered:
                 angle_cluster_data = clusterdata.loc[indices, cols]
                 meandata = self.get_average_object(angle_cluster_data)
-                cluster = Marking(meandata, scope='planet4', with_center=True)
+
+                # This returned a pd.Series object I can add more info to now:
                 # storing n_members into the object for later.
-                cluster.n_members = len(cluster_members)
-                # storing this saved marker for later in ClusteringManager
-                cluster.saved = False
-                cluster.image_id = self.pm.id_
-                reduced_data.append(cluster)
+                meandata['n_votes'] = len(indices)
+                meandata['image_id'] = self.pm.id_
+                meandata['image_name'] = self.marking_data.image_name.values[0]
+                # converting to dataframe and clean data format (rows=measurements)
+                reduced_data.append(meandata.to_frame().T)
 
         self.reduced_data[kind] = reduced_data
         logging.debug("Reduced data to %i %s(e)s.", len(reduced_data), kind)
@@ -442,14 +443,16 @@ class ClusteringManager(object):
         "Store the unfnotched data."
         outdir = self.pm.output_dir_clustered
         outdir.mkdir(exist_ok=True)
-        for outfname, outdata in zip(['reduced_blotchfile', 'reduced_fanfile'],
+        for outfname, outdata in zip([self.pm.reduced_blotchfile, self.pm.reduced_fanfile],
                                      [self.reduced_data['blotch'],
                                       self.reduced_data['fan']]):
             if len(outdata) == 0:
                 continue
-            series = [cluster.store() for cluster in outdata]
-            df = pd.DataFrame(series)
-            self.save(df, getattr(self.pm, outfname))
+            df = pd.concat(outdata, ignore_index=True)
+            # make
+            df = df.apply(pd.to_numeric, errors='ignore')
+            df['n_votes'] = df['n_votes'].astype('int')
+            self.save(df, outfname)
 
     def cluster_all(self):
         image_names = self.db.image_names
