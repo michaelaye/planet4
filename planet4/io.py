@@ -246,13 +246,15 @@ class PathManager(object):
     """
 
     def __init__(self, datapath=None, id_=None, suffix='.csv',
-                 cut=0.5):
+                 cut=0.5, image_name='.'):
         self._id = id_
         self.cut = cut
+        self.image_name = Path(image_name)
         if datapath is None:
             self.datapath = Path(data_root) / 'clustering'
         else:
             self.datapath = Path(data_root) / datapath
+        self.datapath /= self.image_name
         self.datapath.mkdir(exist_ok=True)
 
         self.suffix = suffix
