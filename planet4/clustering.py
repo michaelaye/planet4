@@ -93,8 +93,9 @@ class ClusteringManager(object):
                  min_samples=None,
                  proba_cut=0.0,
                  eps_fanangle=20,
-                 eps_blotchangle=20):
-        self.db = io.DBManager(dbname)
+                 eps_blotchangle=20,
+                 s23=False):
+        self.db = io.DBManager(dbname, s23=s23)
         self.dbname = self.db.dbname
         self.fnotch_distance = fnotch_distance
         self.output_dir = output_dir
@@ -411,6 +412,7 @@ class ClusteringManager(object):
         else:
             namedata = data
         image_ids = namedata.image_id.unique()
+        logging.debug("Found %i image_ids.", len(image_ids))
         self.pm.image_name = image_name
         for image_id in image_ids:
             logging.debug('Clustering image_id %s', image_id)
