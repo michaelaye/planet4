@@ -277,11 +277,11 @@ class Blotch(Ellipse):
 
     @property
     def x2(self):
-        return math.cos(math.radians(self.angle+90)) * self.data.radius_2
+        return math.cos(math.radians(self.angle + 90)) * self.data.radius_2
 
     @property
     def y2(self):
-        return math.sin(math.radians(self.angle+90)) * self.data.radius_2
+        return math.sin(math.radians(self.angle + 90)) * self.data.radius_2
 
     @property
     def p3(self):
@@ -323,10 +323,10 @@ class Blotch(Ellipse):
     def store(self, fpath=None):
         out = self.data
         for p in range(1, 5):
-            attr = 'p'+str(p)
+            attr = 'p' + str(p)
             point = getattr(self, attr)
-            out[attr+'_x'] = point[0]
-            out[attr+'_y'] = point[1]
+            out[attr + '_x'] = point[0]
+            out[attr + '_y'] = point[1]
         if 'image_id' not in out.index:
             out['image_id'] = self.image_id
         if fpath is not None:
@@ -453,7 +453,7 @@ class Fan(lines.Line2D):
     @property
     def area(self):
         tr_h = np.sqrt(self.armlength**2 - self.radius**2)
-        tr_area = tr_h*self.radius
+        tr_area = tr_h * self.radius
         half_circ_area = 0.5 * pi * self.radius**2
         return tr_area + half_circ_area
 
@@ -536,8 +536,8 @@ class Fan(lines.Line2D):
         out = "markings.Fan object. Input data:\n"
 
         out += 'base: {0}\narmlength: {1}\narm1: {2}\narm2: {3}'\
-            .format(self.base, self.armlength, self.base+self.v1,
-                    self.base+self.v2)
+            .format(self.base, self.armlength, self.base + self.v1,
+                    self.base + self.v2)
         return out
 
     def __repr__(self):
@@ -546,8 +546,8 @@ class Fan(lines.Line2D):
     def store(self, fpath=None):
         out = self.data
         for i, arm in enumerate([self.v1, self.v2]):
-            out['arm{}_x'.format(i+1)] = (self.base + arm)[0]
-            out['arm{}_y'.format(i+1)] = (self.base + arm)[1]
+            out['arm{}_x'.format(i + 1)] = (self.base + arm)[0]
+            out['arm{}_y'.format(i + 1)] = (self.base + arm)[1]
         if 'image_id' not in out.index:
             out['image_id'] = self.image_id
         if fpath is not None:
@@ -586,9 +586,9 @@ class Fnotch(object):
         self.scope = scope
 
         fanstore = fan.store().copy()  # copy(),otherwise renaming original
-        fanstore.rename_axis(lambda x: 'fan_'+x, inplace=True)
+        fanstore.rename_axis(lambda x: 'fan_' + x, inplace=True)
         blotchstore = blotch.store().copy()  # copy(),otherwise renaming original
-        blotchstore.rename_axis(lambda x: 'blotch_'+x, inplace=True)
+        blotchstore.rename_axis(lambda x: 'blotch_' + x, inplace=True)
         df = pd.concat([fan.data, blotch.data])
         df['fnotch_value'] = self.value
         self.fan = fan
