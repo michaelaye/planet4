@@ -389,7 +389,7 @@ class ClusteringManager(object):
         if data is None:
             self.data = self.db.get_image_id_markings(image_id)
         else:
-            self.data = data.copy()
+            self.data = data
         self.cluster_data()
         logging.debug("Clustering completed.")
         self.store_clustered()
@@ -409,13 +409,13 @@ class ClusteringManager(object):
         if data is None:
             namedata = self.db.get_image_name_markings(image_name)
         else:
-            namedata = data.copy()
+            namedata = data
         image_ids = namedata.image_id.unique()
-        self.pm = io.PathManager(self.output_dir / image_name,
-                                 id_=image_ids[0], suffix='.' + self.output_format)
+        self.pm.image_name = image_name
         for image_id in image_ids:
+            logging.debug('Clustering image_id %s', image_id)
             self.pm.id_ = image_id
-            self.data = data[data.image_id == image_id]
+            self.data = namedata[namedata.image_id == image_id]
             self.cluster_data()
             self.store_clustered()
 
@@ -453,11 +453,6 @@ class ClusteringManager(object):
             df = df.apply(pd.to_numeric, errors='ignore')
             df['n_votes'] = df['n_votes'].astype('int')
             self.save(df, outfname)
-
-    def cluster_all(self):
-        image_names = self.db.image_names
-        for image_name in image_names:
-            self.cluster_image_name(image_name)
 
     def report(self):
         print("Fnotches:", len(self.fnotches))
