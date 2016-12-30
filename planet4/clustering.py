@@ -196,6 +196,7 @@ class ClusteringManager(object):
 
         reduced_data = []
         data = self.marking_data
+        logger.debug("Post processing %s", kind)
         for cluster_members in self.clusterer.clustered_indices:
             clusterdata = data.loc[cluster_members, cols + ['user_name']]
             # if the same user is inside one cluster, just take
@@ -219,6 +220,7 @@ class ClusteringManager(object):
                 meandata['image_name'] = self.marking_data.image_name.values[0]
                 # converting to dataframe and clean data format (rows=measurements)
                 reduced_data.append(meandata.to_frame().T)
+        logger.debug("Length of reduced data: %i", len(reduced_data))
 
         self.reduced_data[kind] = reduced_data
         logger.debug("Reduced data to %i %s(e)s.", len(reduced_data), kind)
