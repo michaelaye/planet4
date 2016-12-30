@@ -1,9 +1,7 @@
 """Managing clustering, fnotching and cut application here."""
 from __future__ import division, print_function
 
-import importlib
 import logging
-from pathlib import Path
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -15,11 +13,8 @@ from scipy.stats import circmean
 from . import io, markings
 from .dbscan import DBScanner, HDBScanner
 
-importlib.reload(logging)
-logpath = Path.home() / 'p4reduction.log'
-logging.basicConfig(filename=str(logpath), filemode='w', level=logging.DEBUG,
-                    format='%(asctime)s %(levelname)s: %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S')
+logger = logging.getLogger(__name__)
+
 
 matplotlib.style.use('bmh')
 
@@ -209,6 +204,7 @@ class ClusteringManager(object):
             # still only taking stuff if it has more than min_samples markings.
             if len(filtered) < self.min_samples:
                 continue
+            logger.debug("Len of clusterdata: %i", len(clusterdata))
             # now sub-cluster on angles, to distinguish between different fans
             # and to increase precision on blotch alignments
             angle_clustered = self.cluster_angles(filtered)
@@ -225,7 +221,7 @@ class ClusteringManager(object):
                 reduced_data.append(meandata.to_frame().T)
 
         self.reduced_data[kind] = reduced_data
-        logging.debug("Reduced data to %i %s(e)s.", len(reduced_data), kind)
+        logger.debug("Reduced data to %i %s(e)s.", len(reduced_data), kind)
 
     def get_average_object(self, clusterdata):
         "Create the average object out of a cluster of data."
@@ -249,7 +245,7 @@ class ClusteringManager(object):
         data : pandas.DataFrame
             containing both fan and blotch data to be clustered.
         """
-        logging.debug('ClusterManager: cluster_data()')
+        logger.debug('ClusterManager: cluster_data()')
         # reset stored clustered data
         self.reduced_data = {}
 
@@ -300,8 +296,8 @@ class ClusteringManager(object):
                                    len(self.reduced_data[kind]),
                                    clusterer.n_rejected))
         self.n_classifications = n_classifications
-        logging.info("n_classifications: %i", self.n_classifications)
-        logging.info("min_samples: %i", self.min_samples)
+        logger.info("n_classifications: %i", self.n_classifications)
+        logger.info("min_samples: %i", self.min_samples)
 
     def do_the_fnotch(self):
         """Combine fans and blotches if necessary.
@@ -320,13 +316,13 @@ class ClusteringManager(object):
         # check first if both blotchens and fans were found, if not, we don't
         # need to fnotch.
         if not all(self.reduced_data.values()):
-            logging.debug("CM: no fnotching required.")
+            logger.debug("CM: no fnotching required.")
             self.fnotches = []
             self.fnotched_blotches = self.reduced_data['blotch']
             self.fnotched_fans = self.reduced_data['fan']
             return
 
-        logging.debug("CM: do_the_fnotch")
+        logger.debug("CM: do_the_fnotch")
         n_close = 0
         fnotches = []
         blotches = []
@@ -358,7 +354,7 @@ class ClusteringManager(object):
         self.fnotches = fnotches
         self.fnotched_blotches = blotches
         self.fnotched_fans = fans
-        logging.debug("CM: do_the_fnotch: Found %i fnotches.", n_close)
+        logger.debug("CM: do_the_fnotch: Found %i fnotches.", n_close)
 
     # def execute_pipeline(self, data):
     #     """Execute the standard list of methods for catalog production.
@@ -385,14 +381,14 @@ class ClusteringManager(object):
             Dataframe with data for this clustering run
         """
         image_id = io.check_and_pad_id(image_id)
-        logging.info("Clustering data for %s", image_id)
+        logger.info("Clustering data for %s", image_id)
         self.pm.id_ = image_id
         if data is None:
             self.data = self.db.get_image_id_markings(image_id)
         else:
             self.data = data
         self.cluster_data()
-        logging.debug("Clustering completed.")
+        logger.debug("Clustering completed.")
         self.store_clustered()
 
     def cluster_image_name(self, image_name, data=None):
@@ -406,16 +402,16 @@ class ClusteringManager(object):
         data : pd.DataFrame
             Dataframe containing the data to cluster on.
         """
-        logging.info("Clustering data for %s", image_name)
+        logger.info("Clustering data for %s", image_name)
         if data is None:
             namedata = self.db.get_image_name_markings(image_name)
         else:
             namedata = data
         image_ids = namedata.image_id.unique()
-        logging.debug("Found %i image_ids.", len(image_ids))
+        logger.debug("Found %i image_ids.", len(image_ids))
         self.pm.image_name = image_name
         for image_id in image_ids:
-            logging.debug('Clustering image_id %s', image_id)
+            logger.debug('Clustering image_id %s', image_id)
             self.pm.id_ = image_id
             self.data = namedata[namedata.image_id == image_id]
             self.cluster_data()
@@ -427,8 +423,8 @@ class ClusteringManager(object):
 
     def store_fnotched(self):
         """Write out the clustered and fnotched data."""
-        logging.debug('CM: Writing output files.')
-        logging.debug('CM: Output dir: %s', self.datapath)
+        logger.debug('CM: Writing output files.')
+        logger.debug('CM: Output dir: %s', self.datapath)
 
         # first write the fnotched data
         for outfname, outdata in zip(['fnotchfile', 'blotchfile', 'fanfile'],
@@ -469,12 +465,12 @@ class ClusteringManager(object):
                                                      'n_rejected'])
 
     def get_newfans_newblotches(self):
-        logging.debug("Executing get_newfans_newblotches")
+        logger.debug("Executing get_newfans_newblotches")
         df = self.pm.fnotchdf
 
         # check if we got a fnotch dataframe. If not, we assume none were found.
         if df is None:
-            logging.debug("No fnotches found on disk.")
+            logger.debug("No fnotches found on disk.")
             self.newfans = []
             self.newblotches = []
             return
@@ -499,7 +495,7 @@ class ClusteringManager(object):
             final_clusters.apply(filter_for_blotches).notnull()]
 
     def apply_fnotch_cut(self, cut=None):
-        logging.debug("Executing apply_fnotch_cut")
+        logger.debug("Executing apply_fnotch_cut")
         if cut is None:
             cut = self.cut
 
@@ -516,9 +512,9 @@ class ClusteringManager(object):
                     self.pm.fandf).append(newfans, ignore_index=True)
             except OSError:
                 completefans = newfans
-            logging.debug("No of fans now: %i" % len(completefans))
+            logger.debug("No of fans now: %i" % len(completefans))
         else:
-            logging.debug("Apply fnotch cut: No new fans found.")
+            logger.debug("Apply fnotch cut: No new fans found.")
             completefans = self.pm.fandf
         if len(self.newblotches) > 0:
             newblotches = self.newblotches.apply(lambda x: x.store())
@@ -527,13 +523,13 @@ class ClusteringManager(object):
                     self.pm.blotchdf).append(newblotches, ignore_index=True)
             except OSError:
                 completeblotches = newblotches
-            logging.debug("No of blotches now: %i" % len(completeblotches))
+            logger.debug("No of blotches now: %i" % len(completeblotches))
         else:
-            logging.debug('Apply fnotch cut: no blotches survived.')
+            logger.debug('Apply fnotch cut: no blotches survived.')
             completeblotches = self.pm.blotchdf
         self.save(completefans, self.pm.final_fanfile)
         self.save(completeblotches, self.final_blotchfile)
-        logging.debug("Finished apply_fnotch_cut.")
+        logger.debug("Finished apply_fnotch_cut.")
 
     def save(self, obj, path):
         try:
