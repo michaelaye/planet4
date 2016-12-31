@@ -203,30 +203,38 @@ class ClusteringManager(object):
         reduced_data = []
         data = self.marking_data
         logger.debug("Post processing %s", kind)
-        for cluster_members in self.clusterer.clustered_indices:
-            clusterdata = data.loc[cluster_members, cols + ['user_name']]
-            # if the same user is inside one cluster, just take
-            # the first entry per user:
-            filtered = clusterdata.groupby('user_name').first()
-            # still only taking stuff if it has more than min_samples markings.
-            if len(filtered) < self.min_samples:
-                continue
-            logger.debug("Len of clusterdata: %i", len(clusterdata))
-            # now sub-cluster on angles, to distinguish between different fans
+        for xy_cluster in self.clusterer.clustered_indices:
+            xy_clusterdata = data.loc[xy_cluster, cols + ['user_name']]
+            logger.debug("N of members in this xy_cluster: %i", len(xy_clusterdata))
+            # now sub-cluster on angles, to distinguish between different fan directions
             # and to increase precision on blotch alignments
-            angle_clustered = self.cluster_angles(filtered)
-            for indices in angle_clustered:
-                angle_cluster_data = clusterdata.loc[indices, cols]
-                meandata = self.get_average_object(angle_cluster_data)
-
+            angle_clustered_indices = self.cluster_angles(xy_clusterdata)
+            if len(angle_clustered_indices) > 0:
+                logger.debug("Entering angle clustering")
+            for angle_cluster in angle_clustered_indices:
+                angle_clusterdata = xy_clusterdata.loc[angle_cluster, cols + ['user_name']]
+                # if the same user is inside one cluster, just take
+                # the first entry per user:
+                filtered = angle_clusterdata.groupby('user_name').first()
+                # still only taking stuff if it has more than min_samples markings.
+                logger.debug("N of members of this angle cluster before filtering: %i",
+                             len(angle_clusterdata))
+                logger.debug("N of members of this angle cluster after filtering: %i",
+                             len(filtered))
+                if len(filtered) < self.min_samples:
+                    logger.debug("Throwing away this cluster for < min_samples")
+                    continue
+                logger.debug("Calculating mean %s object.", kind)
+                meandata = self.get_average_object(angle_clusterdata)
                 # This returned a pd.Series object I can add more info to now:
-                # storing n_members into the object for later.
-                meandata['n_votes'] = len(indices)
+                # storing n_votes into the object for later.
+                meandata['n_votes'] = len(angle_cluster)
                 meandata['image_id'] = self.pm.id_
                 meandata['image_name'] = self.marking_data.image_name.values[0]
                 # converting to dataframe and clean data format (rows=measurements)
                 reduced_data.append(meandata.to_frame().T)
-        logger.debug("Length of reduced data: %i", len(reduced_data))
+        logger.debug("Length of reduced data (total number clusters found): %i",
+                     len(reduced_data))
 
         self.reduced_data[kind] = reduced_data
         logger.debug("Reduced data to %i %s(e)s.", len(reduced_data), kind)
@@ -393,6 +401,7 @@ class ClusteringManager(object):
         self.pm.id_ = image_id
         if data is None:
             self.data = self.db.get_image_id_markings(image_id)
+            logger.debug("DB used: %s", self.dbname)
         else:
             self.data = data
         self.cluster_data()
