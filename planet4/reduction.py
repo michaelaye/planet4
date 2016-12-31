@@ -16,6 +16,7 @@ from . import markings
 from .io import DBManager, data_root
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # the split trick creates lists when u don't want to break ur fingers with
 # typing ',,'','',',,' all the time...
@@ -94,15 +95,15 @@ def filter_data(df):
 
 
 def convert_times(df):
-    logging.info("Starting time conversion now.")
+    logger.info("Starting time conversion now.")
     df.acquisition_date = pd.to_datetime(df.acquisition_date)
     df.created_at = pd.to_datetime(df.created_at,
                                    format='%Y-%m-%d %H:%M:%S %Z')
-    logging.info("Time conversions done.")
+    logger.info("Time conversions done.")
 
 
 def splitting_tutorials(rootpath, df):
-    logging.info("Splitting off tutorials now.")
+    logger.info("Splitting off tutorials now.")
     tutorials = df[df.image_name == 'tutorial']
     tutfpath = '{}_tutorials.h5'.format(rootpath)
     tutorials = tutorials.drop(['image_id',
@@ -111,16 +112,16 @@ def splitting_tutorials(rootpath, df):
                                 'local_mars_time'], axis=1)
     tutorials.to_hdf(tutfpath, 'df', format='t')
 
-    logging.info("Tutorial split done.\nCreated %s.", tutfpath)
+    logger.info("Tutorial split done.\nCreated %s.", tutfpath)
     return df[df.image_name != 'tutorial']
 
 
 def produce_fast_read(rootpath, df):
-    logging.info("Now writing fixed format datafile for "
-                 "fast read-in of all data.")
+    logger.info("Now writing fixed format datafile for "
+                "fast read-in of all data.")
     newfpath = '{0}_fast_all_read.h5'.format(rootpath)
     df.to_hdf(newfpath, 'df')
-    logging.info("Created %s.", newfpath)
+    logger.info("Created %s.", newfpath)
 
 
 def convert_ellipse_angles(df):
@@ -131,7 +132,7 @@ def convert_ellipse_angles(df):
     to force the angles to be from 0..180 instead of -180..180.
     This is supported by the symmetry of ellipses.
     """
-    logging.info("Converting ellipse angles.")
+    logger.info("Converting ellipse angles.")
 
     blotchindex = (df.marking == 'blotch')
     radindex = (df.radius_1 < df.radius_2)
@@ -141,23 +142,23 @@ def convert_ellipse_angles(df):
     df.loc[both, col_orig] = df.loc[both, col_reversed].values
     df.loc[both, 'angle'] += 90
     df.loc[blotchindex, 'angle'] = df.loc[blotchindex, 'angle'] % 180
-    logging.info("Conversion of ellipse angles done.")
+    logger.info("Conversion of ellipse angles done.")
 
 
 def normalize_fan_angles(df):
     """Convert -180..180 angles to 0..360"""
-    logging.info("Normalizing fan angles.")
+    logger.info("Normalizing fan angles.")
 
     rowindex = (df.marking == 'fan')
     df.loc[rowindex, 'angle'] = df.loc[rowindex, 'angle'] % 360
-    logging.info("Normalizing of fan angles done.")
+    logger.info("Normalizing of fan angles done.")
 
 
 def calculate_hirise_pixels(df):
-    logging.info("Calculating and assigning hirise pixel coordinates")
+    logger.info("Calculating and assigning hirise pixel coordinates")
     df = df.assign(hirise_x=lambda row: (row.x + 740 * (row.x_tile - 1)).round(),
                    hirise_y=lambda row: (row.y + 548 * (row.y_tile - 1)).round())
-    logging.info("Hirise pixels coords added.")
+    logger.info("Hirise pixels coords added.")
     return df
 
 
@@ -168,10 +169,10 @@ def get_temp_fname(image_name, root=None):
 
 
 def get_image_names(dbname):
-    logging.info('Reading image_names from disk.')
+    logger.info('Reading image_names from disk.')
     store = pd.HDFStore(dbname)
     image_names = store.select_column('df', 'image_name').unique()
-    logging.info('Got image_names')
+    logger.info('Got image_names')
     return image_names
 
 
@@ -182,13 +183,13 @@ def get_cleaned_dbname(dbname):
 
 
 def merge_temp_files(dbname, image_names=None):
-    logging.info('Merging temp files manually.')
+    logger.info('Merging temp files manually.')
 
     if image_names is None:
         image_names = get_image_names(dbname)
 
     dbnamenew = get_cleaned_dbname(dbname)
-    logging.info('Creating concatenated db file %s', dbnamenew)
+    logger.info('Creating concatenated db file %s', dbnamenew)
     df = []
     for image_name in image_names:
         try:
@@ -202,12 +203,12 @@ def merge_temp_files(dbname, image_names=None):
     df.to_hdf(str(dbnamenew), 'df',
               format='table',
               data_columns=data_columns)
-    logging.info('Duplicates removal complete.')
+    logger.info('Duplicates removal complete.')
     return dbnamenew
 
 
 def remove_duplicates(df):
-    logging.info('Removing duplicates.')
+    logger.info('Removing duplicates.')
 
     image_names = df.image_name.unique()
 
@@ -229,12 +230,12 @@ def remove_duplicates(df):
         else:
             os.remove(get_temp_fname(image_name))
     df = pd.concat(df, ignore_index=True)
-    logging.info('Duplicates removal complete.')
+    logger.info('Duplicates removal complete.')
     return df
 
 
 def display_multi_progress(results, objectlist, sleep=1):
-    with progressbar.ProgressBar(min_value=0, max_value=len(list(objectlist))-1) as bar:
+    with progressbar.ProgressBar(min_value=0, max_value=len(list(objectlist)) - 1) as bar:
         while not results.ready():
             bar.update(results.progress)
             time.sleep(sleep)
@@ -279,7 +280,7 @@ def remove_duplicates_from_image_name_data(data):
 
 
 def remove_duplicates_from_file(dbname):
-    logging.info('Removing duplicates.')
+    logger.info('Removing duplicates.')
 
     image_names = get_image_names(dbname)
     dbname = Path(dbname)
@@ -294,15 +295,15 @@ def remove_duplicates_from_file(dbname):
 
     # parallel approach, u need to launch an ipcluster/controller for this work!
     lbview = setup_parallel(dbname)
-    logging.info('Starting parallel processing.')
+    logger.info('Starting parallel processing.')
     results = lbview.map_async(process_image_name, image_names)
     display_multi_progress(results, image_names)
-    logging.info('Done clean up. Now concatenating results.')
+    logger.info('Done clean up. Now concatenating results.')
     all_df = pd.concat(results, ignore_index=True)
-    logging.info("Writing cleaned database file.")
+    logger.info("Writing cleaned database file.")
     all_df.to_hdf(get_cleaned_dbname(dbname), 'df', format='table', data_columns=data_columns)
     # merge_temp_files(dbname, image_names)
-    logging.info("Done.")
+    logger.info("Done.")
 
 
 def create_season2_and_3_database():
@@ -315,7 +316,7 @@ def create_season2_and_3_database():
     parser.add_argument("db_fname",
                         help="path to database to be used.")
     args = parser.parse_args()
-    logging.info('Starting production of season 2 and 3 database.')
+    logger.info('Starting production of season 2 and 3 database.')
     # read data for season2 and 3
     db = DBManager(args.db_fname)
     season23_image_names = db.season2and3_image_names
@@ -330,7 +331,7 @@ def create_season2_and_3_database():
     if os.path.exists(newfname):
         os.remove(newfname)
     season23.to_hdf(newfname, 'df', format='t', data_columns=data_columns)
-    logging.info('Finished. Produced %s', newfname)
+    logger.info('Finished. Produced %s', newfname)
 
 
 def read_csv_into_df(fname, chunks=1e6, test_n_rows=None):
@@ -348,11 +349,11 @@ def read_csv_into_df(fname, chunks=1e6, test_n_rows=None):
     else:
         # read in data chunk by chunk and collect into python list
         data = [chunk for chunk in reader]
-        logging.info("Data collected into list.")
+        logger.info("Data collected into list.")
 
         # convert list into Pandas dataframe
         df = pd.concat(data, ignore_index=True)
-    logging.info("Conversion to dataframe complete.")
+    logger.info("Conversion to dataframe complete.")
     data = 0
     return df
 
@@ -395,7 +396,7 @@ def main():
     args = parser.parse_args()
 
     t0 = time.time()
-    logging.info("Starting reduction.")
+    logger.info("Starting reduction.")
 
     # creating file paths
     csvfpath = Path(args.csv_fname)
@@ -425,14 +426,14 @@ def main():
     # split off tutorials
     df = splitting_tutorials(rootpath, df)
 
-    logging.info('Scanning for and dropping empty lines now.')
+    logger.info('Scanning for and dropping empty lines now.')
     df = df.dropna(how='all')
-    logging.info("Dropped empty lines.")
+    logger.info("Dropped empty lines.")
 
     if not args.keep_dirt:
-        logging.info("Now filtering for unwanted data.")
+        logger.info("Now filtering for unwanted data.")
         df = filter_data(df)
-        logging.info("Done removing incompletes.")
+        logger.info("Done removing incompletes.")
 
     convert_ellipse_angles(df)
     normalize_fan_angles(df)
@@ -440,12 +441,12 @@ def main():
     if args.do_fastread:
         produce_fast_read(rootpath, df)
 
-    logging.info("Now writing query-able database file.")
+    logger.info("Now writing query-able database file.")
     df.to_hdf(newfpath, 'df',
               format='table',
               data_columns=['image_name'])
-    logging.info("Writing to HDF file finished. Created %s. "
-                 "Reduction complete.", newfpath)
+    logger.info("Writing to HDF file finished. Created %s. "
+                "Reduction complete.", newfpath)
 
     # free memory
     df = 0
@@ -454,7 +455,8 @@ def main():
         remove_duplicates_from_file(newfpath)
 
     dt = time.time() - t0
-    logging.info("Time taken: %f minutes.", dt / 60.0)
+    logger.info("Time taken: %f minutes.", dt / 60.0)
+
 
 if __name__ == '__main__':
     main()
