@@ -26,10 +26,11 @@ class DBScanner(object):
         Mininum number of samples required for a cluster to be created. Default: 3
     """
 
-    def __init__(self, current_X, eps=10, min_samples=3):
+    def __init__(self, current_X, eps=10, min_samples=3, only_core=False):
         self.current_X = current_X
         self.eps = eps
         self.min_samples = min_samples
+        self.only_core = only_core
 
         # these lines execute the clustering
         self._run_DBSCAN()
@@ -52,15 +53,20 @@ class DBScanner(object):
         for k in unique_labels:
             # get indices for members of this cluster
             class_member_mask = (labels == k)
-            cluster_members = (class_member_mask & core_samples_mask)
+            if self.only_core:
+                cluster_members = (class_member_mask & core_samples_mask)
+            else:
+                cluster_members = class_member_mask
+
             # treat noise
             if k == -1:
-                self.n_rejected = len(cluster_members)
+                self.n_rejected = np.sum(class_member_mask)
             # if label is a cluster member:
             else:
                 self.clustered_indices.append(cluster_members)
 
         self.db = db
+        self.core_samples_mask = core_samples_mask
 
 
 class HDBScanner(object):
