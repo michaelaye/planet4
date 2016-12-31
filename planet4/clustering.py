@@ -24,6 +24,25 @@ class NotEnoughMarkingData(Exception):
         Exception.__init__(self, "Not enough data to cluster (< 3 items).")
 
 
+def angle_to_xy(angles, kind):
+    y = np.sin(np.deg2rad(angles))
+    out = [y]
+    if kind == 'fan':
+        x = np.cos(np.deg2rad(angles))
+        out = [x] + out
+    return np.vstack(out).T
+
+
+def cluster_angles(data, kind, min_samples=3, eps_fanangle=20, eps_blotchangle=20):
+    # calculated value of euclidean distance of unit vector end points per degree
+    dist_per_degree = 2 * np.pi / 360
+    X = angle_to_xy(data.angle, kind)
+    delta = eps_fanangle if kind == 'fan' else eps_blotchangle
+    clusterer = DBScanner(X, eps=delta * dist_per_degree,
+                          min_samples=min_samples)
+    return clusterer.clustered_indices
+
+
 class ClusteringManager(object):
 
     """Control class to manage the clustering pipeline.
@@ -164,22 +183,9 @@ class ClusteringManager(object):
         self.current_coords = coords
         return current_X
 
-    def angle_to_xy(self, angle):
-        y = np.sin(np.deg2rad(angle))
-        out = [y]
-        if self.kind == 'fan':
-            x = np.cos(np.deg2rad(angle))
-            out = [x] + out
-        return np.vstack(out).T
-
-    def cluster_angles(self, filtered):
-        # calculated value of euclidean distance of unit vector end points per degree
-        dist_per_degree = 0.017453070996747883
-        X = self.angle_to_xy(filtered.angle)
-        delta = self.eps_fanangle if self.kind == 'fan' else self.eps_blotchangle
-        clusterer = DBScanner(X, eps=delta * dist_per_degree,
-                              min_samples=self.min_samples)
-        return clusterer.clustered_indices
+    def cluster_angles(self, data):
+        return cluster_angles(data, self.kind, self.min_samples,
+                              self.eps_fanangle, self.eps_blotchangle)
 
     def post_processing(self):
         """Create mean objects out of cluster label members.
