@@ -2,6 +2,7 @@ import numpy as np
 from math import pi
 tau = 2 * pi
 
+
 def get_fan_and_blotch_nunique_cids(data):
     f1 = data.marking == 'fan'
     f2 = data.marking == 'blotch'
@@ -47,7 +48,7 @@ def get_status_per_classifications(df, limit=30):
     no_all = df.image_id.unique().size
     sum_classifications = classification_counts_per_image(df).sum()
     try:
-        return np.round(100.0 * sum_classifications / (limit*no_all), 1)
+        return np.round(100.0 * sum_classifications / (limit * no_all), 1)
     except ZeroDivisionError:
         return np.nan
 
@@ -74,7 +75,7 @@ def get_blotch_area(record):
     if record.marking != 'blotch':
         return 0
     else:
-        return 0.5*tau*record.radius_1*record.radius_2
+        return 0.5 * tau * record.radius_1 * record.radius_2
 
 
 ###
