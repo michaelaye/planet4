@@ -1,6 +1,4 @@
 """Managing clustering, fnotching and cut application here."""
-from __future__ import division, print_function
-
 import logging
 
 import matplotlib
@@ -8,13 +6,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from numpy.linalg import norm
-from scipy.stats import circmean
 
 from . import io, markings
 from .dbscan import DBScanner, HDBScanner
+from ._utils import get_average_object
 
 logger = logging.getLogger(__name__)
-
 
 matplotlib.style.use('bmh')
 
@@ -22,19 +19,6 @@ matplotlib.style.use('bmh')
 class NotEnoughMarkingData(Exception):
     def __init__(self):
         Exception.__init__(self, "Not enough data to cluster (< 3 items).")
-
-
-def get_average_object(df, kind):
-    "Create the average object out of a cluster of data."
-    # first filter for outliers more than 1 std away
-    # for
-    # reduced = df[df.apply(lambda x: np.abs(x - x.mean()) / x.std() < 1).all(axis=1)]
-    meandata = df.mean()
-    # this determines the upper limit for circular mean
-    high = 180 if kind == 'blotch' else 360
-    avg = circmean(df.angle, high=high)
-    meandata.angle = avg
-    return meandata
 
 
 def angle_to_xy(angles, kind):
