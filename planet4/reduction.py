@@ -8,6 +8,7 @@ import sys
 import time
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import progressbar
 from ipyparallel import Client
@@ -437,6 +438,10 @@ def main():
 
     convert_ellipse_angles(df)
     normalize_fan_angles(df)
+
+    # calculate x_angle and y_angle for clustering on angles
+    df.assign(x_angle=np.cos(np.deg2rad(df['angle'])),
+              y_angle=np.sin(np.deg2rad(df['angle'])))
 
     if args.do_fastread:
         produce_fast_read(rootpath, df)
