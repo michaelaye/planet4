@@ -17,6 +17,8 @@ from numpy import arctan2
 
 from . import io
 
+logger = logging.getLogger(__name__)
+
 data_root = io.data_root
 
 img_x_size = 840
@@ -137,12 +139,12 @@ class ImageID(object):
     def plot_objects(self, objects, n=None, img=True, user_name=None, ax=None,
                      user_color=None, without_users=None):
         """Plotting either fans or blotches with p4 subframe background."""
-        logging.debug("Entering markings.plot_objects")
+        logger.debug("Entering markings.plot_objects")
         if ax is None:
             _, ax = plt.subplots(figsize=calc_fig_size(8))
-            logging.debug("Created own axis.")
+            logger.debug("Created own axis.")
         if img:
-            logging.debug("Plotting background image.")
+            logger.debug("Plotting background image.")
             self.show_subframe(ax)
         counter = 0
         for obj, color in zip(objects, colors):

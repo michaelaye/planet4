@@ -20,6 +20,8 @@ except ImportError:
 
 configpath = Path.home() / '.planet4.yaml'
 
+logger = logging.getLogger(__name__)
+
 
 def get_config():
     if not configpath.exists():
@@ -106,13 +108,13 @@ def get_subframe(url):
     targetpath = data_root / 'images' / os.path.basename(url)
     targetpath.parent.mkdir(exist_ok=True)
     if not targetpath.exists():
-        logging.info("Did not find image in cache. Downloading ...")
+        logger.info("Did not find image in cache. Downloading ...")
         sys.stdout.flush()
         path = urlretrieve(url)[0]
-        logging.debug("Done.")
+        logger.debug("Done.")
         shutil.move(path, str(targetpath))
     else:
-        logging.debug("Found image in cache.")
+        logger.debug("Found image in cache.")
     im = mplimg.imread(targetpath)
     return im
 
