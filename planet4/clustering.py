@@ -24,7 +24,28 @@ class NotEnoughMarkingData(Exception):
         Exception.__init__(self, "Not enough data to cluster (< 3 items).")
 
 
+def get_average_object(df, kind):
+    "Create the average object out of a cluster of data."
+    # first filter for outliers more than 1 std away
+    # for
+    # reduced = df[df.apply(lambda x: np.abs(x - x.mean()) / x.std() < 1).all(axis=1)]
+    meandata = df.mean()
+    # this determines the upper limit for circular mean
+    high = 180 if kind == 'blotch' else 360
+    avg = circmean(df.angle, high=high)
+    meandata.angle = avg
+    return meandata
+
+
 def angle_to_xy(angles, kind):
+    """Convert angles in degrees to coordinates on unit circle.
+
+    Parameters
+    ----------
+    angles : np.array, list
+        List of angles
+
+    """
     y = np.sin(np.deg2rad(angles))
     out = [y]
     if kind == 'fan':
@@ -34,6 +55,22 @@ def angle_to_xy(angles, kind):
 
 
 def cluster_angles(data, kind, min_samples=3, eps_fanangle=20, eps_blotchangle=20):
+    """ Cluster only by angle.
+
+    Parameters
+    ----------
+    data : pd.dataframe
+        the pandas dataframe with data
+    kind : {'fan','blotch'}
+        The marking kind currently used. Important because blotches are only clustered
+        by their np.sin(angle), while fans also on np.cos(angle)
+    min_samples : int
+        Mininum sample number for DBSCAN
+    eps_fanangle : int
+        Angle in degree for allowed separation between fan angles
+    eps_blotchangle : int
+        Angle in degrees for allowed separation between blotch angles
+    """
     # calculated value of euclidean distance of unit vector end points per degree
     dist_per_degree = 2 * np.pi / 360
     X = angle_to_xy(data.angle, kind)
@@ -103,11 +140,13 @@ class ClusteringManager(object):
                  include_angle=True, id_=None, pm=None,
                  do_dynamic_min_samples=False,
                  use_DBSCAN=True,
-                 hdbscan_min_samples=None,
+                 hdbscan_min_samples_diff=0,
                  min_samples=None,
                  proba_cut=0.0,
                  eps_fanangle=20,
                  eps_blotchangle=20,
+                 include_radii=False,
+                 only_core=True,
                  s23=False):
         self.db = io.DBManager(dbname, s23=s23)
         self.dbname = self.db.dbname
@@ -121,12 +160,13 @@ class ClusteringManager(object):
         self.min_samples_factor = min_samples_factor
         self.do_dynamic_min_samples = do_dynamic_min_samples
         self.use_DBSCAN = use_DBSCAN
-        self.hdbscan_min_samples = hdbscan_min_samples
+        self.hdbscan_min_samples_diff = hdbscan_min_samples_diff
         self.min_samples = min_samples
         self.proba_cut = proba_cut
         self.eps_fanangle = eps_fanangle
         self.eps_blotchangle = eps_blotchangle
-
+        self.include_radii = include_radii
+        self.only_core = only_core
         # to be defined at runtime:
         self.current_coords = None
         self.reduced_data = None
@@ -175,6 +215,9 @@ class ClusteringManager(object):
 
         # basic coordinates to cluster on
         coords = ['x', 'y']
+
+        if self.include_radii and self.kind == 'blotch':
+            coords += ['radius_1', 'radius_2']
 
         # Determine the clustering input matrix
         current_X = marking_data[coords].values
@@ -239,15 +282,6 @@ class ClusteringManager(object):
         self.reduced_data[kind] = reduced_data
         logger.debug("Reduced data to %i %s(e)s.", len(reduced_data), kind)
 
-    def get_average_object(self, clusterdata):
-        "Create the average object out of a cluster of data."
-        meandata = clusterdata.mean()
-        # this determines the upper limit for circular mean
-        high = 180 if self.kind == 'blotch' else 360
-        avg = circmean(clusterdata.angle, high=high)
-        meandata.angle = avg
-        return meandata
-
     def cluster_data(self):
         """Basic clustering.
 
@@ -292,13 +326,19 @@ class ClusteringManager(object):
             current_X = self.pre_processing()
             if current_X is not None:
                 if self.use_DBSCAN:
+                    logger.debug("Using DBSCAN")
                     clusterer = DBScanner(current_X, eps=self.eps,
-                                          min_samples=min_samples)
+                                          min_samples=min_samples,
+                                          only_core=self.only_core)
                 else:
+                    logger.debug("Using HDBSCAN")
+                    hdbscan_min_samples = self.min_samples - \
+                        self.hdbscan_min_samples_diff
                     clusterer = HDBScanner(current_X,
                                            min_cluster_size=min_samples,
-                                           min_samples=self.hdbscan_min_samples,
-                                           proba_cut=self.proba_cut)
+                                           min_samples=hdbscan_min_samples,
+                                           proba_cut=self.proba_cut,
+                                           only_core=self.only_core)
                 # store the scanner object in both cases into `self`
                 self.clusterer = clusterer
             else:
@@ -461,6 +501,8 @@ class ClusteringManager(object):
         for outfname, outdata in zip([self.pm.reduced_blotchfile, self.pm.reduced_fanfile],
                                      [self.reduced_data['blotch'],
                                       self.reduced_data['fan']]):
+            if outfname.exists():
+                outfname.unlink()
             if len(outdata) == 0:
                 continue
             df = pd.concat(outdata, ignore_index=True)
