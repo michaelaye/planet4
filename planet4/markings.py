@@ -104,28 +104,49 @@ class ImageID(object):
         self.scope = scope
 
     @property
+    def blotchmask(self):
+        return self.data.marking == 'blotch'
+
+    @property
+    def fanmask(self):
+        return self.data.marking == 'fan'
+
+    @property
+    def n_marked_classifications(self):
+        return self.data[self.blotchmask | self.fanmask].classification_id.nunique()
+
+    @property
     def subframe(self):
         "np.array : Get tile url and return image tile using io funciton."
         url = self.data.iloc[0].image_url
         return io.get_subframe(url)
 
-    def get_fans(self, user_name=None, without_users=None):
-        """Return only data for fan markings."""
-        mask = self.data.marking == 'fan'
+    def filter_data(self, kind, user_name=None, without_users=None):
+        """Filter and return data for kind, user, or without_users.
+
+        Parameters
+        ----------
+        kind : {'fan', 'blotch'}
+            Marking
+        user_name : str
+            Filter data further for `user_name`
+        without_users : list(strings)
+            Only return data that is not in list of user_names (useful for non-gold data)
+        """
+        mask = self.data.marking == kind
         if user_name is not None:
             mask = (mask) & (self.data.user_name == user_name)
         if without_users is not None:
             mask = (mask) & (~self.data.user_name.isin(without_users))
         return self.data[mask]
 
-    def get_blotches(self, user_name=None, without_users=None):
+    def get_fans(self, **kwargs):
+        """Return data for fan markings."""
+        self.filter_data('fan', **kwargs)
+
+    def get_blotches(self, **kwargs):
         """Return data for blotch markings."""
-        mask = self.data.marking == 'blotch'
-        if user_name is not None:
-            mask = (mask) & (self.data.user_name == user_name)
-        if without_users is not None:
-            mask = (mask) & (~self.data.user_name.isin(without_users))
-        return self.data[mask]
+        self.filter_data('blotch', **kwargs)
 
     def show_subframe(self, ax=None, aspect='auto'):
         fig = None
