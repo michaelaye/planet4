@@ -1,27 +1,8 @@
-#!/usr/bin/env python
-
-import sys
 # To use a consistent encoding
 from codecs import open
 from os import path
 
-from setuptools import setup
-from setuptools.command.test import test as TestCommand
-
-
-class PyTest(TestCommand):
-
-    def finalize_options(self):
-        TestCommand.finalize_options(self)
-        self.test_args = ['-v']
-        self.test_suite = True
-
-    def run_tests(self):
-        # import here, cause outside the eggs aren't loaded
-        import pytest
-        errno = pytest.main(self.test_args)
-        sys.exit(errno)
-
+from setuptools import setup, find_packages
 
 here = path.abspath(path.dirname(__file__))
 
@@ -33,13 +14,10 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 setup(
     name="planet4",
     version='0.7.3',
-    cmdclass={'test': PyTest},
-    packages=['planet4'],
-    install_requires=['pandas'],
-    tests_require=['pytest', 'pandas', 'pytables'],
-    extras_require={
-        'test': ['coverage'],
-    },
+    packages=find_packages(),
+    install_requires=['pandas', 'numpy', 'matplotlib'],
+    tests_require=['pytest'],
+    setup_requires=['pytest-runner'],
     package_data={
         'planet4': ['data/*']
     },
@@ -64,6 +42,7 @@ setup(
     url="http://github.com/michaelaye/planet4",
     classifiers=[
         'Development Status :: 4 - Beta',
+        'Environment :: Console',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: ISC License (ISCL)',
         'Programming Language :: Python :: 3.5',
