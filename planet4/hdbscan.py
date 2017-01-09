@@ -20,11 +20,14 @@ class HDBScanner(object):
     ----------
     current_X : numpy.array
         array holding the data to be clustered, preprocessed in ClusterManager
-    eps : int, optional
-        Distance criterion for DBSCAN algorithm. Samples further away than this value don't
-        become members of the currently considered cluster. Default: 10
+    min_cluster_size : int
+        Set this to the smallest size grouping that you wish to consider
+        a cluster.
     min_samples : int, optional
-        Mininum number of samples required for a cluster to be created. Default: 3
+        Despite its name, this parameter controls how `conservative` the
+        clustering will be. By default at the value of `min_cluster_size`,
+        this will be allowing progressively more clusters to appear when
+        decreased below the value of min_cluster_size.
     """
 
     def __init__(self, current_X, min_cluster_size=3,
