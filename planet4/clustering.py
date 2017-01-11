@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from . import io, markings
-from .dbscan import DBScanner, HDBScanner
+from .dbscan import DBScanner
 from ._utils import get_average_object
 
 logger = logging.getLogger(__name__)
@@ -83,8 +83,6 @@ class ClusteringManager(object):
         Path to folder where to store output. Default: io.data_root / 'output'
     output_format : {'hdf', 'csv', 'both'}
         Format to save the output in. Default: 'hdf'
-    cut : float
-        Value to apply for fnotch cutting.
     min_samples_factor : float
         Value to multiply the number of unique classifications per image_id with
         to determine the `min_samples` value for DBSCAN to use. Default: 0.1
@@ -113,58 +111,39 @@ class ClusteringManager(object):
     n_clustered_blotches
     output_dir_clustered : pathlib.Path
         Path to full clustering results, without removal of fnotched clusters.
-    cut_dir : pathlib.Path
-        Path to final fan and blotch clusters, after applying `cut`.
     """
 
-    def __init__(self, dbname=None, fnotch_distance=10, eps=10,
-                 output_dir=None, output_format='csv', cut=0.5,
+    def __init__(self, dbname=None, eps=10,
+                 output_dir=None, output_format='csv',
                  min_samples_factor=0.15,
-                 include_angle=True, id_=None, pm=None,
+                 id_=None,
                  do_dynamic_min_samples=False,
-                 use_DBSCAN=True,
-                 hdbscan_min_samples_diff=0,
                  min_samples=None,
-                 proba_cut=0.0,
                  eps_fanangle=20,
                  eps_blotchangle=20,
                  include_radii=False,
-                 only_core=True,
-                 s23=False):
-        self.db = io.DBManager(dbname, s23=s23)
+                 ):
+
+        self.db = io.DBManager(dbname)
         self.dbname = self.db.dbname
-        self.fnotch_distance = fnotch_distance
         self.output_dir = output_dir
         self.output_format = output_format
         self.eps = eps
-        self.cut = cut
-        self.include_angle = include_angle
-        self.confusion = []
         self.min_samples_factor = min_samples_factor
         self.do_dynamic_min_samples = do_dynamic_min_samples
-        self.use_DBSCAN = use_DBSCAN
-        self.hdbscan_min_samples_diff = hdbscan_min_samples_diff
         self.min_samples = min_samples
-        self.proba_cut = proba_cut
         self.eps_fanangle = eps_fanangle
         self.eps_blotchangle = eps_blotchangle
         self.include_radii = include_radii
-        self.only_core = only_core
+
         # to be defined at runtime:
+        self.confusion = []
         self.current_coords = None
         self.reduced_data = None
-        self.fnotches = None
-        self.fnotched_blotches = None
-        self.fnotched_fans = None
         self.p4id = None
-        self.newfans = None
-        self.newblotches = None
 
-        if pm is not None:
-            self.pm = pm
-        else:
-            self.pm = io.PathManager(output_dir, id_=id_,
-                                     suffix='.' + self.output_format)
+        self.pm = io.PathManager(output_dir, id_=id_,
+                                 suffix='.' + self.output_format)
 
     @property
     def n_clustered_fans(self):
@@ -203,7 +182,7 @@ class ClusteringManager(object):
             coords += ['radius_1', 'radius_2']
 
         # Determine the clustering input matrix
-        current_X = marking_data[coords].values
+        current_X = marking_data[coords].as_matrix()
 
         # store stuff for later
         self.current_coords = coords
@@ -241,17 +220,17 @@ class ClusteringManager(object):
                 angle_clusterdata = xy_clusterdata.loc[angle_cluster, cols + ['user_name']]
                 # if the same user is inside one cluster, just take
                 # the first entry per user:
-                filtered = angle_clusterdata.groupby('user_name').first()
+                filtered = angle_clusterdata.groupby('user_name').first().reset_index()
                 # still only taking stuff if it has more than min_samples markings.
-                logger.debug("N of members of this angle cluster before filtering: %i",
-                             len(angle_clusterdata))
-                logger.debug("N of members of this angle cluster after filtering: %i",
-                             len(filtered))
+                if len(angle_clusterdata) != len(filtered):
+                    logger.debug("N of members of this angle cluster after filtering: %i,"
+                                 " removed %i.", len(filtered),
+                                 len(angle_clusterdata) - len(filtered))
                 if len(filtered) < self.min_samples:
                     logger.debug("Throwing away this cluster for < min_samples")
                     continue
                 logger.debug("Calculating mean %s object.", kind)
-                meandata = self.get_average_object(angle_clusterdata)
+                meandata = get_average_object(filtered[cols], self.kind)
                 # This returned a pd.Series object I can add more info to now:
                 # storing n_votes into the object for later.
                 meandata['n_votes'] = len(angle_cluster)
