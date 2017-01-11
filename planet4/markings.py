@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """Module to manage Planet4 markings."""
 import argparse
+import itertools
 import logging
 import math
-from itertools import cycle
 from math import cos, degrees, pi, radians, sin
 
 import matplotlib.lines as lines
@@ -11,6 +11,7 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from matplotlib.patches import Ellipse
 from numpy import linalg as LA
 from numpy import arctan2
@@ -24,10 +25,7 @@ data_root = io.data_root
 img_x_size = 840
 img_y_size = 648
 
-
 img_shape = (img_y_size, img_x_size)
-
-colors = cycle('rgbcym')
 
 gold_members = ['michaelaye', 'mschwamb', 'Portyankina', 'CJ-DPI']
 gold_plot_colors = list('cmyg')
@@ -140,13 +138,13 @@ class ImageID(object):
             mask = (mask) & (~self.data.user_name.isin(without_users))
         return self.data[mask]
 
-    def get_fans(self, **kwargs):
+    def get_fans(self, user_name=None, without_users=None):
         """Return data for fan markings."""
-        self.filter_data('fan', **kwargs)
+        return self.filter_data('fan', user_name, without_users)
 
-    def get_blotches(self, **kwargs):
+    def get_blotches(self, user_name=None, without_users=None):
         """Return data for blotch markings."""
-        self.filter_data('blotch', **kwargs)
+        return self.filter_data('blotch', user_name, without_users)
 
     def show_subframe(self, ax=None, aspect='auto'):
         fig = None
@@ -158,7 +156,7 @@ class ImageID(object):
             return fig
 
     def plot_objects(self, objects, n=None, img=True, user_name=None, ax=None,
-                     user_color=None, without_users=None):
+                     user_color=None, user_colors=None, without_users=None):
         """Plotting either fans or blotches with p4 subframe background."""
         logger.debug("Entering markings.plot_objects")
         if ax is None:
@@ -168,42 +166,44 @@ class ImageID(object):
             logger.debug("Plotting background image.")
             self.show_subframe(ax)
         counter = 0
+        if user_colors is None:
+            colors = itertools.cycle(sns.color_palette('bright', 12))
+        else:
+            colors = user_colors
         for obj, color in zip(objects, colors):
             if user_color is not None:
                 color = user_color
-            obj.plot(color, ax)
+            obj.plot(color=color, ax=ax)
             counter += 1
             if counter == n:
                 break
         set_subframe_size(ax)
         ax.set_axis_off()
 
-    def plot_blotches(self, blotches=None, **kwargs):
+    def plot_blotches(self, data=None, **kwargs):
         with_center = kwargs.pop('with_center', False)
         user_name = kwargs.pop('user_name', None)
-        lw = kwargs.pop('lw', 1)
         without_users = kwargs.pop('without_users', None)
-        if blotches is None:
-            blotches = self.get_blotches(user_name, without_users)
-        if type(blotches) == pd.core.frame.DataFrame:
-            blotches = [Blotch(i, self.scope,
-                               with_center=with_center, lw=lw)
-                        for _, i in blotches.iterrows()]
-        self.plot_objects(blotches, **kwargs)
+        lw = kwargs.pop('lw', 1)
+        if data is None:
+            data = self.get_blotches(user_name, without_users)
+        if type(data) == pd.core.frame.DataFrame:
+            data = [Blotch(i, self.scope, with_center=with_center, lw=lw)
+                    for _, i in data.iterrows()]
+        self.plot_objects(data, **kwargs)
 
-    def plot_fans(self, fans=None, **kwargs):
+    def plot_fans(self, data=None, **kwargs):
         """Plotting fans using Fans class and self.subframe."""
         with_center = kwargs.pop('with_center', False)
         user_name = kwargs.pop('user_name', None)
         without_users = kwargs.pop('without_users', None)
-        linewidth = kwargs.pop('linewidth', None)
-        if fans is None:
-            fans = self.get_fans(user_name, without_users)
-        if type(fans) == pd.core.frame.DataFrame:
-            fans = [Fan(i, self.scope,
-                        with_center=with_center,
-                        linewidth=linewidth) for _, i in fans.iterrows()]
-        self.plot_objects(fans, **kwargs)
+        lw = kwargs.pop('lw', 1)
+        if data is None:
+            data = self.get_fans(user_name, without_users)
+        if type(data) == pd.core.frame.DataFrame:
+            data = [Fan(i, self.scope, with_center=with_center, lw=lw)
+                    for _, i in data.iterrows()]
+        self.plot_objects(data, **kwargs)
 
     def plot_all(self):
         fig, axes = plt.subplots(2, 2, figsize=(10, 8))
@@ -243,8 +243,7 @@ class Blotch(Ellipse):
 
     to_average = 'x y image_x image_y angle radius_1 radius_2'.split()
 
-    def __init__(self, data, scope, color='b', with_center=False,
-                 lw=1):
+    def __init__(self, data, scope, with_center=False, **kwargs):
         self.data = data
         self.scope = scope
         self.with_center = with_center
@@ -263,7 +262,7 @@ class Blotch(Ellipse):
         super(Blotch, self).__init__((self.x, self.y),
                                      data.radius_1 * 2, data.radius_2 * 2,
                                      data.angle, alpha=0.65,
-                                     fill=False, linewidth=lw, color=color)
+                                     fill=False, **kwargs)
         self.data = data
 
     def is_equal(self, other):
@@ -334,11 +333,11 @@ class Blotch(Ellipse):
     def n_members(self, value):
         self._n_members = value
 
-    def plot(self, color='blue', ax=None):
+    def plot(self, color=None, ax=None):
         if ax is None:
             _, ax = plt.subplots()
-
-        self.set_color(color)
+        if color is not None:
+            self.set_color(color)
         ax.add_patch(self)
         if self.with_center:
             self.plot_center(ax, color=color)
@@ -407,7 +406,7 @@ class Fan(lines.Line2D):
 
     to_average = 'x y image_x image_y angle spread distance'.split()
 
-    def __init__(self, data, scope, linewidth=0.5, with_center=False, **kwargs):
+    def __init__(self, data, scope, with_center=False, **kwargs):
         self.data = data
         self.scope = scope
         self.with_center = with_center
@@ -439,7 +438,7 @@ class Fan(lines.Line2D):
                                  self.base + self.v2))
         # init fan line, first column are the x-components of the row-vectors
         lines.Line2D.__init__(self, self.coords[:, 0], self.coords[:, 1],
-                              alpha=0.65, linewidth=linewidth, color='white',
+                              alpha=0.65, color='white',
                               **kwargs)
 
     def is_equal(self, other):
@@ -518,10 +517,11 @@ class Fan(lines.Line2D):
         pointer.set_color(color)
         ax.add_line(pointer)
 
-    def plot(self, color='blue', ax=None):
+    def plot(self, color=None, ax=None):
         if ax is None:
             _, ax = plt.subplots()
-        self.set_color(color)
+        if color is not None:
+            self.set_color(color)
         ax.add_line(self)
         self.add_semicircle(ax, color=color)
         if self.with_center:
