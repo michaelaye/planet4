@@ -147,7 +147,7 @@ def get_latest_file(filenames):
 
 def get_latest_cleaned_db(datadir=None):
     datadir = data_root if datadir is None else Path(datadir)
-    h5files = datadir.glob('201*_queryable_cleaned.h5')
+    h5files = datadir.glob('201*_queryable_cleaned*.h5')
     return get_latest_file(h5files)
 
 
@@ -402,7 +402,7 @@ class DBManager(object):
 
     """
 
-    def __init__(self, dbname=None, s23=True):
+    def __init__(self, dbname=None):
         """Initialize DBManager class.
 
         Parameters
@@ -412,10 +412,7 @@ class DBManager(object):
             database.
         """
         if dbname is None:
-            if s23:
-                self.dbname = str(get_latest_season23_dbase())
-            else:
-                self.dbname = str(get_latest_cleaned_db())
+            self.dbname = str(get_latest_cleaned_db())
         else:
             self.dbname = str(dbname)
 
