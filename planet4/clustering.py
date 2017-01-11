@@ -261,13 +261,7 @@ class ClusteringManager(object):
         # reset stored clustered data
         self.reduced_data = {}
 
-        # Calculate the unique classification_ids so that the mininum number of
-        # samples for DBScanner can be calculated (15 % currently)
-        # use only class_ids that actually contain fan and blotch markings
-        f1 = self.data.marking == 'fan'   # this creates a boolean filter
-        f2 = self.data.marking == 'blotch'
-        # combine filters with logical OR:
-        n_classifications = self.data[f1 | f2].classification_id.nunique()
+        n_classifications = self.p4id.n_marked_classifications
 
         if self.do_dynamic_min_samples:
             min_samples = round(self.min_samples_factor * n_classifications)
@@ -283,24 +277,15 @@ class ClusteringManager(object):
 
         for kind in ['fan', 'blotch']:
             # what is included for clustering is decided in pre_processing
-            self.marking_data = self.data[self.data.marking == kind]
+            self.marking_data = self.p4id.filter_data(kind)
             self.kind = kind
             current_X = self.pre_processing()
             if current_X is not None:
-                if self.use_DBSCAN:
-                    logger.debug("Using DBSCAN")
-                    clusterer = DBScanner(current_X, eps=self.eps,
-                                          min_samples=min_samples,
-                                          only_core=self.only_core)
-                else:
-                    logger.debug("Using HDBSCAN")
-                    hdbscan_min_samples = self.min_samples - \
-                        self.hdbscan_min_samples_diff
-                    clusterer = HDBScanner(current_X,
-                                           min_cluster_size=min_samples,
-                                           min_samples=hdbscan_min_samples,
-                                           proba_cut=self.proba_cut,
-                                           only_core=self.only_core)
+                logger.debug("Using DBSCAN")
+                clusterer = DBScanner(current_X,
+                                      eps=self.eps,
+                                      min_samples=min_samples,
+                                      only_core=self.only_core)
                 # store the scanner object in both cases into `self`
                 self.clusterer = clusterer
             else:
@@ -327,11 +312,11 @@ class ClusteringManager(object):
         data : pd.DataFrame, optional
             Dataframe with data for this clustering run
         """
-        image_id = io.check_and_pad_id(image_id)
+        self.p4id = markings.ImageID(image_id, scope='planet4')
         logger.info("Clustering data for %s", image_id)
-        self.pm.id_ = image_id
+        self.pm.id_ = self.p4id.imgid
         if data is None:
-            self.data = self.db.get_image_id_markings(image_id)
+            self.data = self.p4id.data
             logger.debug("DB used: %s", self.dbname)
         else:
             self.data = data
