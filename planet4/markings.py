@@ -206,7 +206,7 @@ class ImageID(object):
         self.plot_objects(data, **kwargs)
 
     def plot_all(self):
-        fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+        fig, axes = plt.subplots(2, 2)
         axes = axes.ravel()
         self.show_subframe(ax=axes[0])
         self.show_subframe(ax=axes[2])
