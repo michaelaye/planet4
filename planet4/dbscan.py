@@ -5,168 +5,285 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from scipy.stats import circmean
 from sklearn.cluster import DBSCAN
-from sklearn.preprocessing import robust_scale
 
-from . import markings
-from ._utils import get_average_object
+from . import io, markings
 
 logger = logging.getLogger(__name__)
 
 
-def post_processing(kind, data, dbscanner, min_members=3):
-    Marking = markings.Fan if kind == 'fan' else markings.Blotch
-    cols = Marking.to_average
+def get_average_objects(clusters, kind):
+    """Create the average object out of a sequence of clusters.
 
-    reduced_data = []
-    logger.debug("Post processing %s", kind)
-    for cluster in dbscanner.clustered_indices:
-        clusterdata = data.loc[cluster, cols + ['user_name']]
-        logger.debug("N of members in this cluster: %i", len(clusterdata))
-        filtered = clusterdata.groupby('user_name').first().reset_index()
-        if len(clusterdata) != len(filtered):
-            logger.debug("N of members of this cluster after filtering: %i,"
-                         " removed %i.", len(filtered),
-                         len(clusterdata) - len(filtered))
-            if len(filtered) < min_members:
-                logger.debug("Throwing away this cluster for < min_samples")
-                continue
-        logger.debug("Calculating mean %s object.", kind)
-        meandata = get_average_object(filtered[cols], kind)
-        # # This returned a pd.Series object I can add more info to now:
-        # # storing n_votes into the object for later.
-        # meandata['n_votes'] = len(filtered)
-        # meandata['image_id'] = pm.id_
-        # meandata['image_name'] = self.marking_data.image_name.values[0]
-        # # converting to dataframe and clean data format (rows=measurements)
-        reduced_data.append(meandata.to_frame().T)
-    logger.debug("Length of reduced data (total number clusters found): %i",
-                 len(reduced_data))
-    # self.reduced_data[kind] = reduced_data
-    try:
-        return pd.concat(reduced_data, ignore_index=True)
-    except ValueError:
-        return []
+    Parameters
+    ----------
+    clusters : sequence of pandas.DataFrames
+        table with rows of markings (fans or blotches) to be averaged
+    kind : {'fan', 'blotch}
+        Switch to control the circularity for the average angle calculation.
+
+    Returns
+    -------
+    Generator providing single row pandas.DataFrames with the average values
+    """
+    logger.debug("Averaging clusters.")
+    for cluster_df in clusters:
+        # first filter for outliers more than 1 std away
+        # for
+        # reduced = df[df.apply(lambda x: np.abs(x - x.mean()) / x.std() < 1).all(axis=1)]
+        logger.debug("Averaging %i objects.", len(cluster_df))
+        meandata = cluster_df.mean()
+        # this determines the upper limit for circular mean
+        high = 180 if kind == 'blotch' else 360
+        avg = circmean(cluster_df.angle, high=high)
+        meandata.angle = avg
+        meandata['n_votes'] = len(cluster_df)
+        yield meandata.to_frame().T
 
 
-def plot_results(clusterer, data, p4id, kind, reduced_data=None, ax=None):
+def plot_results(p4id, labels, data=None, kind=None, reduced_data=None, ax=None):
     functions = dict(blotch=p4id.plot_blotches,
                      fan=p4id.plot_fans)
     if ax is None:
         fig, ax = plt.subplots()
 
     plot_kwds = {'alpha': 0.8, 's': 10, 'linewidths': 0}
-    palette = sns.color_palette('bright', clusterer.n_clusters_)
-    cluster_colors = [palette[x] if x >= 0 else (0.5, 0.5, 0.5)
-                      for x in clusterer.dbscan.labels_]
+    palette = sns.color_palette('bright', len(labels))
+    cluster_colors = [palette[x] if x >= 0 else (0.75, 0.75, 0.75)
+                      for x in labels]
     p4id.show_subframe(ax=ax)
-    ax.scatter(data.loc[:, 'x'], data.loc[:, 'y'], c=cluster_colors,
-               **plot_kwds)
+    if data is not None:
+        ax.scatter(data.loc[:, 'x'], data.loc[:, 'y'], c=cluster_colors,
+                   **plot_kwds)
+    markings.set_subframe_size(ax)
     # pick correct function for kind of marking:
     if reduced_data is not None:
         functions[kind](ax=ax, data=reduced_data, lw=1)
 
 
-def parameter_scan(img_id, kind, msf_values, eps_values,
-                   cols=None, do_scale=True, do_radii=False):
-    if cols is None:
-        cols = 'x y'.split()
-    p4id = markings.ImageID(img_id, scope='planet4')
-    functions = dict(blotch=p4id.plot_blotches,
-                     fan=p4id.plot_fans)
-    data = p4id.filter_data(kind)
-    if do_radii:
-        cols += ['radius_1', 'radius_2']
-    X = data[cols].as_matrix()
-    if do_scale:
-        X = robust_scale(X)
-    fig, ax = plt.subplots(nrows=len(msf_values),
-                           ncols=len(eps_values) + 1,
-                           figsize=(10, 5))
-    axes = ax.flatten()
-    for ax, (msf, eps) in zip(axes,
-                              product(msf_values,
-                                      eps_values)):
-        min_samples = round(msf * p4id.n_marked_classifications)
-        dbscanner = DBScanner(X, eps=eps, min_samples=min_samples)
-        reduced_data = post_processing(kind, data, dbscanner)
-        plot_results(dbscanner, data, p4id, kind, reduced_data, ax=ax)
-        ax.set_title('MS: {}, MSF: {}, EPS: {}\nn_clusters: {}, averaged: {}'
-                     .format(min_samples, msf, eps, dbscanner.n_clusters_,
-                             len(reduced_data)),
-                     fontsize=8)
-
-    p4id.show_subframe(ax=axes[-1])
-    functions[kind](ax=axes[-2], lw=0.25, with_center=True)
-    fig.suptitle("n_class: {}, ncols: {}, radii: {}, scale: {}"
-                 .format(p4id.n_marked_classifications, len(cols),
-                         do_radii, do_scale))
-    savepath = ("plots/{}/{}_lencols{}_radii{}_scale{}.png"
-                .format(kind, img_id, len(cols), do_radii, do_scale))
-    # fig.tight_layout()
-    fig.savefig(savepath, dpi=200)
-
-
 class DBScanner(object):
-
-    """Execute clustering and create mean cluster markings.
-
-    The instantiated object will execute:
-
-        * _run_DBSCAN() to perform the clustering itself
-        * _post_analysis() to create mean markings from the clustering results
-
+    """Potential replacement for ClusteringManager
 
     Parameters
     ----------
-    current_X : numpy.array
-        array holding the data to be clustered, preprocessed in ClusterManager
-    eps : int, optional
-        Distance criterion for DBSCAN algorithm. Samples further away than this value don't
-        become members of the currently considered cluster. Default: 10
-    min_samples : int, optional
-        Mininum number of samples required for a cluster to be created. Default: 3
+    img_id : str
+        planet4 image_id string. Can be the right-hand minimal identifier,
+        lik 'pbr', will be padded to the full one.
     """
+    # shortcut translator
+    t = dict(b='blotch',
+             f='fan',
+             blotch='blotch',
+             fan='fan',
+             blotches='blotch',
+             fans='fan')
 
-    def __init__(self, current_X, eps=10, min_samples=3, only_core=True):
-        self.current_X = current_X
-        self.eps = eps
-        self.min_samples = min_samples
-        self.only_core = only_core
+    radii_eps = 30
 
-        logger.debug("DBScanner received: eps=%i, min_samples=%i", eps, min_samples)
-        logger.debug("Shape of X: %i, %i", *current_X.shape)
-        # these lines execute the clustering
-        self._run_DBSCAN()
+    def __init__(self, img_id, output_dir_clustered=None):
+        self.img_id = img_id
+        self.p4id = markings.ImageID(img_id, scope='planet4')
+        self.output_dir_clustered = output_dir_clustered
+        self.pm = io.PathManager(img_id)
 
-    def _run_DBSCAN(self):
-        """Perform the DBSCAN clustering."""
-        logger.debug("Running DBSCAN")
-        db = DBSCAN(self.eps, self.min_samples).fit(self.current_X)
-        self.dbscan = db
+    def show_markings(self):
+        self.p4id.plot_all()
+
+    def cluster_any(self, X, eps, min_samples):
+        logger.debug("Clustering any.")
+        db = DBSCAN(eps, min_samples).fit(X)
         labels = db.labels_
         unique_labels = sorted(set(labels))
 
         core_samples_mask = np.zeros_like(labels, dtype=bool)
         core_samples_mask[db.core_sample_indices_] = True
 
-        self.n_clusters_ = len(unique_labels) - (1 if -1 in labels else 0)
-        logger.debug("%i clusters found.", self.n_clusters_)
-        self.clustered_indices = []  # list of `kind` cluster average objects
-        self.n_rejected = 0
+        self.n_clusters = len(unique_labels) - (1 if -1 in labels else 0)
+        logger.debug("%i cluster(s) found with:", self.n_clusters)
+
+        self.labels = labels
+
         # loop over unique labels.
         for k in unique_labels:
-            # get indices for members of this cluster
             class_member_mask = (labels == k)
-            # treat noise
             if k == -1:
-                self.n_rejected = np.sum(class_member_mask)
                 continue
-            if self.only_core:
-                cluster_members = (class_member_mask & core_samples_mask)
-            else:
-                cluster_members = class_member_mask
-            self.clustered_indices.append(cluster_members)
+            indices = class_member_mask & core_samples_mask
+            logger.debug("%i members.", np.count_nonzero(indices))
+            yield indices
 
-        self.core_samples_mask = core_samples_mask
-        logger.debug("Length of clustered_indices: %i", len(self.clustered_indices))
+    def cluster_xy(self, eps, min_samples):
+        logger.debug("Clustering x,y.")
+        X = self.data[['x', 'y']].as_matrix()
+        for cluster_index in self.cluster_any(X, eps, min_samples):
+            yield self.data.loc[cluster_index]
+
+    def split_markings_by_size(self, data, limit=420):
+        kind = data.marking.value_counts()
+        if len(kind) > 1:
+            raise TypeError("Data had more than 1 marking kind.")
+        if kind.index[0] == 'blotch':
+            f1 = data.radius_1 > limit
+            f2 = data.radius_2 > limit
+            data_large = data[f1 | f2]
+            data_small = data[~(f1 | f2)]
+        else:
+            f1 = data.distance > limit
+            data_large = data[f1]
+            data_small = data[~f1]
+        return data_small, data_large
+
+    def cluster_and_plot(self, kind, eps, min_samples, with_angles=True,
+                         with_radii=True, ax=None, fontsize=None,
+                         eps_large=None):
+        self.kind = self.t[kind]
+        data = self.p4id.filter_data(self.kind)
+        if eps_large is not None:
+            datasets = self.split_markings_by_size(data)
+            epsilons = [eps, eps_large]
+            radii_eps = [eps, eps_large]
+        else:
+            datasets = [data]
+            epsilons = [eps]
+            radii_eps = [30]
+        reduced_data = []
+        for dataset, epsnow, radeps in zip(datasets, epsilons, radii_eps):
+            logger.info("Clustering with eps=%i", epsnow)
+            self.data = dataset
+            logger.debug("Length of dataset: %i", len(self.data))
+            if len(self.data) < min_samples:
+                logger.info("Skipping due to lack of data.")
+                reduced_data.append(pd.DataFrame())
+                continue
+            self.radii_eps = radeps
+            reduced_data.append(self.pipeline(epsnow, min_samples,
+                                              with_angles, with_radii)
+                                )
+        # merging large and small markings clusters
+        try:
+            reduced_data = pd.concat(reduced_data, ignore_index=True)
+        except ValueError as e:
+            if e.args[0].startswith("All objects passed were None"):
+                logger.warning("Nothing survived.")
+                return
+            else:
+                raise e
+
+        try:
+            n_reduced = len(reduced_data)
+        except TypeError:
+            n_reduced = 0
+
+        if ax is None:
+            fig, ax = plt.subplots()
+        plot_results(self.p4id, self.labels, kind=kind,
+                     reduced_data=reduced_data, ax=ax)
+        ax.set_title("MS: {}, EPS: {}\nEPS_LARGE: {}, n_clusters: {}"
+                     .format(min_samples, eps, eps_large, n_reduced),
+                     fontsize=fontsize)
+        self.reduced_data = reduced_data
+        self.n_reduced = n_reduced
+
+    def cluster_angles(self, xy_clusters,
+                       min_samples,
+                       eps_fanangle=20,
+                       eps_blotchangle=20):
+        logger.debug("Clustering angles.")
+        cols_to_cluster = dict(blotch=['y_angle'],
+                               fan=['x_angle', 'y_angle'])
+        kind = self.kind
+        eps_degrees = eps_fanangle if kind == 'fan' else eps_blotchangle
+        # convert to radians
+        # calculated value of euclidean distance of unit vector
+        # end points per degree
+        eps_per_degree = 2 * np.pi / 360
+        eps = eps_degrees * eps_per_degree
+        for xy_cluster in xy_clusters:
+            X = xy_cluster[cols_to_cluster[kind]]
+            for indices in self.cluster_any(X, eps, min_samples):
+                yield xy_cluster.loc[indices]
+
+    def cluster_radii(self, angle_clusters, min_samples):
+        logger.debug("Clustering radii.")
+        cols_to_cluster = ['radius_1', 'radius_2']
+        for angle_cluster in angle_clusters:
+            X = angle_cluster[cols_to_cluster]
+            for indices in self.cluster_any(X, self.radii_eps, min_samples):
+                yield angle_cluster.loc[indices]
+
+    def pipeline(self, eps, min_samples, with_angles=True,
+                 with_radii=True):
+        kind = self.kind
+        xyclusters = self.cluster_xy(eps, min_samples)
+        xyclusters = list(xyclusters)
+        if with_angles:
+            last = self.cluster_angles(xyclusters, min_samples)
+        else:
+            last = xyclusters
+        last = list(last)
+        if with_radii and kind == 'blotch':
+            finalclusters = self.cluster_radii(last, min_samples)
+        else:
+            finalclusters = last
+        finalclusters = list(finalclusters)
+        averaged = get_average_objects(finalclusters, kind)
+        try:
+            reduced_data = pd.concat(averaged, ignore_index=True)
+        except ValueError as e:
+            if e.args[0].startswith("No objects to concatenate"):
+                logger.warning("No clusters survived.")
+                return pd.DataFrame()
+            else:
+                raise e
+        return reduced_data
+
+    def parameter_scan(self, kind, msf_values, eps_values, do_scale=False,
+                       with_angles=True, with_radii=True):
+        kind = self.kind = self.t[kind]
+        fig, ax = plt.subplots(nrows=len(msf_values),
+                               ncols=len(eps_values) + 1,
+                               figsize=(10, 5))
+        axes = ax.flatten()
+        for ax, (msf, eps) in zip(axes, product(msf_values, eps_values)):
+            min_samples = round(msf * self.p4id.n_marked_classifications)
+            # don't allow less than 3 min_samples:
+            min_samples = max(3, min_samples)
+            self.cluster_and_plot(kind, eps, min_samples,
+                                  with_angles=with_angles,
+                                  with_radii=with_radii, eps_large=eps + 30,
+                                  ax=ax, fontsize=8)
+            t = ax.get_title()
+            ax.set_title("MSF: {}, {}".format(msf, t),
+                         fontsize=8)
+
+        # plot input tile
+        self.p4id.show_subframe(ax=axes[-1])
+        axes[-1].set_title("Input tile", fontsize=8)
+        # plot marking data
+        self.p4id.plot_markings(kind, ax=axes[-2], lw=0.25, with_center=True)
+        axes[-2].set_title("{} marking data".format(kind), fontsize=8)
+        fig.suptitle("ID: {}, n_class: {}, angles: {}, radii: {}"
+                     .format(self.img_id, self.p4id.n_marked_classifications,
+                             with_angles, with_radii))
+        savepath = ("plots/{id_}_{kind}_scale{s}_radii{r}.png"
+                    .format(kind=kind, id_=self.img_id,
+                            s=do_scale, r=with_radii))
+        fig.savefig(savepath, dpi=200)
+
+    def store_clustered(self, reduced_data):
+        "Store the unfnotched data."
+        outdir = self.output_dir_clustered
+        outdir.mkdir(exist_ok=True)
+        for outfname, outdata in zip([self.pm.reduced_blotchfile, self.pm.reduced_fanfile],
+                                     [self.reduced_data['blotch'],
+                                      self.reduced_data['fan']]):
+            if outfname.exists():
+                outfname.unlink()
+            if len(outdata) == 0:
+                continue
+            df = pd.concat(outdata, ignore_index=True)
+            # make
+            df = df.apply(pd.to_numeric, errors='ignore')
+            df['n_votes'] = df['n_votes'].astype('int')
+            self.save(df, outfname)

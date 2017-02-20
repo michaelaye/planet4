@@ -180,30 +180,28 @@ class ImageID(object):
         set_subframe_size(ax)
         ax.set_axis_off()
 
-    def plot_blotches(self, data=None, **kwargs):
+    def pop_kwargs(self, kwargs):
         with_center = kwargs.pop('with_center', False)
         user_name = kwargs.pop('user_name', None)
         without_users = kwargs.pop('without_users', None)
         lw = kwargs.pop('lw', 1)
+        return with_center, user_name, without_users, lw
+
+    def plot_markings(self, kind, data=None, **kwargs):
+        with_center, user_name, without_users, lw = self.pop_kwargs(kwargs)
         if data is None:
-            data = self.get_blotches(user_name, without_users)
+            data = self.filter_data(kind, user_name, without_users)
+        markingClass = Blotch if kind == 'blotch' else Fan
         if type(data) == pd.core.frame.DataFrame:
-            data = [Blotch(i, self.scope, with_center=with_center, lw=lw)
+            data = [markingClass(i, self.scope, with_center=with_center, lw=lw)
                     for _, i in data.iterrows()]
         self.plot_objects(data, **kwargs)
 
+    def plot_blotches(self, data=None, **kwargs):
+        self.plot_markings('blotch', data=data, **kwargs)
+
     def plot_fans(self, data=None, **kwargs):
-        """Plotting fans using Fans class and self.subframe."""
-        with_center = kwargs.pop('with_center', False)
-        user_name = kwargs.pop('user_name', None)
-        without_users = kwargs.pop('without_users', None)
-        lw = kwargs.pop('lw', 1)
-        if data is None:
-            data = self.get_fans(user_name, without_users)
-        if type(data) == pd.core.frame.DataFrame:
-            data = [Fan(i, self.scope, with_center=with_center, lw=lw)
-                    for _, i in data.iterrows()]
-        self.plot_objects(data, **kwargs)
+        self.plot_markings('fan', data=data, **kwargs)
 
     def plot_all(self):
         fig, axes = plt.subplots(2, 2)
