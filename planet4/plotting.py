@@ -36,7 +36,7 @@ def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
         dbname = cm.dbname
     imgid = markings.ImageID(image_id, dbname=dbname, scope='planet4')
 
-    fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(10, 5))
+    fig, axes = plt.subplots(nrows=2, ncols=3)
     axes = axes.ravel()
     for ax in axes:
         imgid.show_subframe(ax=ax)
@@ -94,9 +94,9 @@ def plot_finals(id_, scope='planet4', datapath=None, ax=None):
     if ax is None:
         _, ax = plt.subplots()
     if pm.final_fanfile.exists():
-        imgid.plot_fans(ax=ax, fans=pm.final_fandf)
+        imgid.plot_fans(ax=ax, data=pm.final_fandf)
     if pm.final_blotchfile.exists():
-        imgid.plot_blotches(ax=ax, blotches=pm.final_blotchdf)
+        imgid.plot_blotches(ax=ax, data=pm.final_blotchdf)
 
 
 def plot_clustered_blotches(id_, scope='planet4', datapath=None, ax=None, **kwargs):
@@ -109,7 +109,7 @@ def plot_clustered_blotches(id_, scope='planet4', datapath=None, ax=None, **kwar
     data = pm.reduced_blotchdf
     imgid = markings.ImageID(id_, scope=scope)
 
-    imgid.plot_blotches(blotches=data, ax=ax, **kwargs)
+    imgid.plot_blotches(data=data, ax=ax, **kwargs)
 
 
 def blotches_all(id_, datapath=None):
@@ -154,7 +154,7 @@ def plot_clustered_fans(image_id, datapath=None, ax=None, scope_id=None,
         #                                                 scope='planet4')
     imgid = markings.ImageID(image_id, scope='planet4')
 
-    imgid.plot_fans(fans=data, ax=ax, **kwargs)
+    imgid.plot_fans(data=data, ax=ax, **kwargs)
 
 
 def fans_all(id_, datapath=None):
