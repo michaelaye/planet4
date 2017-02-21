@@ -134,6 +134,33 @@ class DBScanner(object):
             data_small = data[~f1]
         return data_small, data_large
 
+    def cluster_angles(self, xy_clusters,
+                       min_samples,
+                       eps_fanangle=20,
+                       eps_blotchangle=20):
+        logger.debug("Clustering angles.")
+        cols_to_cluster = dict(blotch=['y_angle'],
+                               fan=['x_angle', 'y_angle'])
+        kind = self.kind
+        eps_degrees = eps_fanangle if kind == 'fan' else eps_blotchangle
+        # convert to radians
+        # calculated value of euclidean distance of unit vector
+        # end points per degree
+        eps_per_degree = 2 * np.pi / 360
+        eps = eps_degrees * eps_per_degree
+        for xy_cluster in xy_clusters:
+            X = xy_cluster[cols_to_cluster[kind]]
+            for indices in self.cluster_any(X, eps, min_samples):
+                yield xy_cluster.loc[indices]
+
+    def cluster_radii(self, angle_clusters, min_samples):
+        logger.debug("Clustering radii.")
+        cols_to_cluster = ['radius_1', 'radius_2']
+        for angle_cluster in angle_clusters:
+            X = angle_cluster[cols_to_cluster]
+            for indices in self.cluster_any(X, self.radii_eps, min_samples):
+                yield angle_cluster.loc[indices]
+
     def cluster_and_plot(self, kind, eps, min_samples, with_angles=True,
                          with_radii=True, ax=None, fontsize=None,
                          eps_large=None):
@@ -142,7 +169,7 @@ class DBScanner(object):
         if eps_large is not None:
             datasets = self.split_markings_by_size(data)
             epsilons = [eps, eps_large]
-            radii_eps = [eps, eps_large]
+            radii_eps = [20, 50]
         else:
             datasets = [data]
             epsilons = [eps]
@@ -177,40 +204,37 @@ class DBScanner(object):
 
         if ax is None:
             fig, ax = plt.subplots()
-        plot_results(self.p4id, self.labels, kind=kind,
-                     reduced_data=reduced_data, ax=ax)
-        ax.set_title("MS: {}, EPS: {}\nEPS_LARGE: {}, n_clusters: {}"
-                     .format(min_samples, eps, eps_large, n_reduced),
+        if n_reduced > 0:
+            plot_results(self.p4id, self.labels, kind=kind,
+                         reduced_data=reduced_data, ax=ax)
+        else:
+            self.p4id.show_subframe(ax=ax)
+        ax.set_title("MS: {}, n_clusters: {}\nEPS: {}, EPS_LARGE: {}, "
+                     .format(min_samples, n_reduced, eps, eps_large),
                      fontsize=fontsize)
         self.reduced_data = reduced_data
         self.n_reduced = n_reduced
 
-    def cluster_angles(self, xy_clusters,
-                       min_samples,
-                       eps_fanangle=20,
-                       eps_blotchangle=20):
-        logger.debug("Clustering angles.")
-        cols_to_cluster = dict(blotch=['y_angle'],
-                               fan=['x_angle', 'y_angle'])
-        kind = self.kind
-        eps_degrees = eps_fanangle if kind == 'fan' else eps_blotchangle
-        # convert to radians
-        # calculated value of euclidean distance of unit vector
-        # end points per degree
-        eps_per_degree = 2 * np.pi / 360
-        eps = eps_degrees * eps_per_degree
-        for xy_cluster in xy_clusters:
-            X = xy_cluster[cols_to_cluster[kind]]
-            for indices in self.cluster_any(X, eps, min_samples):
-                yield xy_cluster.loc[indices]
+    @property
+    def store_folder(self):
+        return self.pm.datapath / self.p4id.image_name / self.img_id
 
-    def cluster_radii(self, angle_clusters, min_samples):
-        logger.debug("Clustering radii.")
-        cols_to_cluster = ['radius_1', 'radius_2']
-        for angle_cluster in angle_clusters:
-            X = angle_cluster[cols_to_cluster]
-            for indices in self.cluster_any(X, self.radii_eps, min_samples):
-                yield angle_cluster.loc[indices]
+    def store_clustered(self, reduced_data):
+        "Store the clustered but as of yet unfnotched data."
+        outdir = self.store_folder
+        outdir.mkdir(exist_ok=True)
+        for outfname, outdata in zip([self.pm.reduced_blotchfile, self.pm.reduced_fanfile],
+                                     [self.reduced_data['blotch'],
+                                      self.reduced_data['fan']]):
+            if outfname.exists():
+                outfname.unlink()
+            if len(outdata) == 0:
+                continue
+            df = pd.concat(outdata, ignore_index=True)
+            # make
+            df = df.apply(pd.to_numeric, errors='ignore')
+            df['n_votes'] = df['n_votes'].astype('int')
+            self.save(df, outfname)
 
     def pipeline(self, eps, min_samples, with_angles=True,
                  with_radii=True):
@@ -249,9 +273,9 @@ class DBScanner(object):
             min_samples = round(msf * self.p4id.n_marked_classifications)
             # don't allow less than 3 min_samples:
             min_samples = max(3, min_samples)
-            self.cluster_and_plot(kind, eps, min_samples,
+            self.cluster_and_plot(kind, 10, min_samples,
                                   with_angles=with_angles,
-                                  with_radii=with_radii, eps_large=eps + 30,
+                                  with_radii=with_radii, eps_large=eps,
                                   ax=ax, fontsize=8)
             t = ax.get_title()
             ax.set_title("MSF: {}, {}".format(msf, t),
@@ -270,20 +294,3 @@ class DBScanner(object):
                     .format(kind=kind, id_=self.img_id,
                             s=do_scale, r=with_radii))
         fig.savefig(savepath, dpi=200)
-
-    def store_clustered(self, reduced_data):
-        "Store the unfnotched data."
-        outdir = self.output_dir_clustered
-        outdir.mkdir(exist_ok=True)
-        for outfname, outdata in zip([self.pm.reduced_blotchfile, self.pm.reduced_fanfile],
-                                     [self.reduced_data['blotch'],
-                                      self.reduced_data['fan']]):
-            if outfname.exists():
-                outfname.unlink()
-            if len(outdata) == 0:
-                continue
-            df = pd.concat(outdata, ignore_index=True)
-            # make
-            df = df.apply(pd.to_numeric, errors='ignore')
-            df['n_votes'] = df['n_votes'].astype('int')
-            self.save(df, outfname)
