@@ -119,7 +119,7 @@ class DBScanner(object):
         for cluster_index in self.cluster_any(X, eps, min_samples):
             yield self.data.loc[cluster_index]
 
-    def split_markings_by_size(self, data, limit=420):
+    def split_markings_by_size(self, data, limit=210):
         kind = data.marking.value_counts()
         if len(kind) > 1:
             raise TypeError("Data had more than 1 marking kind.")
