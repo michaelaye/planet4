@@ -467,6 +467,12 @@ class DBManager(object):
         image_id = check_and_pad_id(image_id)
         return pd.read_hdf(self.dbname, 'df', where='image_id=' + image_id)
 
+    def get_data_for_obsids(self, obsids):
+        bucket = []
+        for obsid in obsids:
+            bucket.append(self.get_obsid_markings(obsid))
+        return pd.concat(bucket, ignore_index=True)
+        
     def get_classification_id_data(self, class_id):
         "Return data for one classification_id"
         return pd.read_hdf(self.dbname, 'df',
