@@ -247,16 +247,14 @@ class PathManager(object):
         Defined in `get_cut_folder`.
     """
 
-    def __init__(self, datapath=None, id_=None, suffix='.csv',
-                 cut=0.5, image_name='.'):
+    def __init__(self, id_, datapath=None, suffix='.csv',
+                 cut=0.5):
         self._id = id_
         self.cut = cut
-        self._image_name = Path(image_name)
         if datapath is None:
             self._datapath = Path(data_root) / 'clustering'
         else:
             self._datapath = Path(data_root) / datapath
-        self._datapath.mkdir(exist_ok=True)
 
         self.suffix = suffix
 
@@ -269,17 +267,8 @@ class PathManager(object):
             self.reader = pd.read_csv
 
     @property
-    def image_name(self):
-        return self.image_name
-
-    @image_name.setter
-    def image_name(self, value):
-        self._image_name = value
-        self.datapath.mkdir(exist_ok=True)
-
-    @property
     def datapath(self):
-        return self._datapath / self._image_name
+        return self._datapath
 
     @property
     def id_(self):
@@ -295,7 +284,7 @@ class PathManager(object):
     @property
     def output_dir_clustered(self):
         "Storage path for the clustered data before fnotching."
-        output_dir_clustered = self.datapath / 'clustered'
+        output_dir_clustered = self.datapath / self.id_
         output_dir_clustered.mkdir(exist_ok=True)
         return output_dir_clustered
 
