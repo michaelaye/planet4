@@ -58,8 +58,8 @@ def plot_results(p4id, labels, data=None, kind=None, reduced_data=None, ax=None)
                    **plot_kwds)
     markings.set_subframe_size(ax)
     # pick correct function for kind of marking:
-    if reduced_data is not None:
-        functions[kind](ax=ax, data=reduced_data, lw=1)
+    if any(reduced_data):
+        functions[kind](ax=ax, data=reduced_data, lw=1, user_color=color)
 
 
 class DBScanner(object):
