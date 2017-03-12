@@ -5,3 +5,4 @@ pytables
 matplotlib
 ipyparallel
 scikit-learn
+seaborn
