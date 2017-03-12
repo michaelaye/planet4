@@ -4,17 +4,28 @@ from os import path
 
 from setuptools import setup, find_packages
 
+DISTNAME = 'planet4'
+DESCRIPTION = "Software for the reduction and analysis of PlanetFour data."
+AUTHOR = "K.-Michael Aye"
+AUTHOR_EMAIL = "michael.aye@lasp.colorado.edu"
+MAINTAINER_EMAIL = AUTHOR_EMAIL
+URL = "https://github.com/michaelaye/planet4"
+LICENSE = "ISC"
+KEYWORDS = ['Mars', 'science', 'MRO', 'imaging']
+DOWNLOAD_URL = "https://github.com/michaelaye/planet4"
+
 here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the README file
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
-    long_description = f.read()
+    LONG_DESCRIPTION = f.read()
 
 
 setup(
-    name="planet4",
+    name=DISTNAME,
     version='0.7.3',
     packages=find_packages(),
+
     install_requires=['pandas', 'numpy', 'matplotlib'],
     tests_require=['pytest'],
     setup_requires=['pytest-runner'],
@@ -33,17 +44,21 @@ setup(
     },
 
     # metadata
-    author="K.-Michael Aye",
-    author_email="kmichael.aye@gmail.com",
-    description="Software for the reduction and analysis of Planet4 data.",
-    long_description=long_description,
-    license="ISC",
-    keywords="Mars Planet4 Zooniverse",
-    url="http://github.com/michaelaye/planet4",
+    author=AUTHOR,
+    author_email=AUTHOR_EMAIL,
+    maintainer_email=AUTHOR_EMAIL,
+    description=DESCRIPTION,
+    long_description=LONG_DESCRIPTION,
+    license=LICENSE,
+    keywords=KEYWORDS,
+    url=URL,
+    download_url=DOWNLOAD_URL,
+
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
         'Intended Audience :: Science/Research',
+        'Intended Audience :: Developers'
         'License :: OSI Approved :: ISC License (ISCL)',
         'Programming Language :: Python :: 3.5',
         'Topic :: Scientific/Engineering :: Astronomy',

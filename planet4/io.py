@@ -1,14 +1,14 @@
+import configparser
 import datetime as dt
 import logging
 import os
 import shutil
 import sys
-import yaml
+from pathlib import Path
 
 import matplotlib.image as mplimg
 import pandas as pd
 import pkg_resources as pr
-from pathlib import Path
 
 from . import stats
 from .exceptions import NoFilesFoundError
@@ -18,17 +18,27 @@ try:
 except ImportError:
     from urllib.request import urlretrieve
 
-configpath = Path.home() / '.planet4.yaml'
+pkg_name = __name__.split('.')[0]
+
+configpath = Path.home() / ".{}.ini".format(pkg_name)
 
 logger = logging.getLogger(__name__)
 
 
 def get_config():
+    """Read the configfile and return config dict.
+
+    Returns
+    -------
+    dict
+        Dictionary with the content of the configpath file.
+    """
     if not configpath.exists():
-        raise IOError("Config file .pyciss.yaml not found.")
+        raise IOError("Config file {} not found.".format(str(configpath)))
     else:
-        with open(str(configpath)) as f:
-            return yaml.load(f)
+        config = configparser.ConfigParser()
+        config.read(str(configpath))
+        return config
 
 
 if not configpath.exists():
@@ -44,28 +54,25 @@ else:
 def set_database_path(dbfolder):
     """Use to write the database path into the config.
 
-    Using the socket module to determine the host/node name and
-    creating a new section in the config file.
-
     Parameters
     ----------
     dbfolder : str or pathlib.Path
-        Path to where pyciss will store the ISS images it downloads and receives.
+        Path to where planet4 will store clustering results by default.
     """
     try:
         d = get_config()
     except IOError:
-        d = {}
-    d['planet4_db_path'] = dbfolder
+        d = configparser.ConfigParser()
+        d['planet4_db'] = {}
+    d['planet4_db']['path'] = dbfolder
     with configpath.open('w') as f:
-        yaml.dump(d, f, default_flow_style=False)
+        d.write(f)
     print("Saved database path into {}.".format(configpath))
 
 
-HOME = Path(os.environ["HOME"])
-data_root = HOME / 'Dropbox' / 'data' / 'planet4'
-
-done_path = data_root / 'done.h5'
+d = get_config()
+data_root = Path(d['planet4_db']['path'])
+data_root.mkdir(exist_ok=True)
 
 location_target_codes = {'giza': [850],
                          'spider_evolution': [950],
@@ -73,7 +80,7 @@ location_target_codes = {'giza': [850],
 
 
 def dropbox():
-    return HOME / 'Dropbox'
+    return Path.home() / 'Dropbox'
 
 
 def p4data():
@@ -209,12 +216,6 @@ def get_latest_marked():
                        where='marking!=None')
 
 
-def get_and_save_done(df, limit=30):
-    counts = stats.classification_counts_per_image(df)
-    ids_done = counts[counts >= limit].index
-    df[df.image_id.isin(ids_done)].to_hdf(done_path, 'df')
-
-
 def get_image_id_from_fname(fname):
     "Return image_id from beginning of Path(fname).name"
     fname = Path(fname)
@@ -233,11 +234,11 @@ class PathManager(object):
 
     Parameters
     ----------
-    datapath : str or pathlib.Path
-        the base path from where to manage all derived paths. No default assumed
-        to prevent errors.
     id_ : str
         The data item id that is used to determine sub-paths
+    datapath : str or pathlib.Path, optional
+        the base path from where to manage all derived paths. No default assumed
+        to prevent errors.
     suffix : {'.hdf', '.h5', '.csv'}
         The suffix that controls the reader function to be used.
 
@@ -247,18 +248,27 @@ class PathManager(object):
         Defined in `get_cut_folder`.
     """
 
-    def __init__(self, id_, datapath=None, suffix='.csv',
-                 cut=0.5):
+    def __init__(self, id_, datapath='clustering',
+                 suffix='.csv', obsid=None, cut=0.5):
         self._id = id_
         self.cut = cut
+        self.obsid = obsid
+
         if datapath is None:
-            self._datapath = Path(data_root) / 'clustering'
+            # take default path if none given
+            self._datapath = Path(data_root)
+        elif Path(datapath).is_absolute():
+            # if given datapath is absolute, take only that:
+            self._datapath = Path(datapath)
         else:
+            # if it is relative, add it to data_root
             self._datapath = Path(data_root) / datapath
+
+        self._datapath /= self.id_
 
         self.suffix = suffix
 
-        self.cut_dir = None  # defined at run time
+        self.cut_dir = self.get_cut_folder()
 
         # point reader to correct function depending on required suffix
         if suffix in ['.hdf', '.h5']:
@@ -272,37 +282,29 @@ class PathManager(object):
 
     @property
     def id_(self):
-        try:
-            return check_and_pad_id(self._id)
-        except TypeError:
-            raise TypeError('self.id_ needs to be set first.')
-
-    @id_.setter
-    def id_(self, value):
-        self._id = value
+        return check_and_pad_id(self._id)
 
     @property
     def output_dir_clustered(self):
         "Storage path for the clustered data before fnotching."
-        output_dir_clustered = self.datapath / self.id_
-        output_dir_clustered.mkdir(exist_ok=True)
+        output_dir_clustered = self.datapath / 'just_clustering'
         return output_dir_clustered
 
-    def get_cut_folder(self, cut):
+    def get_cut_folder(self, cut=None):
         # storage path for the final catalog after applying `cut`
+        if cut is None:
+            cut = self.cut
         cut_dir = self.datapath / 'applied_cut_{:.1f}'.format(cut)
-        cut_dir.mkdir(exist_ok=True)
         self.cut_dir = cut_dir
         return cut_dir
 
-    def get_path(self, marking, path):
-        if path is None:
-            raise TypeError('path needs to be set.')
-        if self.id_ is None:
-            raise TypeError('self.id_ needs to be set.')
-
-        p = Path(path) / (self.id_ + '_' + str(marking) + self.suffix)
-        p.parent.mkdir(exist_ok=True)
+    def get_path(self, marking, extra=None):
+        p = self.datapath
+        if self.obsid is not None:
+            p /= self.obsid
+        if extra is not None:
+            p /= extra
+        p /= (self.id_ + '_' + str(marking) + self.suffix)
         return p
 
     def get_df(self, fpath):
@@ -313,7 +315,7 @@ class PathManager(object):
 
     @property
     def fanfile(self):
-        return self.get_path('fans', self.datapath)
+        return self.get_path('fans')
 
     @property
     def fandf(self):
@@ -337,7 +339,7 @@ class PathManager(object):
 
     @property
     def blotchfile(self):
-        return self.get_path('blotches', self.datapath)
+        return self.get_path('blotches')
 
     @property
     def blotchdf(self):
@@ -361,7 +363,7 @@ class PathManager(object):
 
     @property
     def fnotchfile(self):
-        return self.get_path('fnotches', self.datapath)
+        return self.get_path('fnotches')
 
     @property
     def fnotchdf(self):
@@ -472,7 +474,7 @@ class DBManager(object):
         for obsid in obsids:
             bucket.append(self.get_obsid_markings(obsid))
         return pd.concat(bucket, ignore_index=True)
-        
+
     def get_classification_id_data(self, class_id):
         "Return data for one classification_id"
         return pd.read_hdf(self.dbname, 'df',
@@ -488,6 +490,7 @@ class DBManager(object):
 
     def get_general_filter(self, f):
         return pd.read_hdf(self.dbname, 'df', where=f)
+
 
 ###
 # general database helpers
