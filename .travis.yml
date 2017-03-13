@@ -1,35 +1,19 @@
+# make it explicit to prefer container-based travis workers
+sudo: false
+
 language: python
 
-cache: pip
+cache:
+  apt: true
+  directories:
+    - $HOME/.cache/pip
+    - $HOME/download
 
 branches:
   except:
     - gh-pages
 
-python:
-  - "3.6"
-
-install:
-  - sudo apt-get update
-  - wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-  - bash miniconda.sh -b -p $HOME/miniconda
-  - export PATH="$HOME/miniconda/bin:$PATH"
-  - hash -r
-  - conda config --set always_yes yes --set changeps1 no
-  - conda update -q conda
-  - conda info -a
-  # now my stuff
-  - conda create -q -n test-environment python=3
-  - source activate test-environment
-  - conda install --file requirements.txt
-  - conda install pytest
-  # - pip install codecov
-  # - pip install pytest-cov
-  - pip install coveralls
-  # - pip install pytest-ipynb
-  - python setup.py install
-  - python -c "from planet4 import io;io.set_database_path('~')"
-
+install: source .travis_install.sh
 # command to run tests, e.g. python setup.py test
 script:
   - coverage run --source=planet4 setup.py test
