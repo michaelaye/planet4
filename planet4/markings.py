@@ -102,6 +102,10 @@ class ImageID(object):
         self.scope = scope
 
     @property
+    def image_name(self):
+        return self.data.image_name.iloc[0]
+        
+    @property
     def blotchmask(self):
         return self.data.marking == 'blotch'
 
