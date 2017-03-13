@@ -28,6 +28,7 @@ install:
   - pip install coveralls
   # - pip install pytest-ipynb
   - python setup.py install
+  - python -c "from planet4 import io;io.set_database_path('~')"
 
 # command to run tests, e.g. python setup.py test
 script:
