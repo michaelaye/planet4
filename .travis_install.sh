@@ -22,11 +22,12 @@ if [[ ! -f miniconda.sh ]]
     wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh \
             -O miniconda.sh
   fi
-chmod +x miniconda.sh && ./miniconda.sh -b
+bash miniconda.sh -b -p $HOME/miniconda
 cd ..
-export PATH=/home/travis/miniconda/bin:$PATH
+export PATH="$HOME/miniconda/bin:$PATH"
+hash -r
 conda config --set always_yes yes --set changeps1 no
-conda update conda
+conda update -q conda
 conda info -a
 popd
 conda create -q -n test-environment python=3
