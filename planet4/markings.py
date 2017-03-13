@@ -163,6 +163,7 @@ class ImageID(object):
                      user_color=None, user_colors=None, without_users=None):
         """Plotting either fans or blotches with p4 subframe background."""
         logger.debug("Entering markings.plot_objects")
+        logger.debug("Received %i objects to plot.", len(objects))
         if ax is None:
             _, ax = plt.subplots(figsize=calc_fig_size(8))
             logger.debug("Created own axis.")
@@ -210,8 +211,8 @@ class ImageID(object):
     def plot_all(self):
         fig, axes = plt.subplots(2, 2)
         axes = axes.ravel()
-        self.show_subframe(ax=axes[0])
-        self.show_subframe(ax=axes[2])
+        for i in [0, 2]:
+            self.show_subframe(ax=axes[i])
         self.plot_fans(ax=axes[1])
         self.plot_blotches(ax=axes[3])
         for ax in axes:
