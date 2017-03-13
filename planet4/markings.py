@@ -104,7 +104,7 @@ class ImageID(object):
     @property
     def image_name(self):
         return self.data.image_name.iloc[0]
-        
+
     @property
     def blotchmask(self):
         return self.data.marking == 'blotch'
@@ -243,10 +243,9 @@ class Blotch(Ellipse):
     center : tuple (inherited from matplotlib.Ellipse)
         Coordinates of center, i.e. self.x, self.y
     """
-
     to_average = 'x y image_x image_y angle radius_1 radius_2'.split()
 
-    def __init__(self, data, scope, with_center=False, **kwargs):
+    def __init__(self, data, scope='planet4', with_center=False, **kwargs):
         self.data = data
         self.scope = scope
         self.with_center = with_center
@@ -370,6 +369,27 @@ class Blotch(Ellipse):
         return self.__str__()
 
 
+class HiBlotch(Blotch):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, scope='hirise', **kwargs)
+
+
+def rotate_vector(v, angle):
+    """Rotate vector by angle given in degrees.
+
+    Parameters
+    ----------
+    v : np.array
+        Vector to be rotated
+    angle : float
+        Angle in degrees
+    """
+    rangle = radians(angle)
+    rotmat = np.array([[cos(rangle), -sin(rangle)],
+                       [sin(rangle), cos(rangle)]])
+    return rotmat.dot(v)
+
+
 class Fan(lines.Line2D):
 
     """Fan management class for P4.
@@ -409,7 +429,7 @@ class Fan(lines.Line2D):
 
     to_average = 'x y image_x image_y angle spread distance'.split()
 
-    def __init__(self, data, scope, with_center=False, **kwargs):
+    def __init__(self, data, scope='planet4', with_center=False, **kwargs):
         self.data = data
         self.scope = scope
         self.with_center = with_center
@@ -432,9 +452,9 @@ class Fan(lines.Line2D):
         # length of arms
         self.armlength = self.get_arm_length()
         # first arm
-        self.v1 = self.rotate_vector([self.armlength, 0], alpha)
+        self.v1 = rotate_vector([self.armlength, 0], alpha)
         # second arm
-        self.v2 = self.rotate_vector([self.armlength, 0], beta)
+        self.v2 = rotate_vector([self.armlength, 0], beta)
         # vector matrix, stows the 1D vectors row-wise
         self.coords = np.vstack((self.base + self.v1,
                                  self.base,
@@ -463,13 +483,6 @@ class Fan(lines.Line2D):
     @n_members.setter
     def n_members(self, value):
         self._n_members = value
-
-    def rotate_vector(self, v, angle):
-        """Rotate vector by angle given in degrees."""
-        rangle = radians(angle)
-        rotmat = np.array([[cos(rangle), -sin(rangle)],
-                           [sin(rangle), cos(rangle)]])
-        return rotmat.dot(v)
 
     def get_arm_length(self):
         half = radians(self.inside_half)
@@ -512,7 +525,7 @@ class Fan(lines.Line2D):
 
     def add_mean_wind_pointer(self, ax, color='b', ls='-'):
         "Draw a thicker mean wind direction pointer for better visibility in plots."
-        endpoint = self.rotate_vector([5 * self.armlength, 0], self.data.angle)
+        endpoint = rotate_vector([5 * self.armlength, 0], self.data.angle)
         coords = np.vstack((self.base,
                             self.base + endpoint))
         pointer = lines.Line2D(coords[:, 0], coords[:, 1],
@@ -537,9 +550,9 @@ class Fan(lines.Line2D):
         As total length, I define the armlength + the radius of the semi-circle
         at the end.
         """
-        mid_point_vec = self.rotate_vector([0.5 * (self.armlength + self.radius),
-                                            0],
-                                           self.data.angle)
+        mid_point_vec = rotate_vector([0.5 * (self.armlength + self.radius),
+                                       0],
+                                      self.data.angle)
         return self.base + mid_point_vec
 
     def plot_center(self, ax, color='b'):
@@ -580,6 +593,11 @@ class Fan(lines.Line2D):
             out.to_hdf(str(fpath.with_suffix('.hdf')), 'df')
         out['n_members'] = self.n_members
         return out
+
+
+class HiFan(Blotch):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, scope='hirise', **kwargs)
 
 
 class Fnotch(object):
