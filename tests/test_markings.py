@@ -65,7 +65,6 @@ import pandas as pd
 # assert isinstance(fnotch.get_marking(0.3), markings.Fan)
 
 
-
 def test_diffangle():
     v1 = np.array([1, 0])
     v2 = np.array([0, 1])
@@ -88,7 +87,7 @@ def test_rotate_vector():
 
 class Test_Fan:
     index = 'x y distance angle spread'.split()
-     # spread is full spread here
+    # spread is full spread here
 
     def test_along_x(self):
         data = [0, 0, 1, 0, 90]
@@ -97,7 +96,7 @@ class Test_Fan:
 
         assert np.array_equal(fan.base, np.array([0, 0]))
 
-        assert np.allclose(np.sqrt(0.5), fan.length)
+        assert np.allclose(np.sqrt(0.5), fan.armlength)
 
         assert np.allclose(np.array([0.5, -0.5]), fan.v1)
 
@@ -109,7 +108,7 @@ class Test_Fan:
 
         assert np.array_equal(fan.base, np.array([0, 0]))
 
-        assert np.allclose(np.sqrt(2), fan.length)
+        assert np.allclose(np.sqrt(2), fan.armlength)
 
         assert np.allclose(np.array([1.0, 1.0]), fan.v1)
 
@@ -121,7 +120,7 @@ class Test_Fan:
 
         assert np.array_equal(fan.base, np.array([0, 0]))
 
-        assert np.allclose(1.0, fan.length)
+        assert np.allclose(1.0, fan.armlength)
 
         assert np.allclose(np.array([1.0, 0.0]), fan.v1)
 
