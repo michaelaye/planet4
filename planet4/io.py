@@ -48,7 +48,9 @@ if not configpath.exists():
     print("`planet4` will store this path in {}, where you can easily change it later."
           .format(configpath))
 else:
-    config = get_config()
+    d = get_config()
+    data_root = Path(d['planet4_db']['path'])
+    data_root.mkdir(exist_ok=True)
 
 
 def set_database_path(dbfolder):
@@ -69,10 +71,6 @@ def set_database_path(dbfolder):
         d.write(f)
     print("Saved database path into {}.".format(configpath))
 
-
-d = get_config()
-data_root = Path(d['planet4_db']['path'])
-data_root.mkdir(exist_ok=True)
 
 location_target_codes = {'giza': ['0850'],
                          'spider_evolution': ['0950'],
