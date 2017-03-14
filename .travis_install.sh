@@ -36,4 +36,5 @@ conda install --file requirements.txt
 conda install pytest
 pip install coveralls
 python setup.py install
-python -c "from planet4 import io;io.set_database_path('~')"
+echo "[planet4_db]" > $HOME/.planet4.ini
+echo "path = ~" >> $HOME/.planet4.ini
