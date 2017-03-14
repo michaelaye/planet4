@@ -20,7 +20,7 @@ from . import io
 
 logger = logging.getLogger(__name__)
 
-data_root = io.data_root
+data_root = io.get_data_root()
 
 img_x_size = 840
 img_y_size = 648

@@ -41,18 +41,6 @@ def get_config():
         return config
 
 
-if not configpath.exists():
-    print("No configuration file {} found.\n".format(configpath))
-    print("Please run `planet4.io.set_database_path()` and provide the path where\n"
-          "you want to keep your automatically downloaded images.")
-    print("`planet4` will store this path in {}, where you can easily change it later."
-          .format(configpath))
-else:
-    d = get_config()
-    data_root = Path(d['planet4_db']['path'])
-    data_root.mkdir(exist_ok=True)
-
-
 def set_database_path(dbfolder):
     """Use to write the database path into the config.
 
@@ -70,6 +58,21 @@ def set_database_path(dbfolder):
     with configpath.open('w') as f:
         d.write(f)
     print("Saved database path into {}.".format(configpath))
+
+
+def get_data_root():
+    d = get_config()
+    data_root = Path(d['planet4_db']['path'])
+    data_root.mkdir(exist_ok=True)
+    return data_root
+
+
+if not configpath.exists():
+    print("No configuration file {} found.\n".format(configpath))
+    savepath = input("Please provide the path where you want to store planet4 results:")
+    set_database_path(savepath)
+else:
+    data_root = get_data_root()
 
 
 location_target_codes = {'giza': ['0850'],
