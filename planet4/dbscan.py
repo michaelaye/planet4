@@ -3,12 +3,13 @@ from itertools import product
 
 import matplotlib.pyplot as plt
 import numpy as np
+import math
 import pandas as pd
 import seaborn as sns
 from scipy.stats import circmean
 from sklearn.cluster import DBSCAN
 
-from . import io, markings
+from . import markings
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ def plot_results(p4id, labels, data=None, kind=None, reduced_data=None, ax=None)
     markings.set_subframe_size(ax)
     # pick correct function for kind of marking:
     if any(reduced_data):
-        functions[kind](ax=ax, data=reduced_data, lw=1, user_color=color)
+        functions[kind](ax=ax, data=reduced_data, lw=1)
 
 
 class DBScanner(object):
@@ -67,32 +68,59 @@ class DBScanner(object):
 
     Parameters
     ----------
-    img_id : str
-        planet4 image_id string. Can be the right-hand minimal identifier,
-        lik 'pbr', will be padded to the full one.
+    msf : float
+        m_ean s_amples f_actor: Factor to multiply number of markings with to calculate the
+        min_samples value for DBSCAN to use
+    savedir : str, pathlib.Path
+        Path where to store clustered results
+    with_angles, with_radii : bool
+        Switches to control if clustering should include angles and radii respectively.
+    split_by_size : bool
+        Switch to control if splitting the clustering by size of markings shall occur.
+    save_results : bool
+        Switch to control if the resulting clustered objects should be written to disk.
     """
-    # shortcut translator
-    t = dict(b='blotch',
-             f='fan',
-             blotch='blotch',
-             fan='fan',
-             blotches='blotch',
-             fans='fan')
+    # set all the different eps values for the different clustering loops here:
+    eps_values = {
+        'fan': {
+            'xy': {  # in pixels
+                'small': 10,
+                'large': 50,
+            },
+            'angle': 20,  # degrees
+            'radius': {
+                'small': None,  # not in use currently for fans`
+                'large': None,  # ditto
+            }
+        },
+        'blotch': {
+            'xy': {  # in pixels
+                'small': 15,
+                'large': 50,
+            },
+            'angle': 20,  # degrees
+            'radius': {
+                'small': 30,
+                'large': 50,
+            }
+        }
+    }
 
-    radii_eps = 30
-
-    def __init__(self, img_id, output_dir_clustered=None):
-        self.img_id = img_id
-        self.p4id = markings.ImageID(img_id, scope='planet4')
-        self.output_dir_clustered = output_dir_clustered
-        self.pm = io.PathManager(img_id)
+    def __init__(self, msf=0.13, savedir=None, with_angles=True, with_radii=True,
+                 split_by_size=True, save_results=True):
+        self.msf = msf
+        self.savedir = savedir
+        self.with_angles = with_angles
+        self.with_radii = with_radii
+        self.split_by_size = split_by_size
+        self.save_results = save_results
 
     def show_markings(self):
         self.p4id.plot_all()
 
-    def cluster_any(self, X, eps, min_samples):
+    def cluster_any(self, X, eps):
         logger.debug("Clustering any.")
-        db = DBSCAN(eps, min_samples).fit(X)
+        db = DBSCAN(eps, self.min_samples).fit(X)
         labels = db.labels_
         unique_labels = sorted(set(labels))
 
@@ -113,11 +141,11 @@ class DBScanner(object):
             logger.debug("%i members.", np.count_nonzero(indices))
             yield indices
 
-    def cluster_xy(self, eps, min_samples):
+    def cluster_xy(self, data, eps):
         logger.debug("Clustering x,y.")
-        X = self.data[['x', 'y']].as_matrix()
-        for cluster_index in self.cluster_any(X, eps, min_samples):
-            yield self.data.loc[cluster_index]
+        X = data[['x', 'y']].as_matrix()
+        for cluster_index in self.cluster_any(X, eps):
+            yield data.loc[cluster_index]
 
     def split_markings_by_size(self, data, limit=210):
         kind = data.marking.value_counts()
@@ -134,68 +162,56 @@ class DBScanner(object):
             data_small = data[~f1]
         return data_small, data_large
 
-    def cluster_angles(self, xy_clusters,
-                       min_samples,
-                       eps_fanangle=20,
-                       eps_blotchangle=20):
+    def cluster_angles(self, xy_clusters, kind):
         logger.debug("Clustering angles.")
         cols_to_cluster = dict(blotch=['y_angle'],
                                fan=['x_angle', 'y_angle'])
-        kind = self.kind
-        eps_degrees = eps_fanangle if kind == 'fan' else eps_blotchangle
+        eps_degrees = self.eps_values[kind]['angle']
         # convert to radians
         # calculated value of euclidean distance of unit vector
         # end points per degree
-        eps_per_degree = 2 * np.pi / 360
+        eps_per_degree = math.tau / 360
         eps = eps_degrees * eps_per_degree
         for xy_cluster in xy_clusters:
             X = xy_cluster[cols_to_cluster[kind]]
-            for indices in self.cluster_any(X, eps, min_samples):
+            for indices in self.cluster_any(X, eps):
                 yield xy_cluster.loc[indices]
 
-    def cluster_radii(self, angle_clusters, min_samples):
+    def cluster_radii(self, angle_clusters, eps):
         logger.debug("Clustering radii.")
         cols_to_cluster = ['radius_1', 'radius_2']
         for angle_cluster in angle_clusters:
             X = angle_cluster[cols_to_cluster]
-            for indices in self.cluster_any(X, self.radii_eps, min_samples):
+            for indices in self.cluster_any(X, eps):
                 yield angle_cluster.loc[indices]
 
-    def cluster_and_plot(self, kind, eps, min_samples, with_angles=True,
-                         with_radii=True, ax=None, fontsize=None,
-                         eps_large=None):
-        self.kind = self.t[kind]
-        data = self.p4id.filter_data(self.kind)
-        if eps_large is not None:
-            datasets = self.split_markings_by_size(data)
-            epsilons = [eps, eps_large]
-            radii_eps = [20, 50]
-        else:
-            datasets = [data]
-            epsilons = [eps]
-            radii_eps = [30]
-        reduced_data = []
-        for dataset, epsnow, radeps in zip(datasets, epsilons, radii_eps):
-            logger.info("Clustering with eps=%i", epsnow)
-            self.data = dataset
-            logger.debug("Length of dataset: %i", len(self.data))
-            if len(self.data) < min_samples:
-                logger.info("Skipping due to lack of data.")
-                reduced_data.append(pd.DataFrame())
-                continue
-            self.radii_eps = radeps
-            reduced_data.append(self.pipeline(epsnow, min_samples,
-                                              with_angles, with_radii)
-                                )
-        # merging large and small markings clusters
-        try:
-            reduced_data = pd.concat(reduced_data, ignore_index=True)
-        except ValueError as e:
-            if e.args[0].startswith("All objects passed were None"):
-                logger.warning("Nothing survived.")
-                return
-            else:
-                raise e
+    def cluster_and_plot(self, img_id, kind, msf=None, eps_values=None, ax=None, fontsize=None):
+        """Cluster and plot the results for one P4 image_id.
+
+        Parameters
+        ----------
+        img_ig : str
+            Planet Four image_id
+        kind : {'fan', 'blotch'}
+            Kind of marking
+        eps_values : dictionary, optional
+            Dictionary with clustering values to be used. If not given, use stored default one.
+            This is mostly used for `self.parameter_scan`.
+        ax : matplotlib.axis, optional
+            Matplotlib axis to be used for plotting. If not given, a new figure and axis is
+            created.
+        fontsize : int, optional
+            Fontsize for the plots' headers.
+        """
+        if msf is not None:
+            self.msf = msf
+        if eps_values is None:
+            # if not given, use stored default values:
+            eps_values = self.eps_values
+
+        self.cluster_image_id(img_id, msf, eps_values)
+
+        reduced_data = self.reduced_data[kind]
 
         try:
             n_reduced = len(reduced_data)
@@ -209,45 +225,106 @@ class DBScanner(object):
                          reduced_data=reduced_data, ax=ax)
         else:
             self.p4id.show_subframe(ax=ax)
+        eps = eps_values[kind]['xy']['small']
+        eps_large = eps_values[kind]['xy']['large']
         ax.set_title("MS: {}, n_clusters: {}\nEPS: {}, EPS_LARGE: {}, "
-                     .format(min_samples, n_reduced, eps, eps_large),
+                     .format(self.min_samples, n_reduced, eps, eps_large),
                      fontsize=fontsize)
-        self.reduced_data = reduced_data
-        self.n_reduced = n_reduced
 
     @property
-    def store_folder(self):
-        return self.pm.datapath / self.p4id.image_name / self.img_id
+    def min_samples(self):
+        """Calculate min_samples for DBSCAN.
 
-    def store_clustered(self, reduced_data):
-        "Store the clustered but as of yet unfnotched data."
-        outdir = self.store_folder
-        outdir.mkdir(exist_ok=True)
-        for outfname, outdata in zip([self.pm.reduced_blotchfile, self.pm.reduced_fanfile],
-                                     [self.reduced_data['blotch'],
-                                      self.reduced_data['fan']]):
-            if outfname.exists():
-                outfname.unlink()
-            if len(outdata) == 0:
+        From current self.msf value and no of classifications.
+        """
+        min_samples = round(self.msf * self.p4id.n_marked_classifications)
+        return max(3, min_samples)  # never use less than 3
+
+    def cluster_image_id(self, img_id, msf=None, eps_values=None):
+        """Interface function for users to cluster data for one P4 image_id.
+
+        This method does the data splitting in case it is required and calls the
+        `_cluster_pipeline` that goes over all dimensions to cluster.
+
+
+        Parameters
+        ----------
+        img_ig : str
+            Planet Four image_id
+        msf : float, optional
+            mean_samples_factor to be used for calculating min_samples. Default as given
+            during __init__.
+        eps_values : dictionary, optional
+            Dict with eps values for clustering, in the format as given in `self.eps_values`.
+            If not provided, the default stored `self.eps_values` is used.
+
+        Returns
+        -------
+        At the end the data from differently-sized clustering is concatenated into the same
+        results pd.DataFrame and then being stored per marking kind in the dictionary
+        `self.reduced_data`.
+        """
+        self.p4id = markings.ImageID(img_id, scope='planet4')
+
+        if msf is not None:
+            # this sets the stored msf, automatically changing min_samples accordingly
+            self.msf = msf
+
+        eps_values = self.eps_values if eps_values is None else eps_values
+
+        # set up storage for results
+        reduced_data = {}
+        for kind in ['fan', 'blotch']:
+            # fill in empty list in case we need to bail for not enough data
+            reduced_data[kind] = []
+            logger.debug('%s loop', kind)
+            data = self.p4id.filter_data(kind)
+            if len(data) < self.min_samples:
+                # skip all else if we have not enough markings
                 continue
-            df = pd.concat(outdata, ignore_index=True)
-            # make
-            df = df.apply(pd.to_numeric, errors='ignore')
-            df['n_votes'] = df['n_votes'].astype('int')
-            self.save(df, outfname)
+            if self.split_by_size is True:
+                datasets = self.split_markings_by_size(data)
+                sizes = ['small', 'large']
+            else:
+                # doing it like this enables to use the same loop for both cases
+                datasets = [data]
+                sizes = ['small']
+            # this loop either executes once or twice (more?) for the split datasets.
+            for dataset, size in zip(datasets, sizes):
+                eps_xy = eps_values[kind]['xy'][size]
+                eps_rad = eps_values[kind]['radius'][size]
+                logger.debug("Length of dataset: %i", len(dataset))
+                if len(dataset) < self.min_samples:
+                    logger.warning("Skipping due to lack of data.")
+                    reduced_data[kind].append(pd.DataFrame())
+                    continue
+                reduced_data[kind].append(self._cluster_pipeline(kind, dataset, eps_xy, eps_rad))
+            # merging large and small markings clusters
+            try:
+                reduced_data[kind] = pd.concat(reduced_data[kind], ignore_index=True)
+            except ValueError as e:
+                # i can just continue here, as I stored an empty list above already
+                continue
 
-    def pipeline(self, eps, min_samples, with_angles=True,
-                 with_radii=True):
-        kind = self.kind
-        xyclusters = self.cluster_xy(eps, min_samples)
+        if self.save_results:
+            self.store_clustered(reduced_data)
+        self.reduced_data = reduced_data
+
+    def _cluster_pipeline(self, kind, data, eps, eps_rad):
+        """Cluster pipeline that can cluster over xy, angles and radii.
+
+        It does so without knowledge of different marking sizes, it just receives data and
+        will cluster it together, successively.
+        """
+        xyclusters = self.cluster_xy(data, eps)
         xyclusters = list(xyclusters)
-        if with_angles:
-            last = self.cluster_angles(xyclusters, min_samples)
+        if self.with_angles:
+            last = self.cluster_angles(xyclusters, kind)
         else:
             last = xyclusters
         last = list(last)
-        if with_radii and kind == 'blotch':
-            finalclusters = self.cluster_radii(last, min_samples)
+        if self.with_radii and kind == 'blotch':
+            finalclusters = self.cluster_radii(last, eps_rad)
         else:
             finalclusters = last
         finalclusters = list(finalclusters)
@@ -257,26 +334,43 @@ class DBScanner(object):
         except ValueError as e:
             if e.args[0].startswith("No objects to concatenate"):
                 logger.warning("No clusters survived.")
-                return pd.DataFrame()
+                return None
             else:
                 raise e
         return reduced_data
 
-    def parameter_scan(self, kind, msf_values, eps_values, do_scale=False,
-                       with_angles=True, with_radii=True):
-        kind = self.kind = self.t[kind]
-        fig, ax = plt.subplots(nrows=len(msf_values),
-                               ncols=len(eps_values) + 1,
+    def parameter_scan(self, img_id, kind, msf_vals_to_scan, eps_vals_to_scan,
+                       size_to_scan='large', do_scale=False,):
+        """Method to scan parameter space and plot results in multi-figure plot.
+
+        Parameters
+        ----------
+        kind : {'fan', 'blotch'}
+            Marking kind
+        msf_values : iterable (list, array, tuple), length of 2
+            1D container for msf values to use
+        eps_values : iterable, length of 3
+            1D container for eps_values to be used. If they are used for the small or large
+            items is determined by `size_to_scan`
+        size_to_scan : {'small', 'large'}
+            Switch to interpret which eps_values I have received. If 'small' to scan, I take
+            the large value from `self.eps_values` as constant, and vice versa.
+        do_scale : bool
+            Switch to control if scaling is applied.
+        """
+        self.kind = kind
+        fig, ax = plt.subplots(nrows=len(msf_vals_to_scan),
+                               ncols=len(eps_vals_to_scan) + 1,
                                figsize=(10, 5))
         axes = ax.flatten()
-        for ax, (msf, eps) in zip(axes, product(msf_values, eps_values)):
-            min_samples = round(msf * self.p4id.n_marked_classifications)
-            # don't allow less than 3 min_samples:
-            min_samples = max(3, min_samples)
-            self.cluster_and_plot(kind, 10, min_samples,
-                                  with_angles=with_angles,
-                                  with_radii=with_radii, eps_large=eps,
-                                  ax=ax, fontsize=8)
+
+        for ax, (msf, eps) in zip(axes, product(msf_vals_to_scan,
+                                                eps_vals_to_scan)):
+            eps_values = self.eps_values.copy()
+
+            eps_values[kind]['xy'][size_to_scan] = eps
+
+            self.cluster_and_plot(img_id, kind, msf, eps_values, ax=ax, fontsize=8)
             t = ax.get_title()
             ax.set_title("MSF: {}, {}".format(msf, t),
                          fontsize=8)
@@ -288,9 +382,37 @@ class DBScanner(object):
         self.p4id.plot_markings(kind, ax=axes[-2], lw=0.25, with_center=True)
         axes[-2].set_title("{} marking data".format(kind), fontsize=8)
         fig.suptitle("ID: {}, n_class: {}, angles: {}, radii: {}"
-                     .format(self.img_id, self.p4id.n_marked_classifications,
-                             with_angles, with_radii))
-        savepath = ("plots/{id_}_{kind}_scale{s}_radii{r}.png"
-                    .format(kind=kind, id_=self.img_id,
-                            s=do_scale, r=with_radii))
-        fig.savefig(savepath, dpi=200)
+                     .format(img_id, self.p4id.n_marked_classifications,
+                             self.with_angles, self.with_radii))
+        if self.save_results:
+            savepath = ("plots/{img_id}_{kind}_angles{a}_radii{r}.png"
+                        .format(kind=kind, img_id=img_id,
+                                a=self.with_angles, r=self.with_radii))
+            fig.savefig(savepath, dpi=200)
+
+    @property
+    def store_folder(self):
+        return self.pm.datapath / self.p4id.image_name / self.img_id
+
+    def store_clustered(self, reduced_data):
+        "Store the clustered but as of yet unfnotched data."
+        outdir = self.store_folder
+        outdir.mkdir(exist_ok=True, parents=True)
+        for outfname, outdata in zip([self.pm.reduced_blotchfile, self.pm.reduced_fanfile],
+                                     [reduced_data['blotch'], reduced_data['fan']]):
+            outpath = outdir / outfname.name
+            if outpath.exists():
+                outpath.unlink()
+            if len(outdata) == 0:
+                continue
+            df = outdata
+            # df = outdata.apply(pd.to_numeric, errors='ignore')
+            try:
+                df['n_votes'] = df['n_votes'].astype('int')
+            # when df is just list of Nones, will create TypeError
+            # for bad indexing into list.
+            except TypeError:
+                # nothing to write
+                logger.warning("Outdata was empty, nothing to store.")
+                return
+            df.to_csv(str(outpath.with_suffix('.csv')), index=False)
