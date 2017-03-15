@@ -249,11 +249,12 @@ class PathManager(object):
         Defined in `get_cut_folder`.
     """
 
-    def __init__(self, id_, datapath='clustering',
-                 suffix='.csv', obsid=None, cut=0.5):
+    def __init__(self, id_, datapath='clustering', suffix='.csv', obsid='', cut=0.5,
+                 extra_path=''):
         self._id = id_
         self.cut = cut
         self.obsid = obsid
+        self.extra_path = extra_path
 
         if datapath is None:
             # take default path if none given
@@ -264,10 +265,7 @@ class PathManager(object):
         else:
             # if it is relative, add it to data_root
             self._datapath = Path(data_root) / datapath
-
         self.suffix = suffix
-
-        self.cut_dir = self.get_cut_folder()
 
         # point reader to correct function depending on required suffix
         if suffix in ['.hdf', '.h5']:
@@ -284,29 +282,28 @@ class PathManager(object):
         return check_and_pad_id(self._id)
 
     @property
-    def output_dir_clustered(self):
-        "Storage path for the clustered data before fnotching."
-        output_dir_clustered = self.datapath / 'just_clustering'
-        return output_dir_clustered
-
-    def get_cut_folder(self, cut=None):
-        # storage path for the final catalog after applying `cut`
-        if cut is None:
-            cut = self.cut
-        cut_dir = self.datapath / 'applied_cut_{:.1f}'.format(cut)
-        self.cut_dir = cut_dir
-        return cut_dir
-
-    def get_path(self, marking, extra=None):
+    def path_so_far(self):
         p = self.datapath
-        # prepend any extra path
-        if extra is not None:
-            p /= extra
-        # prepend the obsid if set
-        if self.obsid is not None:
-            p /= self.obsid
+        p /= self.extra_path
+        p /= self.obsid
+        return p
+
+    @property
+    def clustered_folder_name(self):
+        "Subfolder name for the clustered data before fnotching."
+        return 'just_clustering'
+
+    @property
+    def cut_folder_name(self):
+        "subfolder name for the final catalog after applying `cut`."
+        return 'applied_cut_{:.1f}'.format(self.cut)
+
+    def get_path(self, marking, specific=''):
+        p = self.path_so_far
         # now add the image_id
         p /= self.id_
+        # add the specific sub folder
+        p /= specific
         p /= (self.id_ + '_' + str(marking) + self.suffix)
         return p
 
@@ -326,7 +323,7 @@ class PathManager(object):
 
     @property
     def reduced_fanfile(self):
-        return self.get_path('fans', self.output_dir_clustered)
+        return self.get_path('fans', self.clustered_folder_name)
 
     @property
     def reduced_fandf(self):
@@ -334,7 +331,7 @@ class PathManager(object):
 
     @property
     def final_fanfile(self):
-        return self.get_path('fans', self.cut_dir)
+        return self.get_path('fans', self.cut_folder_name)
 
     @property
     def final_fandf(self):
@@ -350,7 +347,7 @@ class PathManager(object):
 
     @property
     def reduced_blotchfile(self):
-        return self.get_path('blotches', self.output_dir_clustered)
+        return self.get_path('blotches', self.clustered_folder_name)
 
     @property
     def reduced_blotchdf(self):
@@ -358,7 +355,7 @@ class PathManager(object):
 
     @property
     def final_blotchfile(self):
-        return self.get_path('blotches', self.cut_dir)
+        return self.get_path('blotches', self.cut_folder_name)
 
     @property
     def final_blotchdf(self):
