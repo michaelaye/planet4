@@ -265,8 +265,6 @@ class PathManager(object):
             # if it is relative, add it to data_root
             self._datapath = Path(data_root) / datapath
 
-        self._datapath /= self.id_
-
         self.suffix = suffix
 
         self.cut_dir = self.get_cut_folder()
@@ -301,10 +299,14 @@ class PathManager(object):
 
     def get_path(self, marking, extra=None):
         p = self.datapath
-        if self.obsid is not None:
-            p /= self.obsid
+        # prepend any extra path
         if extra is not None:
             p /= extra
+        # prepend the obsid if set
+        if self.obsid is not None:
+            p /= self.obsid
+        # now add the image_id
+        p /= self.id_
         p /= (self.id_ + '_' + str(marking) + self.suffix)
         return p
 

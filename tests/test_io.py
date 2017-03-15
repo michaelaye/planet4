@@ -46,24 +46,25 @@ class TestPathManager:
         return io.PathManager('007')
 
     def test_no_datapath_given(self, pm):
-        assert pm.datapath == Path('/abc/db/clustering/APF0000007')
+        assert pm.datapath == Path('/abc/db/clustering')
 
     def test_suffix(self, pm):
         assert pm.suffix == '.csv'
 
     def test_relative_datapath_given(self, data_root):
         pm = io.PathManager('007', datapath='testing')
-        assert pm.datapath == Path('/abc/db/testing/APF0000007')
+        assert pm.datapath == Path('/abc/db/testing')
 
     def test_absolute_datapath_given(self, data_root):
         pm = io.PathManager('007', datapath='/abc/db/extra')
-        assert pm.datapath == Path('/abc/db/extra/APF0000007')
+        assert pm.datapath == Path('/abc/db/extra')
 
     def test_datapath_with_obsid(self, data_root):
         # no change despite giving an obsid:
         obsid = 'PSP_003092_0985'
         pm = io.PathManager('007', obsid=obsid)
-        assert pm.datapath == Path('/abc/db/clustering/APF0000007')
+        # still this, as obsid only added at each specific case
+        assert pm.datapath == Path('/abc/db/clustering')
         assert pm.obsid == obsid
 
     def test_blotchfile(self, pm):
