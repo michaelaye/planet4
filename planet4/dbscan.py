@@ -1,15 +1,16 @@
 import logging
+import math
 from itertools import product
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-import math
 import pandas as pd
 import seaborn as sns
 from scipy.stats import circmean
 from sklearn.cluster import DBSCAN
 
-from . import markings
+from . import markings, io
 
 logger = logging.getLogger(__name__)
 
@@ -115,8 +116,9 @@ class DBScanner(object):
         self.split_by_size = split_by_size
         self.save_results = save_results
 
-    def show_markings(self):
-        self.p4id.plot_all()
+    def show_markings(self, id_):
+        p4id = markings.ImageID(id_)
+        p4id.plot_all()
 
     def cluster_any(self, X, eps):
         logger.debug("Clustering any.")
@@ -240,6 +242,15 @@ class DBScanner(object):
         min_samples = round(self.msf * self.p4id.n_marked_classifications)
         return max(3, min_samples)  # never use less than 3
 
+    def cluster_image_name(self, image_name, msf=None, eps_values=None):
+        "Cluster all image_ids for a given image_name (i.e. HiRISE obsid)"
+        db = io.DBManager()
+        data = db.get_image_name_markings(image_name)
+        image_ids = data.image_id.unique()
+        for image_id in image_ids:
+            print(image_id)
+            self.cluster_image_id(image_id, msf, eps_values)
+
     def cluster_image_id(self, img_id, msf=None, eps_values=None):
         """Interface function for users to cluster data for one P4 image_id.
 
@@ -265,6 +276,7 @@ class DBScanner(object):
         `self.reduced_data`.
         """
         self.p4id = markings.ImageID(img_id, scope='planet4')
+        self.img_id = img_id
 
         if msf is not None:
             # this sets the stored msf, automatically changing min_samples accordingly
@@ -340,7 +352,7 @@ class DBScanner(object):
         return reduced_data
 
     def parameter_scan(self, img_id, kind, msf_vals_to_scan, eps_vals_to_scan,
-                       size_to_scan='large', do_scale=False,):
+                       size_to_scan='large', do_scale=False, create_plot=True):
         """Method to scan parameter space and plot results in multi-figure plot.
 
         Parameters
@@ -384,23 +396,18 @@ class DBScanner(object):
         fig.suptitle("ID: {}, n_class: {}, angles: {}, radii: {}"
                      .format(img_id, self.p4id.n_marked_classifications,
                              self.with_angles, self.with_radii))
-        if self.save_results:
-            savepath = ("plots/{img_id}_{kind}_angles{a}_radii{r}.png"
-                        .format(kind=kind, img_id=img_id,
-                                a=self.with_angles, r=self.with_radii))
+        if create_plot:
+            savepath = f"plots/{img_id}_{kind}_angles{self.with_angles}_radii{self.with_radii}.png"
+            Path(savepath).parent.mkdir(exist_ok=True)
             fig.savefig(savepath, dpi=200)
-
-    @property
-    def store_folder(self):
-        return self.pm.datapath / self.p4id.image_name / self.img_id
 
     def store_clustered(self, reduced_data):
         "Store the clustered but as of yet unfnotched data."
-        outdir = self.store_folder
-        outdir.mkdir(exist_ok=True, parents=True)
-        for outfname, outdata in zip([self.pm.reduced_blotchfile, self.pm.reduced_fanfile],
-                                     [reduced_data['blotch'], reduced_data['fan']]):
-            outpath = outdir / outfname.name
+        pm = io.PathManager(self.img_id, obsid=self.p4id.image_name)
+
+        for outpath, outdata in zip([pm.reduced_blotchfile, pm.reduced_fanfile],
+                                    [reduced_data['blotch'], reduced_data['fan']]):
+            outpath.parent.mkdir(exist_ok=True, parents=True)
             if outpath.exists():
                 outpath.unlink()
             if len(outdata) == 0:
