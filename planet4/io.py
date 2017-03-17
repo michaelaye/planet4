@@ -98,6 +98,8 @@ def analysis_folder():
 
 
 def check_and_pad_id(imgid):
+    if imgid is None:
+        return None
     imgid_template = "APF0000000"
     if len(imgid) < len(imgid_template):
         imgid = imgid_template[:-len(imgid)] + imgid
@@ -233,6 +235,14 @@ class PathManager(object):
 
     """Manage file paths and folders related to the analysis pipeline.
 
+    Level definitions:
+    * L0 : Raw output of Planet Four
+    * L1A : Clustering of Blotches and Fans on their own
+    * L1B : Clustered blotches and fans combined into final fans, final blotches, and fnotches that
+    need to have a cut applied for the decision between fans or blotches.
+    * L2 : Derived database where a cut has been applied for fnotches to become either fan or
+    blotch.
+
     Parameters
     ----------
     id_ : str
@@ -249,9 +259,9 @@ class PathManager(object):
         Defined in `get_cut_folder`.
     """
 
-    def __init__(self, id_, datapath='clustering', suffix='.csv', obsid='', cut=0.5,
+    def __init__(self, id_=None, datapath='clustering', suffix='.csv', obsid='', cut=0.5,
                  extra_path=''):
-        self._id = id_
+        self._id_ = check_and_pad_id(id_)
         self.cut = cut
         self.obsid = obsid
         self.extra_path = extra_path
@@ -274,12 +284,16 @@ class PathManager(object):
             self.reader = pd.read_csv
 
     @property
-    def datapath(self):
-        return self._datapath
+    def id_(self):
+        return self._id_
+
+    @id_.setter
+    def id_(self, value):
+        self._id_ = check_and_pad_id(value)
 
     @property
-    def id_(self):
-        return check_and_pad_id(self._id)
+    def datapath(self):
+        return self._datapath
 
     @property
     def path_so_far(self):
@@ -289,14 +303,19 @@ class PathManager(object):
         return p
 
     @property
-    def clustered_folder_name(self):
+    def L1A_folder(self):
         "Subfolder name for the clustered data before fnotching."
-        return 'just_clustering'
+        return 'L1A'
 
     @property
-    def cut_folder_name(self):
+    def L1B_folder(self):
+        "Subfolder name for the fnotched data, before cut is applied."
+        return 'L1B'
+
+    @property
+    def L2_folder(self):
         "subfolder name for the final catalog after applying `cut`."
-        return 'applied_cut_{:.1f}'.format(self.cut)
+        return 'L2_cut_{:.1f}'.format(self.cut)
 
     def get_path(self, marking, specific=''):
         p = self.path_so_far
@@ -304,7 +323,10 @@ class PathManager(object):
         p /= self.id_
         # add the specific sub folder
         p /= specific
-        p /= (self.id_ + '_' + str(marking) + self.suffix)
+        p /= f"{self.id_}_{marking}{self.suffix}"
+        if specific != '':
+            # prepend the data level to file name if given.
+            p = p.with_name(f"{specific}_{p.name}")
         return p
 
     def get_df(self, fpath):
@@ -323,7 +345,7 @@ class PathManager(object):
 
     @property
     def reduced_fanfile(self):
-        return self.get_path('fans', self.clustered_folder_name)
+        return self.get_path('fans', self.L1A_folder)
 
     @property
     def reduced_fandf(self):
@@ -331,7 +353,7 @@ class PathManager(object):
 
     @property
     def final_fanfile(self):
-        return self.get_path('fans', self.cut_folder_name)
+        return self.get_path('fans', self.L2_folder)
 
     @property
     def final_fandf(self):
@@ -347,7 +369,7 @@ class PathManager(object):
 
     @property
     def reduced_blotchfile(self):
-        return self.get_path('blotches', self.clustered_folder_name)
+        return self.get_path('blotches', self.L1A_folder)
 
     @property
     def reduced_blotchdf(self):
@@ -355,7 +377,7 @@ class PathManager(object):
 
     @property
     def final_blotchfile(self):
-        return self.get_path('blotches', self.cut_folder_name)
+        return self.get_path('blotches', self.L2_folder)
 
     @property
     def final_blotchdf(self):
