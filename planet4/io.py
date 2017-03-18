@@ -240,7 +240,7 @@ class PathManager(object):
     * L1A : Clustering of Blotches and Fans on their own
     * L1B : Clustered blotches and fans combined into final fans, final blotches, and fnotches that
     need to have a cut applied for the decision between fans or blotches.
-    * L2 : Derived database where a cut has been applied for fnotches to become either fan or
+    * L1C : Derived database where a cut has been applied for fnotches to become either fan or
     blotch.
 
     Parameters
@@ -332,6 +332,17 @@ class PathManager(object):
             p = p.with_name(f"{specific}_{p.name}")
         return p
 
+    def get_obsid_paths(self, level):
+        """get all existing paths for a given data level.
+
+        Parameters
+        ----------
+        level : {'L1A', 'L1B', 'L1C', 'L2'}
+        """
+        folder = self.path_so_far
+        image_id_paths = [item for item in folder.glob('*') if item.is_dir()]
+        return [p / f"{level}" for p in image_id_paths]
+
     def get_df(self, fpath):
         try:
             return self.reader(str(fpath))
@@ -340,7 +351,7 @@ class PathManager(object):
 
     @property
     def fanfile(self):
-        return self.get_path('fans')
+        return self.get_path('fans', self.L1A_folder)
 
     @property
     def fandf(self):
@@ -348,7 +359,7 @@ class PathManager(object):
 
     @property
     def reduced_fanfile(self):
-        return self.get_path('fans', self.L1A_folder)
+        return self.get_path('fans', self.L1B_folder)
 
     @property
     def reduced_fandf(self):
@@ -356,7 +367,7 @@ class PathManager(object):
 
     @property
     def final_fanfile(self):
-        return self.get_path('fans', self.L2_folder)
+        return self.get_path('fans', self.L1C_folder)
 
     @property
     def final_fandf(self):
@@ -364,7 +375,7 @@ class PathManager(object):
 
     @property
     def blotchfile(self):
-        return self.get_path('blotches')
+        return self.get_path('blotches', self.L1A_folder)
 
     @property
     def blotchdf(self):
@@ -372,7 +383,7 @@ class PathManager(object):
 
     @property
     def reduced_blotchfile(self):
-        return self.get_path('blotches', self.L1A_folder)
+        return self.get_path('blotches', self.L1B_folder)
 
     @property
     def reduced_blotchdf(self):
@@ -380,7 +391,7 @@ class PathManager(object):
 
     @property
     def final_blotchfile(self):
-        return self.get_path('blotches', self.L2_folder)
+        return self.get_path('blotches', self.L1C_folder)
 
     @property
     def final_blotchdf(self):
@@ -388,7 +399,7 @@ class PathManager(object):
 
     @property
     def fnotchfile(self):
-        return self.get_path('fnotches')
+        return self.get_path('fnotches', self.L1B_folder)
 
     @property
     def fnotchdf(self):
