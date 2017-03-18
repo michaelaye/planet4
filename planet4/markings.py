@@ -501,8 +501,8 @@ class Fan(lines.Line2D):
         return self.v1 - self.v2
 
     @property
-    def center(self):
-        """float[2] : vector from base to mid-point between arms.
+    def semi_circle_center(self):
+        """float[2] : vector from base to mid-point between end of arms.
 
         This is used for the drawing of the semi-circle at the end of the
         two fan arms.
@@ -519,7 +519,7 @@ class Fan(lines.Line2D):
         # reverse order of arguments for arctan2 input requirements
         theta1 = degrees(arctan2(*self.circle_base[::-1]))
         theta2 = theta1 + 180
-        wedge = mpatches.Wedge(self.center, self.radius, theta1, theta2,
+        wedge = mpatches.Wedge(self.semi_circle_center, self.radius, theta1, theta2,
                                width=0.01 * self.radius, color=color, alpha=0.65)
         ax.add_patch(wedge)
 
@@ -544,7 +544,7 @@ class Fan(lines.Line2D):
             self.plot_center(ax, color=color)
 
     @property
-    def midpoint(self):
+    def center(self):
         """Calculate vector to half total length.
 
         As total length, I define the armlength + the radius of the semi-circle
@@ -600,6 +600,11 @@ class HiFan(Blotch):
         super().__init__(*args, scope='hirise', **kwargs)
 
 
+def calc_blotchiness(nfans, nblotches):
+    """Calculate the fnotch value (or fan-ness)."""
+    return (nblotches) / (nfans + nblotches)
+
+
 class Fnotch(object):
 
     """Manage Fnotch by providing a cut during output.
@@ -623,24 +628,19 @@ class Fnotch(object):
                         scope=scope)
         return cls(series.fnotch_value, fan, blotch, scope)
 
-    def __init__(self, value, fan, blotch, scope):
-        self.value = value
-        self.fandata = fan.data
-        self.blotchdata = blotch.data
+    def __init__(self, fan, blotch, scope='planet4'):
+        self.fan = fan
+        self.blotch = blotch
         self.scope = scope
 
-        fanstore = fan.store().copy()  # copy(),otherwise renaming original
-        fanstore.rename_axis(lambda x: 'fan_' + x, inplace=True)
-        blotchstore = blotch.store().copy()  # copy(),otherwise renaming original
-        blotchstore.rename_axis(lambda x: 'blotch_' + x, inplace=True)
-        df = pd.concat([fan.data, blotch.data])
-        df['fnotch_value'] = self.value
-        self.fan = fan
-        self.fanstore = fanstore
-        self.blotch = blotch
-        self.blotchstore = blotchstore
+        self.data = pd.concat([fan, blotch], ignore_index=True)
+        self.data.index = ['fan', 'blotch']
+        blotchiness = calc_blotchiness(fan.iloc[0]['n_votes'],
+                                       blotch.iloc[0]['n_votes'])
+        self.data.loc['fan', 'vote_ratio'] = 1 - blotchiness
+        self.data.loc['blotch', 'vote_ratio'] = blotchiness
 
-    def get_marking(self, cut):
+    def apply_cut(self, cut):
         """Return the right marking, depending on cut value.
 
         If the cut is at 0.8, the fnotch value has to be equal or better before
@@ -655,19 +655,13 @@ class Fnotch(object):
         -------
         `Fan` or `Blotch` object, depending on `cut`
         """
-        if cut > self.value:
-            return self.blotch
-        else:
-            return self.fan
-
-    def __str__(self):
-        out = "Fnotch value: {:.2f}\n\n".format(self.value)
-        out += "Fan:\n{}\n\n".format(self.fandata.__str__())
-        out += "Blotch:\n{}".format(self.blotchdata.__str__())
-        return out
+        row = self.data[self.data.vote_ratio > cut]
+        return row
+#         Marking = getattr(markings, row.index[0].title())
+#         return Marking(row)
 
     def __repr__(self):
-        return self.__str__()
+        return self.data.__repr__()
 
     def store(self, fpath=None):
         out = pd.concat([self.fanstore, self.blotchstore])
