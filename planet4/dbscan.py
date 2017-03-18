@@ -422,7 +422,7 @@ class DBScanner(object):
         "Store the clustered but as of yet unfnotched data."
         pm = io.PathManager(self.img_id, obsid=self.p4id.image_name)
 
-        for outpath, outdata in zip([pm.reduced_blotchfile, pm.reduced_fanfile],
+        for outpath, outdata in zip([pm.blotchfile, pm.fanfile],
                                     [reduced_data['blotch'], reduced_data['fan']]):
             outpath.parent.mkdir(exist_ok=True, parents=True)
             if outpath.exists():
