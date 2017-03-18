@@ -110,13 +110,14 @@ class DBScanner(object):
     }
 
     def __init__(self, msf=0.13, savedir=None, with_angles=True, with_radii=True,
-                 split_by_size=True, save_results=True):
+                 split_by_size=True, save_results=True, only_core_samples=True):
         self.msf = msf
         self.savedir = savedir
         self.with_angles = with_angles
         self.with_radii = with_radii
         self.split_by_size = split_by_size
         self.save_results = save_results
+        self.only_core_samples = only_core_samples
 
     def show_markings(self, id_):
         p4id = markings.ImageID(id_)
@@ -141,7 +142,12 @@ class DBScanner(object):
             class_member_mask = (labels == k)
             if k == -1:
                 continue
-            indices = class_member_mask & core_samples_mask
+            if self.only_core_samples is True:
+                # this has a potentially large effect and can make the number
+                # of surviving cluster_members smaller than 3 !
+                indices = class_member_mask & core_samples_mask
+            else:
+                indices = class_member_mask
             logger.debug("%i members.", np.count_nonzero(indices))
             yield indices
 
