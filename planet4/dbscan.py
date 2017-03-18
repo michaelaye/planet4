@@ -345,16 +345,18 @@ class DBScanner(object):
         """
         xyclusters = self.cluster_xy(data, eps)
         xyclusters = list(xyclusters)
-        if self.with_angles:
-            last = self.cluster_angles(xyclusters, kind)
+        if self.with_radii and kind == 'blotch':
+            last = self.cluster_radii(xyclusters, eps_rad)
         else:
             last = xyclusters
         last = list(last)
-        if self.with_radii and kind == 'blotch':
-            finalclusters = self.cluster_radii(last, eps_rad)
+        if self.with_angles and kind == 'fan':
+            finalclusters = self.cluster_angles(last, kind)
         else:
             finalclusters = last
+        last = list(last)
         finalclusters = list(finalclusters)
+        self.finalclusters = finalclusters
         averaged = get_average_objects(finalclusters, kind)
         try:
             reduced_data = pd.concat(averaged, ignore_index=True)
