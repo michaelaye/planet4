@@ -35,6 +35,8 @@ def get_average_objects(clusters, kind):
         # for
         # reduced = df[df.apply(lambda x: np.abs(x - x.mean()) / x.std() < 1).all(axis=1)]
         logger.debug("Averaging %i objects.", len(cluster_df))
+        logger.debug("x.mean: %f", cluster_df.x.mean())
+        logger.debug("y.mean: %f", cluster_df.y.mean())
         meandata = cluster_df.mean()
         # this determines the upper limit for circular mean
         high = 180 if kind == 'blotch' else 360
@@ -303,6 +305,7 @@ class DBScanner(object):
                 sizes = ['small']
             # this loop either executes once or twice (more?) for the split datasets.
             for dataset, size in zip(datasets, sizes):
+                logger.debug("Processing %s dataset.", size)
                 eps_xy = eps_values[kind]['xy'][size]
                 eps_rad = eps_values[kind]['radius'][size]
                 logger.debug("Length of dataset: %i", len(dataset))
@@ -311,6 +314,8 @@ class DBScanner(object):
                     reduced_data[kind].append(pd.DataFrame())
                     continue
                 reduced_data[kind].append(self._cluster_pipeline(kind, dataset, eps_xy, eps_rad))
+                logger.debug("Appending %i items to final_clusters", len(self.finalclusters))
+                final_clusters[kind].append(self.finalclusters)
             # merging large and small markings clusters
             try:
                 reduced_data[kind] = pd.concat(reduced_data[kind], ignore_index=True)
@@ -318,6 +323,7 @@ class DBScanner(object):
                 # i can just continue here, as I stored an empty list above already
                 continue
 
+        self.final_clusters = final_clusters
         if self.save_results:
             self.store_clustered(reduced_data)
         self.reduced_data = reduced_data
