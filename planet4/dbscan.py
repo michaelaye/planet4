@@ -285,6 +285,7 @@ class DBScanner(object):
         """
         self.p4id = markings.ImageID(img_id, scope='planet4')
         self.img_id = img_id
+        self.image_name = self.p4id.image_name
 
         if msf is not None:
             # this sets the stored msf, automatically changing min_samples accordingly
@@ -294,7 +295,9 @@ class DBScanner(object):
 
         # set up storage for results
         reduced_data = {}
+        final_clusters = {}
         for kind in ['fan', 'blotch']:
+            final_clusters[kind] = []
             # fill in empty list in case we need to bail for not enough data
             reduced_data[kind] = []
             logger.debug('%s loop', kind)
@@ -428,6 +431,8 @@ class DBScanner(object):
             # df = outdata.apply(pd.to_numeric, errors='ignore')
             try:
                 df['n_votes'] = df['n_votes'].astype('int')
+                df['image_id'] = self.img_id
+                df['image_name'] = self.image_name
             # when df is just list of Nones, will create TypeError
             # for bad indexing into list.
             except TypeError:
