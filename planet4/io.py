@@ -320,7 +320,10 @@ class PathManager(object):
     def get_path(self, marking, specific=''):
         p = self.path_so_far
         # now add the image_id
-        p /= self.id_
+        try:
+            p /= self.id_
+        except TypeError:
+            raise TypeError("self.id_ is not set!")
         # add the specific sub folder
         p /= specific
         p /= f"{self.id_}_{marking}{self.suffix}"
