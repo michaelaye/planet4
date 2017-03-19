@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import logging
 import math
 from itertools import product
@@ -6,11 +7,12 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import pyaml
 import seaborn as sns
 from scipy.stats import circmean
 from sklearn.cluster import DBSCAN
 
-from . import markings, io
+from . import io, markings
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +103,7 @@ class DBScanner(object):
                 'small': 15,
                 'large': 50,
             },
-            'angle': 20,  # degrees
+            'angle': None,  # for now deactivated
             'radius': {
                 'small': 30,
                 'large': 50,
@@ -110,7 +112,7 @@ class DBScanner(object):
     }
 
     def __init__(self, msf=0.13, savedir=None, with_angles=True, with_radii=True,
-                 split_by_size=True, save_results=True, only_core_samples=True):
+                 split_by_size=True, save_results=True, only_core_samples=False):
         self.msf = msf
         self.savedir = savedir
         self.with_angles = with_angles
@@ -118,6 +120,8 @@ class DBScanner(object):
         self.split_by_size = split_by_size
         self.save_results = save_results
         self.only_core_samples = only_core_samples
+
+        self.pm = io.PathManager()
 
     def show_markings(self, id_):
         p4id = markings.ImageID(id_)
@@ -152,7 +156,7 @@ class DBScanner(object):
             yield indices
 
     def cluster_xy(self, data, eps):
-        logger.debug("Clustering x,y.")
+        logger.info("Clustering x,y with eps: %i", eps)
         X = data[['x', 'y']].as_matrix()
         for cluster_index in self.cluster_any(X, eps):
             yield data.loc[cluster_index]
@@ -173,10 +177,10 @@ class DBScanner(object):
         return data_small, data_large
 
     def cluster_angles(self, xy_clusters, kind):
-        logger.debug("Clustering angles.")
         cols_to_cluster = dict(blotch=['y_angle'],
                                fan=['x_angle', 'y_angle'])
         eps_degrees = self.eps_values[kind]['angle']
+        logger.info("Clustering angles with eps: %i", eps_degrees)
         # convert to radians
         # calculated value of euclidean distance of unit vector
         # end points per degree
@@ -188,7 +192,7 @@ class DBScanner(object):
                 yield xy_cluster.loc[indices]
 
     def cluster_radii(self, angle_clusters, eps):
-        logger.debug("Clustering radii.")
+        logger.info("Clustering radii with eps: %i", eps)
         cols_to_cluster = ['radius_1', 'radius_2']
         for angle_cluster in angle_clusters:
             X = angle_cluster[cols_to_cluster]
@@ -250,14 +254,43 @@ class DBScanner(object):
         min_samples = round(self.msf * self.p4id.n_marked_classifications)
         return max(3, min_samples)  # never use less than 3
 
+    def setup_logfiles(self):
+        if len(logger.handlers) > 0:
+            for handler in logger.handlers:
+                if isinstance(handler, logging.FileHandler):
+                    return
+        logpath = self.pm.path_so_far / 'clustering.log'
+        logpath.parent.mkdir(exist_ok=True, parents=True)
+        fh = logging.FileHandler(logpath, 'w')
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s'
+                                      ' - %(message)s', '%Y-%m-%d %H:%M:%S')
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
+        logger.setLevel(logging.INFO)
+
     def cluster_image_name(self, image_name, msf=None, eps_values=None):
         "Cluster all image_ids for a given image_name (i.e. HiRISE obsid)"
+        if msf is not None:
+            self.msf = msf
+        self.pm.obsid = image_name
+        self.setup_logfiles()
+
+        logger.info("Clustering image_name %s with msf of %f.",
+                    image_name, self.msf)
         db = io.DBManager()
         data = db.get_image_name_markings(image_name)
         image_ids = data.image_id.unique()
         for image_id in image_ids:
-            print(image_id)
+            self.pm.id = image_id
             self.cluster_image_id(image_id, msf, eps_values)
+
+    def write_settings_file(self, eps_values):
+        eps_values['min_samples'] = self.min_samples
+        eps_values['only_core_samples'] = self.only_core_samples
+        settingspath = self.pm.blotchfile.parent / 'clustering_settings.yaml'
+        settingspath.parent.mkdir(exist_ok=True, parents=True)
+        with open(settingspath, 'w') as fp:
+            pyaml.dump(eps_values, fp)
 
     def cluster_image_id(self, img_id, msf=None, eps_values=None):
         """Interface function for users to cluster data for one P4 image_id.
@@ -284,19 +317,27 @@ class DBScanner(object):
         `self.reduced_data`.
         """
         self.p4id = markings.ImageID(img_id, scope='planet4')
-        self.img_id = img_id
-        self.image_name = self.p4id.image_name
+        if self.pm.obsid == '':
+            self.pm.obsid = self.p4id.image_name
+        self.pm.id = img_id
+        # this will setup the logfile if we have not been called via image_name
+        # clustering already.
+        self.setup_logfiles()
 
+        logger.info("Clustering id: %s with min_samples: %i",
+                    img_id, self.min_samples)
         if msf is not None:
             # this sets the stored msf, automatically changing min_samples accordingly
             self.msf = msf
 
         eps_values = self.eps_values if eps_values is None else eps_values
+        self.write_settings_file(eps_values)
 
         # set up storage for results
         reduced_data = {}
         final_clusters = {}
         for kind in ['fan', 'blotch']:
+            logger.info("Working on %s.", kind)
             final_clusters[kind] = []
             # fill in empty list in case we need to bail for not enough data
             reduced_data[kind] = []
@@ -314,12 +355,13 @@ class DBScanner(object):
                 sizes = ['small']
             # this loop either executes once or twice (more?) for the split datasets.
             for dataset, size in zip(datasets, sizes):
-                logger.debug("Processing %s dataset.", size)
+                logger.info("Processing %s dataset.", size)
                 eps_xy = eps_values[kind]['xy'][size]
                 eps_rad = eps_values[kind]['radius'][size]
                 logger.debug("Length of dataset: %i", len(dataset))
                 if len(dataset) < self.min_samples:
-                    logger.warning("Skipping due to lack of data.")
+                    logger.warning("Skipping the %s part for %s due to lack of data.",
+                                   size, kind)
                     reduced_data[kind].append(pd.DataFrame())
                     continue
                 reduced_data[kind].append(self._cluster_pipeline(kind, dataset, eps_xy, eps_rad))
@@ -345,12 +387,12 @@ class DBScanner(object):
         """
         xyclusters = self.cluster_xy(data, eps)
         xyclusters = list(xyclusters)
-        if self.with_radii and kind == 'blotch':
+        if self.with_radii and eps_rad is not None:
             last = self.cluster_radii(xyclusters, eps_rad)
         else:
             last = xyclusters
         last = list(last)
-        if self.with_angles and kind == 'fan':
+        if self.with_angles and self.eps_values[kind]['angle'] is not None:
             finalclusters = self.cluster_angles(last, kind)
         else:
             finalclusters = last
@@ -418,9 +460,21 @@ class DBScanner(object):
             Path(savepath).parent.mkdir(exist_ok=True)
             fig.savefig(savepath, dpi=200)
 
+    @property
+    def n_clustered_fans(self):
+        """int : Number of clustered fans."""
+        return len(self.reduced_data['fan'])
+
+    @property
+    def n_clustered_blotches(self):
+        """int : Number of clustered blotches."""
+        return len(self.reduced_data['blotch'])
+
     def store_clustered(self, reduced_data):
         "Store the clustered but as of yet unfnotched data."
-        pm = io.PathManager(self.img_id, obsid=self.p4id.image_name)
+
+        # get the PathManager object
+        pm = self.pm
 
         for outpath, outdata in zip([pm.blotchfile, pm.fanfile],
                                     [reduced_data['blotch'], reduced_data['fan']]):
@@ -433,8 +487,8 @@ class DBScanner(object):
             # df = outdata.apply(pd.to_numeric, errors='ignore')
             try:
                 df['n_votes'] = df['n_votes'].astype('int')
-                df['image_id'] = self.img_id
-                df['image_name'] = self.image_name
+                df['image_id'] = self.pm.id
+                df['image_name'] = self.pm.obsid
             # when df is just list of Nones, will create TypeError
             # for bad indexing into list.
             except TypeError:
@@ -442,3 +496,18 @@ class DBScanner(object):
                 logger.warning("Outdata was empty, nothing to store.")
                 return
             df.to_csv(str(outpath.with_suffix('.csv')), index=False)
+
+
+def main(args=None):
+    import sys
+    if args is None:
+        args = sys.argv
+    if len(args) == 1:
+        print("Add image id string to run a single image id clustering.")
+        sys.exit()
+    scanner = DBScanner()
+    scanner.cluster_image_id(args[1])
+
+
+if __name__ == '__main__':
+    main()

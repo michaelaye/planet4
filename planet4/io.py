@@ -245,13 +245,19 @@ class PathManager(object):
 
     Parameters
     ----------
-    id_ : str
-        The data item id that is used to determine sub-paths
+    id_ : str, optional
+        The data item id that is used to determine sub-paths. Can be set after
+        init.
     datapath : str or pathlib.Path, optional
         the base path from where to manage all derived paths. No default assumed
         to prevent errors.
     suffix : {'.hdf', '.h5', '.csv'}
         The suffix that controls the reader function to be used.
+    obsid : str, optional
+        HiRISE obsid (i.e. P4 image_name), added as a folder inside path.
+        Can be set after init.
+    extra_path : str, pathlib.Path, optional
+        Any extra path element that needs to be added to the standard path.
 
     Attributes
     ----------
@@ -259,16 +265,16 @@ class PathManager(object):
         Defined in `get_cut_folder`.
     """
 
-    def __init__(self, id_=None, datapath='clustering', suffix='.csv', obsid='', cut=0.5,
+    def __init__(self, id_='', datapath='clustering', suffix='.csv', obsid='', cut=0.5,
                  extra_path=''):
-        self._id_ = check_and_pad_id(id_)
+        self.id = id_
         self.cut = cut
-        self.obsid = obsid
+        self._obsid = obsid
         self.extra_path = extra_path
 
         if datapath is None:
             # take default path if none given
-            self._datapath = Path(data_root)
+            self._datapath = Path(data_root) / 'clustering'
         elif Path(datapath).is_absolute():
             # if given datapath is absolute, take only that:
             self._datapath = Path(datapath)
@@ -284,12 +290,29 @@ class PathManager(object):
             self.reader = pd.read_csv
 
     @property
-    def id_(self):
-        return self._id_
+    def id(self):
+        return self._id
 
-    @id_.setter
-    def id_(self, value):
-        self._id_ = check_and_pad_id(value)
+    @id.setter
+    def id(self, value):
+        if value is not None:
+            self._id = check_and_pad_id(value)
+
+    @property
+    def obsid(self):
+        if self._obsid is '':
+            if self.id is not '':
+                logger.debug("Entering obsid setting.")
+                db = DBManager()
+                data = db.get_image_id_markings(self.id)
+                obsid = data.image_name.iloc[0]
+                logger.debug("Obsid found: %s", obsid)
+                self._obsid = obsid
+        return self._obsid
+
+    @obsid.setter
+    def obsid(self, value):
+        self._obsid = value
 
     @property
     def datapath(self):
@@ -313,20 +336,20 @@ class PathManager(object):
         return 'L1B'
 
     @property
-    def L2_folder(self):
+    def L1C_folder(self):
         "subfolder name for the final catalog after applying `cut`."
-        return 'L2_cut_{:.1f}'.format(self.cut)
+        return 'L1C_cut_{:.1f}'.format(self.cut)
 
     def get_path(self, marking, specific=''):
         p = self.path_so_far
         # now add the image_id
         try:
-            p /= self.id_
+            p /= self.id
         except TypeError:
-            raise TypeError("self.id_ is not set!")
+            raise TypeError("self.id is not set!")
         # add the specific sub folder
         p /= specific
-        p /= f"{self.id_}_{marking}{self.suffix}"
+        p /= f"{self.id}_{marking}{self.suffix}"
         if specific != '':
             # prepend the data level to file name if given.
             p = p.with_name(f"{specific}_{p.name}")
@@ -344,10 +367,7 @@ class PathManager(object):
         return [p / f"{level}" for p in image_id_paths]
 
     def get_df(self, fpath):
-        try:
-            return self.reader(str(fpath))
-        except OSError:
-            return None
+        return self.reader(str(fpath))
 
     @property
     def fanfile(self):
@@ -403,7 +423,8 @@ class PathManager(object):
 
     @property
     def fnotchdf(self):
-        return self.get_df(self.fnotchfile)
+        # the fnotchfile has an index, so i need to read that here:
+        return pd.read_csv(self.fnotchfile, index_col=0)
 
 
 class DBManager(object):

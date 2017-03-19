@@ -247,10 +247,10 @@ class Blotch(Ellipse):
 
     def __init__(self, data, scope='planet4', with_center=False, **kwargs):
         self.data = data
-        self.scope = scope
+        self.scope = scope if scope is not None else 'planet4'
         self.with_center = with_center
         if scope not in ['hirise', 'planet4']:
-            raise TypeError('Unknown scope')
+            raise TypeError('Unknown scope: {}'.format(scope))
         try:
             self.x = data.x if scope == 'planet4' else data.image_x
             self.y = data.y if scope == 'planet4' else data.image_y
@@ -431,10 +431,10 @@ class Fan(lines.Line2D):
 
     def __init__(self, data, scope='planet4', with_center=False, **kwargs):
         self.data = data
-        self.scope = scope
+        self.scope = scope if scope is not None else 'planet4'
         self.with_center = with_center
         if scope not in ['hirise', 'planet4']:
-            raise TypeError('Unknown scope')
+            raise TypeError('Unknown scope: {}'.format(scope))
         # first coordinate is the base of fan
         actual_x = 'x' if scope == 'planet4' else 'image_x'
         actual_y = 'y' if scope == 'planet4' else 'image_y'
@@ -556,16 +556,16 @@ class Fan(lines.Line2D):
         return self.base + mid_point_vec
 
     def plot_center(self, ax, color='b'):
-        ax.scatter(self.midpoint[0], self.midpoint[1], color=color,
+        ax.scatter(self.center[0], self.center[1], color=color,
                    s=20, marker='.')
 
     @property
-    def base_to_midpoint_vec(self):
-        coords = np.vstack((self.base, self.midpoint))
+    def base_to_center_vec(self):
+        coords = np.vstack((self.base, self.center))
         return coords
 
     def add_midpoint_pointer(self, ax, color='b', ls='-'):
-        coords = self.base_to_midpoint_vec
+        coords = self.base_to_center_vec
         pointer = lines.Line2D(coords[:, 0], coords[:, 1],
                                alpha=0.65, linewidth=3, linestyle=ls)
         pointer.set_color(color)
@@ -637,8 +637,8 @@ class Fnotch(object):
         self.data.index = ['fan', 'blotch']
         blotchiness = calc_blotchiness(fan.iloc[0]['n_votes'],
                                        blotch.iloc[0]['n_votes'])
-        self.data.loc['fan', 'vote_ratio'] = 1 - blotchiness
-        self.data.loc['blotch', 'vote_ratio'] = blotchiness
+        self.data.loc['fan', 'vote_ratio'] = (1 - blotchiness) + 0.01
+        self.data.loc['blotch', 'vote_ratio'] = blotchiness - 0.01
 
     def apply_cut(self, cut):
         """Return the right marking, depending on cut value.

@@ -1,11 +1,23 @@
-import matplotlib.pyplot as plt
+import logging
 from pathlib import Path
+
+import matplotlib.pyplot as plt
+import yaml
 
 from . import io, markings
 
+logger = logging.getLogger(__name__)
+
+
+def get_clustering_settings_log(img_id):
+    pm = io.PathManager(img_id)
+    fpath = pm.blotchfile.parent / 'clustering_settings.yaml'
+    with open(fpath) as fp:
+        return yaml.load(fp)
+
 
 def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
-                           savetitle='', figtitle='', cm=None, **kwargs):
+                           savetitle='', figtitle='', **kwargs):
     """Plotting tool to show the results along the P4 pipeline.
 
     Parameters
@@ -13,29 +25,30 @@ def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
     image_id : str
         String in full or short form (without APF000x in front) of the
         P4 image id.
-    dbname : {str, pathlib.Path}
+    dbname : {str, pathlib.Path}, optional
         Path to database file to be used for plotting the raw data.
-    datapath : {str, pathlib.Path}
+    datapath : {str, pathlib.Path}, optional
         Path to directory where the clustering results are stored.
-    save : bool
+    save : bool, optional
         Flag controlling if plots should be saved.
-    savetitle : str
+    savetitle : str, optional
         Additional filename postfix string for plot filenames.
         The filename will be "{0}_{1}.pdf", with {0} being the `image_id`
         and {1} being `savetitle`
-    figtitle : str
+    figtitle : str, optional
         Additional figure title to be displayed.
-    cm : clustering.ClusteringManager
-        Object that can be used to fish out current path informations
     """
-    if cm is not None:
-        datapath = cm.pm.datapath
-    else:
+    pm = io.PathManager(image_id)
+    if datapath is not None:
         datapath = Path(datapath)
-    if cm is not None and dbname is None:
-        dbname = cm.dbname
+    else:
+        datapath = pm.path_so_far.parent
     imgid = markings.ImageID(image_id, dbname=dbname, scope='planet4')
 
+    clustering_settings = get_clustering_settings_log(image_id)
+    min_samples = clustering_settings['min_samples']
+
+    n_classifications = imgid.n_marked_classifications
     fig, axes = plt.subplots(nrows=2, ncols=3)
     axes = axes.ravel()
     for ax in axes:
@@ -43,25 +56,30 @@ def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
     imgid.plot_fans(ax=axes[1])
     imgid.plot_blotches(ax=axes[2])
 
-    plot_clustered_fans(image_id, ax=axes[4], datapath=datapath, **kwargs)
-    plot_clustered_blotches(image_id, ax=axes[5], datapath=datapath, **kwargs)
+    n_clust_fans = plot_clustered_fans(image_id,
+                                       ax=axes[4],
+                                       datapath=datapath,
+                                       **kwargs)
+    n_clust_blotches = plot_clustered_blotches(image_id,
+                                               ax=axes[5],
+                                               datapath=datapath,
+                                               **kwargs)
     plot_finals(image_id, ax=axes[3], datapath=datapath)
 
     # for ax in axes:
     #     ax.set_axis_off()
 
-    if figtitle == '' and cm is not None:
-        figtitle = "min_samples: {}".format(cm.min_samples)
-        figtitle += ", dynamic: {}".format(cm.do_dynamic_min_samples)
-        figtitle += ", n_(blotch|fan) markings: {}".format(cm.n_classifications)
+    if figtitle == '':
+        figtitle = "min_samples: {}".format(min_samples)
+        figtitle += ", n_(blotch|fan) markings: {}".format(n_classifications)
         figtitle += ("\nn_clustered_fans: {}, n_clustered_blotches: {}"
-                     .format(cm.n_clustered_fans, cm.n_clustered_blotches))
+                     .format(n_clust_fans, n_clust_blotches))
     fig.suptitle(image_id + ', ' + str(figtitle))
     fig.subplots_adjust(left=None, top=None, bottom=None, right=None,
                         wspace=0.01, hspace=0.01)
     if save:
         fname = "{}_{}.pdf".format(imgid.imgid, savetitle)
-        saveroot = datapath / 'plots'
+        saveroot = pm.final_fanfile.parent / 'plots'
         saveroot.mkdir(exist_ok=True)
         fpath = saveroot / fname
         plt.savefig(str(fpath))
@@ -79,43 +97,42 @@ def plot_raw_blotches(id_, ax=None):
     imgid.plot_blotches(ax=ax)
 
 
-def plot_finals(id_, scope='planet4', datapath=None, ax=None):
+def plot_finals(id_, datapath=None, ax=None, scope='planet4'):
+
     pm = io.PathManager(id_=id_, datapath=datapath)
-    try:
-        if not all([pm.final_blotchfile.exists(),
-                    pm.final_fanfile.exists()]):
-            print("Some files not found.")
-    except TypeError:
-        print("Error while trying to plot finals.")
-        return
+    if not all([pm.final_blotchfile.exists(),
+                pm.final_fanfile.exists()]):
+        logger.warning("Some files not found.")
 
     imgid = markings.ImageID(id_, scope=scope)
 
     if ax is None:
         _, ax = plt.subplots()
     if pm.final_fanfile.exists():
-        imgid.plot_fans(ax=ax, data=pm.final_fandf)
+        imgid.plot_fans(ax=ax, data=pm.final_fandf, with_center=True)
     if pm.final_blotchfile.exists():
-        imgid.plot_blotches(ax=ax, data=pm.final_blotchdf)
+        imgid.plot_blotches(ax=ax, data=pm.final_blotchdf, with_center=True)
 
 
-def plot_clustered_blotches(id_, scope='planet4', datapath=None, ax=None, **kwargs):
+def plot_clustered_blotches(id_, scope='planet4', datapath=None, ax=None,
+                            **kwargs):
     pm = io.PathManager(id_=id_, datapath=datapath)
-    if not pm.reduced_blotchfile.exists():
+    if not pm.blotchfile.exists():
         print("Clustered blotchfile not found")
         return
-    # reduced_blotches = markings.BlotchContainer.from_fname(pm.reduced_blotchfile,
+    # blotches = markings.BlotchContainer.from_fname(pm.blotchfile,
     #                                                        scope)
-    data = pm.reduced_blotchdf
+    data = pm.blotchdf
     imgid = markings.ImageID(id_, scope=scope)
 
     imgid.plot_blotches(data=data, ax=ax, **kwargs)
+    return len(data)
 
 
 def blotches_all(id_, datapath=None):
     fig, axes = plt.subplots(ncols=2)
     plot_raw_blotches(id_, ax=axes[0])
-    plot_clustered_blotches(id_, datapath, ax=axes[1])
+    plot_clustered_blotches(id_, datapath=datapath, ax=axes[1])
     fig.subplots_adjust(left=None, top=None, bottom=None, right=None,
                         wspace=0.001, hspace=0.001)
 
@@ -142,24 +159,25 @@ def plot_clustered_fans(image_id, datapath=None, ax=None, scope_id=None,
     """
     if scope_id is not None:
         pm = io.PathManager(id_=scope_id, datapath=datapath)
-        fans = pm.reduced_fandf
+        fans = pm.fandf
         data = fans[fans.image_id == image_id]
     else:
         pm = io.PathManager(id_=image_id, datapath=datapath)
-        if not pm.reduced_fanfile.exists():
+        if not pm.fanfile.exists():
             print("Clustered/reduced fanfile not found")
             return
-        data = pm.reduced_fandf
-        # reduced_fans = markings.FanContainer.from_fname(pm.reduced_fanfile,
+        data = pm.fandf
+        # fans = markings.FanContainer.from_fname(pm.fanfile,
         #                                                 scope='planet4')
     imgid = markings.ImageID(image_id, scope='planet4')
 
     imgid.plot_fans(data=data, ax=ax, **kwargs)
+    return len(data)
 
 
 def fans_all(id_, datapath=None):
     fig, axes = plt.subplots(ncols=2)
     plot_raw_fans(id_, ax=axes[0])
-    plot_clustered_fans(id_, datapath, ax=axes[1])
+    plot_clustered_fans(id_, datapath=datapath, ax=axes[1])
     fig.subplots_adjust(left=None, top=None, bottom=None, right=None,
                         wspace=0.001, hspace=0.001)
