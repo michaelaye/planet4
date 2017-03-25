@@ -67,6 +67,13 @@ def get_data_root():
     return data_root
 
 
+def get_ground_projection_root():
+    d = get_config()
+    gp_root = Path(d['ground_projection']['path'])
+    gp_root.mkdir(exist_ok=True)
+    return gp_root
+
+
 if not configpath.exists():
     print("No configuration file {} found.\n".format(configpath))
     savepath = input("Please provide the path where you want to store planet4 results:")
