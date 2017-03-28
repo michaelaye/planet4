@@ -4,14 +4,12 @@ Pipeline was initially developed by Meg Schwamb and her student.
 Adapted to provide more functionality and code clarity by K.-Michael Aye.
 """
 import sys
-from pathlib import Path
 
 from hirise_tools.products import RED_PRODUCT_ID
 from planet4 import io
 from pysis import CubeFile
 from pysis.exceptions import ProcessError
 from pysis.isis import cubenorm, getkey, handmos, hi2isis, histitch, spiceinit
-from pysis.util import file_variations
 import logging
 
 logger = logging.getLogger(__name__)
@@ -25,6 +23,7 @@ def nocal_hi(source_product):
     source_product : hirise_tools.SOURCE_PRODUCT_ID
         Class object managing the precise filenames and locations for HiRISE source products
     """
+    logger.info("hi2isis and spiceinit for %s", source_product)
     img_name = source_product.local_path
     cub_name = source_product.local_cube
     try:
@@ -38,8 +37,9 @@ def nocal_hi(source_product):
 
 def stitch_cubenorm(spid1, spid2):
     "Stitch together the 2 CCD chip images and do a cubenorm."
-    cub = spid1.local_cube.with_name(spid1.stitched_name)
-    norm, = file_variations(cub, ['.norm.cub'])
+    logger.info("Stitch/cubenorm %s and %s", spid1, spid2)
+    cub = spid1.local_cube.with_name(spid1.stitched_cube_name)
+    norm = cub.with_suffix('.norm.cub')
     try:
         histitch(from1=str(spid1.local_cube), from2=str(spid2.local_cube),
                  to=cub)
@@ -48,6 +48,10 @@ def stitch_cubenorm(spid1, spid2):
         print(e.stdout)
         print(e.stderr)
         sys.exit()
+    for spid in [spid1, spid2]:
+        spid.local_cube.unlink()
+    cub.unlink()
+    return norm
 
 
 def get_RED45_mosaic_inputs(obsid, saveroot):
@@ -61,7 +65,7 @@ def get_RED45_mosaic_inputs(obsid, saveroot):
 def hi2mos(obsid, overwrite=False):
     gp_root = io.get_ground_projection_root()
 
-    print('Processing the EDR data associated with ' + obsid)
+    logger.info('Processing the EDR data associated with ' + obsid)
 
     mos_path = gp_root / obsid / f'{obsid}_mosaic_RED45.cub'
 
@@ -76,32 +80,35 @@ def hi2mos(obsid, overwrite=False):
         prod.download()
         nocal_hi(prod)
 
+    norm_paths = []
     for channel_products in [products[:2], products[2:]]:
-        stitch_cubenorm(*channel_products)
+        norm_paths.append(stitch_cubenorm(*channel_products))
 
-    return
     # handmos part
-    im0 = CubeFile.open(f'{name}4.norm.cub')  # use CubeFile to get lines and samples
-    # use linux commands to get binning mode
-    bin_ = int(getkey(from_=name + '4.norm.cub', objname="isiscube", grpname="instrument",
+    norm4, norm5 = norm_paths
+    im0 = CubeFile.open(str(norm4))  # use CubeFile to get lines and samples
+    # get binning mode from label
+    bin_ = int(getkey(from_=str(norm4), objname="isiscube", grpname="instrument",
                keyword="summing"))
 
     # because there is a gap btw RED4 & 5, nsamples need to first make space
     # for 2 cubs then cut some overlap pixels
     try:
-        handmos(from_=f'{name}4.norm.cub', mosaic=mos_path, nbands=1, outline=1, outband=1,
+        handmos(from_=str(norm4), mosaic=str(mos_path), nbands=1, outline=1, outband=1,
                 create='Y', outsample=1, nsamples=im0.samples*2 - 48//bin_,
                 nlines=im0.lines)
     except ProcessError as e:
         print("STDOUT:", e.stdout)
         print("STDERR:", e.stderr)
 
-    im0 = CubeFile.open(f'{name}5.norm.cub')  # use CubeFile to get lines and samples
+    im0 = CubeFile.open(str(norm5))  # use CubeFile to get lines and samples
 
     # deal with the overlap gap between RED4 & 5:
-    handmos(from_=f'{name}5.norm.cub', mosaic=mos_path, outline=1, outband=1, create='N',
+    handmos(from_=str(norm5), mosaic=str(mos_path), outline=1, outband=1, create='N',
             outsample=im0.samples - 48//bin_ + 1)
-    return name, True
+    for norm in [norm4, norm5]:
+        norm.unlink()
+    return obsid, True
 
 
 def cleanup(data_dir, img):
