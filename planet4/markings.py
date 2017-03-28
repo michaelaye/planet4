@@ -679,7 +679,7 @@ class Container(object):
         return cls(rows, scope)
 
     @classmethod
-    def from_fname(cls, fname, scope):
+    def from_fname(cls, fname, scope='planet4'):
         if str(fname).endswith('.hdf'):
             readfunc = pd.read_hdf
         elif str(fname).endswith('.csv'):
@@ -692,13 +692,13 @@ class Container(object):
 
 class FanContainer(Container):
 
-    def __init__(self, iterable, scope):
+    def __init__(self, iterable, scope='planet4'):
         self.content = [Fan(item, scope) for item in iterable]
 
 
 class BlotchContainer(Container):
 
-    def __init__(self, iterable, scope):
+    def __init__(self, iterable, scope='planet4'):
         self.content = [Blotch(item, scope) for item in iterable]
 
 
