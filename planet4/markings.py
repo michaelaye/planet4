@@ -709,7 +709,7 @@ class BlotchContainer(Container):
 
 
 def main():
-    plt.switch_backend('Qt4Agg')
+    plt.switch_backend('Qt5Agg')
     parser = argparse.ArgumentParser()
     parser.add_argument('imgid',
                         help='zooniverse image id to plot')
