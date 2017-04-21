@@ -3,7 +3,6 @@ import datetime as dt
 import logging
 import os
 import shutil
-import sys
 from pathlib import Path
 
 import matplotlib.image as mplimg
@@ -126,7 +125,6 @@ def get_subframe(url):
     targetpath.parent.mkdir(exist_ok=True)
     if not targetpath.exists():
         logger.info("Did not find image in cache. Downloading ...")
-        sys.stdout.flush()
         path = urlretrieve(url)[0]
         logger.debug("Done.")
         shutil.move(path, str(targetpath))
@@ -309,17 +307,32 @@ class PathManager(object):
     def obsid(self):
         if self._obsid is '':
             if self.id is not '':
-                logger.debug("Entering obsid setting.")
+                logger.debug("Entering obsid search for known image_id.")
                 db = DBManager()
                 data = db.get_image_id_markings(self.id)
                 obsid = data.image_name.iloc[0]
-                logger.debug("Obsid found: %s", obsid)
+                logger.debug("obsid found: %s", obsid)
                 self._obsid = obsid
         return self._obsid
 
     @obsid.setter
     def obsid(self, value):
         self._obsid = value
+
+    @property
+    def obsid_results_savefolder(self):
+        subfolder = 'p4_catalog' if self.datapath is None else self.datapath
+        savefolder = analysis_folder() / subfolder
+        savefolder.mkdir(exist_ok=True, parents=True)
+        return savefolder
+
+    @property
+    def obsid_final_fans_path(self):
+        return self.obsid_results_savefolder / f"{self.obsid}_fans.csv"
+
+    @property
+    def obsid_final_blotches_path(self):
+        return self.obsid_results_savefolder / f"{self.obsid}_blotches.csv"
 
     @property
     def datapath(self):
@@ -367,9 +380,11 @@ class PathManager(object):
 
         Parameters
         ----------
-        level : {'L1A', 'L1B', 'L1C', 'L2'}
+        level : {'L1A', 'L1B', 'L1C'}
         """
         folder = self.path_so_far
+        # cast to upper case for the lazy... ;)
+        level = level.upper()
         image_id_paths = [item for item in folder.glob('*') if item.is_dir()]
         return [p / f"{level}" for p in image_id_paths]
 
