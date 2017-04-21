@@ -3,14 +3,19 @@ This module contains the functions required to ground project the PlanetFour dat
 Pipeline was initially developed by Meg Schwamb and her student.
 Adapted to provide more functionality and code clarity by K.-Michael Aye.
 """
+import logging
 import sys
+from pathlib import Path
+
+import pandas as pd
+import pvl
 
 from hirise_tools.products import RED_PRODUCT_ID
 from planet4 import io
 from pysis import CubeFile
 from pysis.exceptions import ProcessError
-from pysis.isis import cubenorm, getkey, handmos, hi2isis, histitch, spiceinit
-import logging
+from pysis.isis import (campt, cubenorm, getkey, handmos, hi2isis, histitch,
+                        spiceinit)
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +60,26 @@ def stitch_cubenorm(spid1, spid2):
 
 
 def get_RED45_mosaic_inputs(obsid, saveroot):
+    """Create list with filenames for RED4 and RED5 CCD chips 0 and 1, respectively.
+
+    Parameters
+    ----------
+    obsid : str
+        HiRISE observation id, e.g. ESP_011350_0945
+    saveroot : str, pathlib.Path
+        Path to where the data is stored
+
+    Example
+    -------
+    ESP_011350_0945 returns a list of hirise_tools.RED_PRODUCT_ID objects, that represent
+    themselves in the notebook as:
+    [RED_PRODUCT_ID: ESP_011350_0945_RED4_0, .... RED4_1, .... RED5_0, .... RED5_1]
+
+    Returns
+    -------
+    list
+        List of 4 hirise_tools.RED_PRODUCT_IDs
+    """
     inputs = []
     for channel in [4, 5]:
         for chip in [0, 1]:
@@ -62,7 +87,7 @@ def get_RED45_mosaic_inputs(obsid, saveroot):
     return inputs
 
 
-def hi2mos(obsid, overwrite=False):
+def create_RED45_mosaic(obsid, overwrite=False):
     gp_root = io.get_ground_projection_root()
 
     logger.info('Processing the EDR data associated with ' + obsid)
@@ -89,13 +114,13 @@ def hi2mos(obsid, overwrite=False):
     im0 = CubeFile.open(str(norm4))  # use CubeFile to get lines and samples
     # get binning mode from label
     bin_ = int(getkey(from_=str(norm4), objname="isiscube", grpname="instrument",
-               keyword="summing"))
+                      keyword="summing"))
 
     # because there is a gap btw RED4 & 5, nsamples need to first make space
     # for 2 cubs then cut some overlap pixels
     try:
         handmos(from_=str(norm4), mosaic=str(mos_path), nbands=1, outline=1, outband=1,
-                create='Y', outsample=1, nsamples=im0.samples*2 - 48//bin_,
+                create='Y', outsample=1, nsamples=im0.samples * 2 - 48 // bin_,
                 nlines=im0.lines)
     except ProcessError as e:
         print("STDOUT:", e.stdout)
@@ -105,7 +130,7 @@ def hi2mos(obsid, overwrite=False):
 
     # deal with the overlap gap between RED4 & 5:
     handmos(from_=str(norm5), mosaic=str(mos_path), outline=1, outband=1, create='N',
-            outsample=im0.samples - 48//bin_ + 1)
+            outsample=im0.samples - 48 // bin_ + 1)
     for norm in [norm4, norm5]:
         norm.unlink()
     return obsid, True
@@ -131,3 +156,80 @@ def cleanup(data_dir, img):
     fs = data_dir.glob(f'{img}_RED*.IMG')
     for p in fs:
         p.unlink()
+
+
+class CornerCalculator(object):
+    img_x_size = 840
+    img_y_size = 648
+
+    def __init__(self, cubepath):
+        self.cubepath = cubepath
+        self.get_tiles_max(self.img_name)
+
+    def transform(self, x, y, xtile, ytile):
+        x_offset = self.img_x_size - 100
+        y_offset = self.img_y_size - 100
+        x_HiRISE = x + ((x_offset) * (xtile - 1))  # **formula
+        y_HiRISE = y + ((y_offset) * (ytile - 1))  # **formula
+        return x_HiRISE, y_HiRISE
+
+    @property
+    def img_name(self):
+        s = Path(self.cubepath).stem
+        return s[:15]
+
+    @property
+    def UL(self):
+        return (1, 1)
+
+    @property
+    def LL(self):
+        return self.transform(1, self.img_y_size, 1, self.yt_max)
+
+    @property
+    def UR(self):
+        return self.transform(self.img_x_size, 1, self.xt_max, 1)
+
+    @property
+    def LR(self):
+        return self.transform(self.img_x_size, self.img_y_size,
+                              self.xt_max, self.yt_max)
+
+    def get_tiles_max(self, img_name):
+        db = io.DBManager()
+        data = db.get_image_name_markings(img_name)
+        self.xt_max = data.x_tile.max()
+        self.yt_max = data.y_tile.max()
+
+    def get_lats_lon(self, s=None, l=None):
+        try:
+            gp = pvl.load(campt(from_=str(self.cubepath),
+                                sample=s,
+                                line=l)).get('GroundPoint')
+        except ProcessError as e:
+            print(e.stdout)
+            print(e.stderr)
+            raise e
+        lat_centric = gp['PlanetocentricLatitude']
+        lat_graphic = gp['PlanetographicLatitude']
+        lon = gp['PositiveWest360Longitude']
+        return dict(lat_centric=lat_centric,
+                    lat_graphic=lat_graphic,
+                    lon=lon)
+
+    def calc_corners(self):
+        d = {}
+        for corner in ['UL', 'LL', 'UR', 'LR']:
+            try:
+                corner_pixels = getattr(self, corner)
+                coords = self.get_lats_lon(*getattr(self, corner))
+            except ProcessError as e:
+                print(self.img_name)
+                print("Corner:", corner)
+                print("Pixels:", corner_pixels)
+                print(e.stdout)
+                print(e.stderr)
+                continue
+            for k, v in coords.items():
+                d[corner + '_' + k] = v.value
+        return pd.DataFrame(d, index=[self.img_name])
