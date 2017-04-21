@@ -95,3 +95,8 @@ def define_season_column(df):
     df.loc[(thousands > 15) & (thousands < 25), 'season'] = 3
     df.loc[(thousands > 25) & (thousands < 35), 'season'] = 4
     df.loc[(thousands > 35), 'season'] = 5
+
+
+# def get_markings_count_per_obsid(obsid):
+#     for kind in ['fan', 'blotches']:
+#         

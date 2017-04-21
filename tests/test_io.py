@@ -75,6 +75,9 @@ class TestPathManager:
         assert pm.fanfile ==\
             Path('/abc/db/clustering/APF0000007/APF0000007_fans.csv')
 
+    # def test_get_obsid_paths(self):
+    #     pm = io.PathManager(obsid=obsid)
+
 
 # def test_PathManager_default_setup():
 #     pm = io.PathManager('ABC0001234')
