@@ -121,7 +121,7 @@ class DBScanner(object):
         self.save_results = save_results
         self.only_core_samples = only_core_samples
 
-        self.pm = io.PathManager()
+        self.pm = io.PathManager(datapath=savedir)
 
     def show_markings(self, id_):
         p4id = markings.ImageID(id_)

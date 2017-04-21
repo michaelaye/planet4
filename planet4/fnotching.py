@@ -125,10 +125,10 @@ def remove_opposing_fans(fans, eps=20):
     return fans.drop(ind_to_remove)
 
 
-def fnotch_image_ids(obsid, eps=20):
+def fnotch_image_ids(obsid, eps=20, savedir=None):
     "Cluster each image_id for an obsid separately."
     # the clustering results were stored as L1A products
-    pm = io.PathManager(obsid=obsid)
+    pm = io.PathManager(obsid=obsid, datapath=savedir)
     paths = pm.get_obsid_paths('L1A')
     for path in paths:
         id_ = get_id_from_path(path)
@@ -222,7 +222,7 @@ def write_l1c(kind, slashed, pm):
         combined.to_csv(str(l1c), index=False)
 
 
-def apply_cut(obsid, cut=0.5):
+def apply_cut(obsid, cut=0.5, savedir=None):
     """Loop over all image_id paths for an obsid and apply cut to fnotches.
 
     Parameters
@@ -232,7 +232,7 @@ def apply_cut(obsid, cut=0.5):
     cut : float, 0..1
         Value where to cut the vote_ratio of the fnotches.
     """
-    pm = io.PathManager(obsid=obsid, cut=cut)
+    pm = io.PathManager(obsid=obsid, cut=cut, datapath=savedir)
     paths = pm.get_obsid_paths('L1B')
     for path in paths:
         id_ = get_id_from_path(path)
