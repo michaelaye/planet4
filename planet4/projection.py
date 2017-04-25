@@ -158,13 +158,26 @@ def cleanup(data_dir, img):
         p.unlink()
 
 
+def get_campt_label(frompath, sample, line):
+    try:
+        group = pvl.load(campt(from_=str(frompath),
+                               sample=sample,
+                               line=line)).get('GroundPoint')
+    except ProcessError as e:
+        print(e.stdout)
+        print(e.stderr)
+        raise e
+    else:
+        return group
+
 class CornerCalculator(object):
     img_x_size = 840
     img_y_size = 648
 
     def __init__(self, cubepath):
         self.cubepath = cubepath
-        self.get_tiles_max(self.img_name)
+        db = io.DBManager()
+        self.data = db.get_image_name_markings(self.img_name)
 
     def transform(self, x, y, xtile, ytile):
         x_offset = self.img_x_size - 100
@@ -195,27 +208,33 @@ class CornerCalculator(object):
         return self.transform(self.img_x_size, self.img_y_size,
                               self.xt_max, self.yt_max)
 
-    def get_tiles_max(self, img_name):
-        db = io.DBManager()
-        data = db.get_image_name_markings(img_name)
-        self.xt_max = data.x_tile.max()
-        self.yt_max = data.y_tile.max()
+    @property
+    def x_tile_max(self):
+        return self.data.x_tile.max()
+
+    @property
+    def y_tile_max(self):
+        return self.data.y_tile.max()
 
     def get_lats_lon(self, s=None, l=None):
-        try:
-            gp = pvl.load(campt(from_=str(self.cubepath),
-                                sample=s,
-                                line=l)).get('GroundPoint')
-        except ProcessError as e:
-            print(e.stdout)
-            print(e.stderr)
-            raise e
-        lat_centric = gp['PlanetocentricLatitude']
-        lat_graphic = gp['PlanetographicLatitude']
-        lon = gp['PositiveWest360Longitude']
+        gp = get_campt_label(self.cubepath, s, l)
+        lat_centric = gp['PlanetocentricLatitude'].value
+        lat_graphic = gp['PlanetographicLatitude'].value
+        lon = gp['PositiveWest360Longitude'].value
         return dict(lat_centric=lat_centric,
                     lat_graphic=lat_graphic,
                     lon=lon)
+
+    def calc_tile_coords(self):
+        bucket = []
+        for x_tile in range(1, self.x_tile_max + 1):
+            print("x_tile:", x_tile)
+            for y_tile in range(1, self.y_tile_max + 1):
+                print("y_tile:", y_tile)
+                xy_hirise = self.transform(self.img_x_size/2, self.img_y_size/2,
+                                           x_tile, y_tile)
+                bucket.append(self.get_lats_lon(*xy_hirise))
+        return pd.concat(bucket, ignore_index=True)
 
     def calc_corners(self):
         d = {}
