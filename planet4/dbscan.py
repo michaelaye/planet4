@@ -317,9 +317,9 @@ class DBScanner(object):
         `self.reduced_data`.
         """
         self.p4id = markings.ImageID(img_id, scope='planet4')
-        if self.pm.obsid == '':
             self.pm.obsid = self.p4id.image_name
         self.pm.id = img_id
+
         # this will setup the logfile if we have not been called via image_name
         # clustering already.
         self.setup_logfiles()
@@ -346,7 +346,8 @@ class DBScanner(object):
             if len(data) < self.min_samples:
                 # skip all else if we have not enough markings
                 continue
-            if self.split_by_size is True:
+            # only ever do the split for blotches, not for fans:
+            if self.split_by_size is True and kind == 'blotch':
                 datasets = self.split_markings_by_size(data)
                 sizes = ['small', 'large']
             else:
