@@ -169,7 +169,7 @@ class DBScanner(object):
             f1 = data.radius_1 > limit
             f2 = data.radius_2 > limit
             data_large = data[f1 | f2]
-            data_small = data[~(f1 | f2)]
+            data_small = data
         else:
             f1 = data.distance > limit
             data_large = data[f1]
@@ -317,7 +317,7 @@ class DBScanner(object):
         `self.reduced_data`.
         """
         self.p4id = markings.ImageID(img_id, scope='planet4')
-            self.pm.obsid = self.p4id.image_name
+        self.pm.obsid = self.p4id.image_name
         self.pm.id = img_id
 
         # this will setup the logfile if we have not been called via image_name
