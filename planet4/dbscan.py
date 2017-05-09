@@ -80,8 +80,9 @@ class DBScanner(object):
         Path where to store clustered results
     with_angles, with_radii : bool
         Switches to control if clustering should include angles and radii respectively.
-    split_by_size : bool
-        Switch to control if splitting the clustering by size of markings shall occur.
+    do_large_run : bool
+        Switch to control if a second run with parameters set for large objects should
+        be done.
     save_results : bool
         Switch to control if the resulting clustered objects should be written to disk.
     """
@@ -112,12 +113,12 @@ class DBScanner(object):
     }
 
     def __init__(self, msf=0.13, savedir=None, with_angles=True, with_radii=True,
-                 split_by_size=True, save_results=True, only_core_samples=False):
+                 do_large_run=False, save_results=True, only_core_samples=False):
         self.msf = msf
         self.savedir = savedir
         self.with_angles = with_angles
         self.with_radii = with_radii
-        self.split_by_size = split_by_size
+        self.do_large_run = do_large_run
         self.save_results = save_results
         self.only_core_samples = only_core_samples
 
@@ -199,7 +200,8 @@ class DBScanner(object):
             for indices in self.cluster_any(X, eps):
                 yield angle_cluster.loc[indices]
 
-    def cluster_and_plot(self, img_id, kind, msf=None, eps_values=None, ax=None, fontsize=None):
+    def cluster_and_plot(self, img_id, kind, msf=None, eps_values=None, ax=None,
+                         fontsize=None, saveplot=True):
         """Cluster and plot the results for one P4 image_id.
 
         Parameters
@@ -244,6 +246,10 @@ class DBScanner(object):
         ax.set_title("MS: {}, n_clusters: {}\nEPS: {}, EPS_LARGE: {}, "
                      .format(self.min_samples, n_reduced, eps, eps_large),
                      fontsize=fontsize)
+        if saveplot:
+            savepath = f"plots/{img_id}_{kind}_eps{eps}_epsLARGE{eps_large}.png"
+            Path(savepath).parent.mkdir(exist_ok=True)
+            fig.savefig(savepath, dpi=200)
 
     @property
     def min_samples(self):
@@ -258,6 +264,7 @@ class DBScanner(object):
         if len(logger.handlers) > 0:
             for handler in logger.handlers:
                 if isinstance(handler, logging.FileHandler):
+                    logger.debug("Found logging.FileHandler")
                     return
         logpath = self.pm.path_so_far / 'clustering.log'
         logpath.parent.mkdir(exist_ok=True, parents=True)
@@ -266,7 +273,7 @@ class DBScanner(object):
                                       ' - %(message)s', '%Y-%m-%d %H:%M:%S')
         fh.setFormatter(formatter)
         logger.addHandler(fh)
-        logger.setLevel(logging.INFO)
+        # logger.setLevel(logging.INFO)
 
     def cluster_image_name(self, image_name, msf=None, eps_values=None):
         "Cluster all image_ids for a given image_name (i.e. HiRISE obsid)"
@@ -334,51 +341,55 @@ class DBScanner(object):
         self.write_settings_file(eps_values)
 
         # set up storage for results
-        reduced_data = {}
-        final_clusters = {}
+        self.reduced_data = {}
+        self.final_clusters = {}
         for kind in ['fan', 'blotch']:
             logger.info("Working on %s.", kind)
-            final_clusters[kind] = []
-            # fill in empty list in case we need to bail for not enough data
-            reduced_data[kind] = []
-            logger.debug('%s loop', kind)
+            # fill in empty lists in case we need to bail for not enough data
+            self.final_clusters[kind] = []
+            self.reduced_data[kind] = []
+            # Receive the fans or blotches, respectively:
             data = self.p4id.filter_data(kind)
             if len(data) < self.min_samples:
                 # skip all else if we have not enough markings
                 continue
-            # only ever do the split for blotches, not for fans:
-            if self.split_by_size is True and kind == 'blotch':
-                datasets = self.split_markings_by_size(data)
-                sizes = ['small', 'large']
-            else:
-                # doing it like this enables to use the same loop for both cases
-                datasets = [data]
-                sizes = ['small']
             # this loop either executes once or twice (more?) for the split datasets.
-            for dataset, size in zip(datasets, sizes):
-                logger.info("Processing %s dataset.", size)
-                eps_xy = eps_values[kind]['xy'][size]
-                eps_rad = eps_values[kind]['radius'][size]
-                logger.debug("Length of dataset: %i", len(dataset))
-                if len(dataset) < self.min_samples:
-                    logger.warning("Skipping the %s part for %s due to lack of data.",
-                                   size, kind)
-                    reduced_data[kind].append(pd.DataFrame())
-                    continue
-                reduced_data[kind].append(self._cluster_pipeline(kind, dataset, eps_xy, eps_rad))
-                logger.debug("Appending %i items to final_clusters", len(self.finalclusters))
-                final_clusters[kind].append(self.finalclusters)
+            self._setup_and_call_clustering(eps_values, data, kind, 'small')
+            if len(self.remaining) > self.min_samples and self.do_large_run is True:
+                logger.info("Clustering on remaining data with large parameter set.")
+                self._setup_and_call_clustering(eps_values, self.remaining, kind, 'large')
             # merging large and small markings clusters
             try:
-                reduced_data[kind] = pd.concat(reduced_data[kind], ignore_index=True)
+                self.reduced_data[kind] = pd.concat(self.reduced_data[kind], ignore_index=True)
             except ValueError as e:
                 # i can just continue here, as I stored an empty list above already
                 continue
 
-        self.final_clusters = final_clusters
         if self.save_results:
-            self.store_clustered(reduced_data)
-        self.reduced_data = reduced_data
+            self.store_clustered(self.reduced_data)
+
+    def _setup_and_call_clustering(self, eps_values, dataset, kind, size):
+        logger.info("Processing %s dataset.", size)
+        eps_xy = eps_values[kind]['xy'][size]
+        eps_rad = eps_values[kind]['radius'][size]
+        logger.debug("Length of dataset: %i", len(dataset))
+        if len(dataset) < self.min_samples:
+            logger.warning("Skipping the %s part for %s due to lack of data.",
+                           size, kind)
+            self.reduced_data[kind].append(pd.DataFrame())
+            return
+        self.reduced_data[kind].append(self._cluster_pipeline(kind, dataset, eps_xy, eps_rad))
+        logger.debug("Appending %i items to final_clusters", len(self.finalclusters))
+        self.final_clusters[kind].append(self.finalclusters)
+
+    def _calculate_unclustered(self, data, xyclusters):
+        data_in = data.dropna(how='all', axis=1)
+        try:
+            clustered = pd.concat(xyclusters).dropna(how='all', axis=1)
+        except ValueError:
+            self.remaining = []
+        else:
+            self.remaining = data_in[~data_in.isin(clustered).all(1)]
 
     def _cluster_pipeline(self, kind, data, eps, eps_rad):
         """Cluster pipeline that can cluster over xy, angles and radii.
@@ -388,6 +399,7 @@ class DBScanner(object):
         """
         xyclusters = self.cluster_xy(data, eps)
         xyclusters = list(xyclusters)
+        self._calculate_unclustered(data, xyclusters)
         if self.with_radii and eps_rad is not None:
             last = self.cluster_radii(xyclusters, eps_rad)
         else:
@@ -474,6 +486,7 @@ class DBScanner(object):
     def store_clustered(self, reduced_data):
         "Store the clustered but as of yet unfnotched data."
 
+        logger.debug("Storing reduced_data.")
         # get the PathManager object
         pm = self.pm
 
@@ -497,6 +510,7 @@ class DBScanner(object):
                 logger.warning("Outdata was empty, nothing to store.")
                 return
             df.to_csv(str(outpath.with_suffix('.csv')), index=False)
+            logger.debug("Wrote %s", str(outpath.with_suffix('.csv')))
 
 
 def main(args=None):
