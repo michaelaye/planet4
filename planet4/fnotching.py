@@ -39,7 +39,7 @@ def get_clusters_in_path(path):
     return clusters
 
 
-def data_to_centers(df):
+def data_to_centers(df, kind):
     """Convert a dataframe with marking data to an array of center coords.
 
     Parameters
@@ -47,16 +47,16 @@ def data_to_centers(df):
     df : pd.dataframe
         Dataframe with either fan or blotch marking data. It probes itself
         which one it is by looking at if distances and radii are defined.
-
+    kind : {'fan', 'blotch'}
     Returns
     -------
     np.array
         Array with the center coordinates, dimensions: (rows, 2)
     """
-    if all(np.isnan(df.distance)):
+    if kind == 'blotch':
         # only the blotch arrays have distance un-defined
         Marking = markings.Blotch
-    elif all(np.isnan(df.radius_1)) and all(np.isnan(df.radius_2)):
+    else:
         Marking = markings.Fan
     return np.vstack(Marking(row, scope='hirise').center for _, row in df.iterrows())
 
@@ -105,7 +105,7 @@ def remove_opposing_fans(fans, eps=20):
     pd.DataFrame
         Data with opposing fans removed.
     """
-    distances = pdist(data_to_centers(fans))
+    distances = pdist(data_to_centers(fans, 'fan'))
     close_indices = np.where(distances < eps)[0]
     ind_to_remove = []
     for index in close_indices:
@@ -142,7 +142,7 @@ def fnotch_image_ids(obsid, eps=20, savedir=None):
             fans = remove_opposing_fans(fans)
         if not any([fans is None, blotches is None]):
             logger.debug("Fnotching %s", id_)
-            distances = cdist(data_to_centers(fans), data_to_centers(blotches))
+            distances = cdist(data_to_centers(fans, 'fan'), data_to_centers(blotches, 'blotch'))
             X, Y = np.where(distances < eps)
             # X are the indices along the fans input, Y for blotches respectively
 
