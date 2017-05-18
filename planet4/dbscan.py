@@ -353,12 +353,15 @@ class DBScanner(object):
             if len(data) < self.min_samples:
                 # skip all else if we have not enough markings
                 continue
-            # this loop either executes once or twice (more?) for the split datasets.
+            # cluster first with the parameters for small objects
             self._setup_and_call_clustering(eps_values, data, kind, 'small')
+            # self.remaining was created during previous call.
             if len(self.remaining) > self.min_samples and self.do_large_run is True:
+                # if we allow it, and more than min_samples are left, do 2nd round
+                # with parameters for large objects
                 logger.info("Clustering on remaining data with large parameter set.")
                 self._setup_and_call_clustering(eps_values, self.remaining, kind, 'large')
-            # merging large and small markings clusters
+            # merging small and large clustering results
             try:
                 self.reduced_data[kind] = pd.concat(self.reduced_data[kind], ignore_index=True)
             except ValueError as e:
