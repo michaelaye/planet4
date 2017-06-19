@@ -101,7 +101,7 @@ class DBScanner(object):
         },
         'blotch': {
             'xy': {  # in pixels
-                'small': 15,
+                'small': 10,
                 'large': 50,
             },
             'angle': None,  # for now deactivated
