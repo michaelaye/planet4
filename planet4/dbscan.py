@@ -236,6 +236,8 @@ class DBScanner(object):
 
         if ax is None:
             fig, ax = plt.subplots()
+        else:
+            fig = ax.get_figure()
         if n_reduced > 0:
             plot_results(self.p4id, self.labels, kind=kind,
                          reduced_data=reduced_data, ax=ax)
@@ -243,8 +245,11 @@ class DBScanner(object):
             self.p4id.show_subframe(ax=ax)
         eps = eps_values[kind]['xy']['small']
         eps_large = eps_values[kind]['xy']['large']
-        ax.set_title("MS: {}, n_clusters: {}\nEPS: {}, EPS_LARGE: {}, "
-                     .format(self.min_samples, n_reduced, eps, eps_large),
+        ax.set_title(f"ID: {img_id}, "
+                     f"n_clusters: {n_reduced}\n"
+                     f"MS: {self.min_samples}, "
+                     f"EPS: {eps}, "
+                     f"EPS_LARGE: {eps_large}",
                      fontsize=fontsize)
         if saveplot:
             savepath = f"plots/{img_id}_{kind}_eps{eps}_epsLARGE{eps_large}.png"
@@ -457,7 +462,8 @@ class DBScanner(object):
 
             eps_values[kind]['xy'][size_to_scan] = eps
 
-            self.cluster_and_plot(img_id, kind, msf, eps_values, ax=ax, fontsize=8)
+            self.cluster_and_plot(img_id, kind, msf, eps_values,
+                                  ax=ax, fontsize=8, saveplot=False)
             t = ax.get_title()
             ax.set_title("MSF: {}, {}".format(msf, t),
                          fontsize=8)
