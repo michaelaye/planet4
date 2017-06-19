@@ -292,6 +292,7 @@ class DBScanner(object):
         db = io.DBManager()
         data = db.get_image_name_markings(image_name)
         image_ids = data.image_id.unique()
+        logger.debug("Number of image_ids found: %i", len(image_ids))
         for image_id in image_ids:
             self.pm.id = image_id
             self.cluster_image_id(image_id, msf, eps_values)
@@ -381,11 +382,6 @@ class DBScanner(object):
         eps_xy = eps_values[kind]['xy'][size]
         eps_rad = eps_values[kind]['radius'][size]
         logger.debug("Length of dataset: %i", len(dataset))
-        if len(dataset) < self.min_samples:
-            logger.warning("Skipping the %s part for %s due to lack of data.",
-                           size, kind)
-            self.reduced_data[kind].append(pd.DataFrame())
-            return
         self.reduced_data[kind].append(self._cluster_pipeline(kind, dataset, eps_xy, eps_rad))
         logger.debug("Appending %i items to final_clusters", len(self.finalclusters))
         self.final_clusters[kind].append(self.finalclusters)
