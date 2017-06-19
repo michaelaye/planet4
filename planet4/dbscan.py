@@ -113,7 +113,7 @@ class DBScanner(object):
     }
 
     def __init__(self, msf=0.13, savedir=None, with_angles=True, with_radii=True,
-                 do_large_run=False, save_results=True, only_core_samples=False):
+                 do_large_run=True, save_results=True, only_core_samples=False):
         self.msf = msf
         self.savedir = savedir
         self.with_angles = with_angles
