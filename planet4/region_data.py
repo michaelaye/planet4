@@ -1,4 +1,9 @@
-class Manhattan:
+class Seasoner:
+    def get_all_obsids(self):
+        return [item for sublist in self.seasons for item in sublist]
+
+
+class Manhattan(Seasoner):
     lat = -85.751
     lon = 105.971
     season1 = ['PSP_002770_0940',
@@ -11,7 +16,7 @@ class Manhattan:
     seasons = [season1, season4]
 
 
-class Manhattan2:
+class Manhattan2(Seasoner):
     lat = -86.39
     lon = 99
     season4 = ['ESP_028932_0935',
@@ -62,10 +67,11 @@ class Manhattan2:
                'PSP_003575_0935',
                'PSP_003641_0935',
                'PSP_005579_0935']
-    seasons = [season1, season2, season3, season4]
+    seasons = [item for sublist in [season1, season2, season3, season4]
+               for item in sublist]
 
 
-class Giza:
+class Giza(Seasoner):
     lat = -84.8
     lon = 65.7
     season4 = ['ESP_030106_0950',
@@ -109,7 +115,7 @@ class Giza:
     seasons = [season1, season2, season3, season4]
 
 
-class Inca:
+class Inca(Seasoner):
     lat = -81.45
     lon = 296
     season4 = ['ESP_030084_0985',
@@ -172,7 +178,8 @@ class Inca:
                'PSP_004371_0985']
     seasons = [season1, season2, season3, season4]
 
-class Ithaca:
+
+class Ithaca(Seasoner):
     lat = -85.128
     lon = 180.7
     season3 = ['ESP_021491_0950',
@@ -212,7 +219,10 @@ class Ithaca:
                'PSP_004666_0945',
                'PSP_004891_0945']
     seasons = [season1, season2, season3]
+
+
 regions = [Giza, Inca, Ithaca, Manhattan, Manhattan2]
+
 
 def get_seasons(season):
     result = []
@@ -222,6 +232,7 @@ def get_seasons(season):
         except AttributeError:
             pass
     return result
+
 
 season2 = get_seasons('season2')
 season3 = get_seasons('season3')
