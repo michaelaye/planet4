@@ -19,6 +19,9 @@ from pysis.isis import (campt, cubenorm, getkey, handmos, hi2isis, histitch,
 
 logger = logging.getLogger(__name__)
 
+img_x_size = 840
+img_y_size = 648
+
 
 def nocal_hi(source_product):
     """Import HiRISE product into ISIS and spice-init it.
@@ -170,43 +173,44 @@ def get_campt_label(frompath, sample, line):
     else:
         return group
 
-class CornerCalculator(object):
-    img_x_size = 840
-    img_y_size = 648
 
+def do_campt(mosaicname, savepath, temppath):
+    print("Calling do_campt")
+    try:
+        campt(from_=mosaicname, to=savepath, format='flat', append='no',
+              coordlist=temppath, coordtype='image')
+    except ProcessError as e:
+        print(e.stderr)
+        return mosaicname, False
+
+
+def xy_to_hirise(x, y, xtile, ytile):
+    "Convert pixels from tile (x,y) to hirise pixels."
+    x_offset = img_x_size - 100
+    y_offset = img_y_size - 100
+    x_HiRISE = x + ((x_offset) * (xtile - 1))  # **formula
+    y_HiRISE = y + ((y_offset) * (ytile - 1))  # **formula
+    return x_HiRISE, y_HiRISE
+
+
+def tilecenter_to_hirise(x_tile, y_tile=None):
+    "get HiRISE pixels for tile center"
+    if y_tile is None:
+        x_tile, y_tile = x_tile
+    return xy_to_hirise(img_x_size/2, img_y_size/2,
+                        x_tile, y_tile)
+
+
+class TileCalculator(object):
     def __init__(self, cubepath):
-        self.cubepath = cubepath
+        self.cubepath = Path(cubepath)
         db = io.DBManager()
         self.data = db.get_image_name_markings(self.img_name)
-
-    def transform(self, x, y, xtile, ytile):
-        x_offset = self.img_x_size - 100
-        y_offset = self.img_y_size - 100
-        x_HiRISE = x + ((x_offset) * (xtile - 1))  # **formula
-        y_HiRISE = y + ((y_offset) * (ytile - 1))  # **formula
-        return x_HiRISE, y_HiRISE
 
     @property
     def img_name(self):
         s = Path(self.cubepath).stem
         return s[:15]
-
-    @property
-    def UL(self):
-        return (1, 1)
-
-    @property
-    def LL(self):
-        return self.transform(1, self.img_y_size, 1, self.yt_max)
-
-    @property
-    def UR(self):
-        return self.transform(self.img_x_size, 1, self.xt_max, 1)
-
-    @property
-    def LR(self):
-        return self.transform(self.img_x_size, self.img_y_size,
-                              self.xt_max, self.yt_max)
 
     @property
     def x_tile_max(self):
@@ -216,39 +220,38 @@ class CornerCalculator(object):
     def y_tile_max(self):
         return self.data.y_tile.max()
 
-    def get_lats_lon(self, s=None, l=None):
-        gp = get_campt_label(self.cubepath, s, l)
-        lat_centric = gp['PlanetocentricLatitude'].value
-        lat_graphic = gp['PlanetographicLatitude'].value
-        lon = gp['PositiveWest360Longitude'].value
-        return dict(lat_centric=lat_centric,
-                    lat_graphic=lat_graphic,
-                    lon=lon)
-
     def calc_tile_coords(self):
-        bucket = []
-        for x_tile in range(1, self.x_tile_max + 1):
-            print("x_tile:", x_tile)
-            for y_tile in range(1, self.y_tile_max + 1):
-                print("y_tile:", y_tile)
-                xy_hirise = self.transform(self.img_x_size/2, self.img_y_size/2,
-                                           x_tile, y_tile)
-                bucket.append(self.get_lats_lon(*xy_hirise))
-        return pd.concat(bucket, ignore_index=True)
-
-    def calc_corners(self):
-        d = {}
-        for corner in ['UL', 'LL', 'UR', 'LR']:
-            try:
-                corner_pixels = getattr(self, corner)
-                coords = self.get_lats_lon(*getattr(self, corner))
-            except ProcessError as e:
-                print(self.img_name)
-                print("Corner:", corner)
-                print("Pixels:", corner_pixels)
-                print(e.stdout)
-                print(e.stderr)
-                continue
-            for k, v in coords.items():
-                d[corner + '_' + k] = v.value
-        return pd.DataFrame(d, index=[self.img_name])
+        x_tiles = range(1, self.x_tile_max+1)
+        y_tiles = range(1, self.y_tile_max+1)
+        from itertools import product
+        xy_tile = list(product(x_tiles, y_tiles))
+        df = pd.DataFrame(dict(xy_tile=xy_tile))
+        df['xy_hirise'] = df.xy_tile.apply(tilecenter_to_hirise)
+        df['x_hirise'] = df.xy_hirise.map(lambda x: x[0])
+        df['y_hirise'] = df.xy_hirise.map(lambda x: x[1])
+        temppath = self.cubepath.with_suffix('.tocampt')
+        df[['x_hirise', 'y_hirise']].to_csv(temppath,
+                                            header=False,
+                                            index=False)
+        savename = f"{self.img_name}_campt_out.csv"
+        savepath = self.cubepath.parent / savename
+        do_campt(self.cubepath, savepath, temppath)
+        results = pd.read_csv(savepath)
+        subdf = results[['PlanetocentricLatitude',
+                         'PlanetographicLatitude',
+                         'PositiveEast360Longitude']]
+        joined = df.join(subdf)
+        joined.set_index('xy_tile', inplace=True)
+        # now correlate tiles with image_id
+        subset = self.data[['image_id', 'x_tile', 'y_tile']]
+        # # this subset is not unique because it comes from marking data,
+        # # there are many markings per tile, but i only need one line per tiles
+        subset = subset.drop_duplicates()
+        # # now create the combined tile index for joining later:
+        subset['xy_tile'] = subset.apply(lambda x: (x['x_tile'], x['y_tile']), axis=1)
+        subset.set_index('xy_tile', inplace=True)
+        finaldf = joined.join(subset)
+        final_fname = f"{self.img_name}_tile_coords.csv"
+        final_path = self.cubepath.parent / final_fname
+        finaldf.to_csv(final_path, index=False)
+        print("Created", final_path)
