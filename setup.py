@@ -61,7 +61,7 @@ setup(
         'Intended Audience :: Science/Research',
         'Intended Audience :: Developers'
         'License :: OSI Approved :: ISC License (ISCL)',
-        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'Topic :: Scientific/Engineering :: Astronomy',
         'Topic :: Scientific/Engineering :: Information Analysis',
     ]
