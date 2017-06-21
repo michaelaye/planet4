@@ -17,6 +17,7 @@ from numpy import linalg as LA
 from numpy import arctan2
 
 from . import io
+from .exceptions import NoFilesFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -94,12 +95,21 @@ class ImageID(object):
 
     def __init__(self, imgid, scope='planet4', dbname=None, data=None):
         self.imgid = io.check_and_pad_id(imgid)
-        if data is not None:
-            self.data = data
-        else:
-            db = io.DBManager(dbname)
-            self.data = db.get_image_id_markings(self.imgid)
+        self._data = data
         self.scope = scope
+        self.dbname = dbname
+
+    @property
+    def data(self):
+        if self._data is not None:
+            return self._data
+        try:
+            db = io.DBManager(self.dbname)
+            self._data = db.get_image_id_markings(self.imgid)
+            return self._data
+        except NoFilesFoundError:
+            print("Cannot find PlanetFour database.")
+            return None
 
     @property
     def image_name(self):
