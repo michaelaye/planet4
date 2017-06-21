@@ -161,13 +161,10 @@ class ImageID(object):
         return self.filter_data('blotch', user_name, without_users)
 
     def show_subframe(self, ax=None, aspect='auto'):
-        fig = None
         if ax is None:
             fig, ax = plt.subplots(figsize=calc_fig_size(8))
         ax.imshow(self.subframe, origin='upper', aspect=aspect)
         ax.set_axis_off()
-        if fig is not None:
-            return fig
 
     def plot_objects(self, objects, n=None, img=True, user_name=None, ax=None,
                      user_color=None, user_colors=None, without_users=None):
@@ -535,17 +532,19 @@ class Fan(lines.Line2D):
 
     def add_mean_wind_pointer(self, ax, color='b', ls='-'):
         "Draw a thicker mean wind direction pointer for better visibility in plots."
-        endpoint = rotate_vector([5 * self.armlength, 0], self.data.angle)
+        endpoint = rotate_vector([2 * self.armlength, 0], self.data.angle)
         coords = np.vstack((self.base,
                             self.base + endpoint))
+        self.wind_pointer_end = coords[1]
         pointer = lines.Line2D(coords[:, 0], coords[:, 1],
-                               alpha=0.65, linewidth=3, linestyle=ls)
+                               alpha=0.65, linewidth=2, linestyle=ls)
         pointer.set_color(color)
         ax.add_line(pointer)
 
     def plot(self, color=None, ax=None):
         if ax is None:
             _, ax = plt.subplots()
+            set_subframe_size(ax)
         if color is not None:
             self.set_color(color)
         ax.add_line(self)
