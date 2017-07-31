@@ -237,12 +237,12 @@ def write_l1c(kind, slashed, pm):
         old_kinds = getattr(pm, f"reduced_{kind}df")
     except FileNotFoundError:
         logger.debug('No old %s file.', kind)
-        new_kinds.dropna(how='all', axis=1, inplace=True)
-        new_kinds.to_csv(str(l1c), index=False)
-    else:
-        logger.debug("Combining. Writing to %s", str(l1c))
-        combined = pd.concat([old_kinds, new_kinds], ignore_index=True)
-        combined.dropna(how='all', axis=1, inplace=True)
+        old_kinds = pd.DataFrame()
+    logger.debug("Combining. Writing to %s", str(l1c))
+    combined = pd.concat([old_kinds, new_kinds], ignore_index=True)
+    combined.dropna(how='all', axis=1, inplace=True)
+    if len(combined) > 0:
+        logger.debug("Writing %s", str(l1c))
         combined.to_csv(str(l1c), index=False)
 
 
@@ -269,8 +269,10 @@ def apply_cut(obsid, cut=0.5, savedir=None):
             # standard files to L1C folder
             pm.final_blotchfile.parent.mkdir(exist_ok=True)
             if pm.reduced_blotchfile.exists():
+                logger.debug("Writing final_blotchfile for %s", id_)
                 pm.reduced_blotchdf.to_csv(pm.final_blotchfile, index=False)
             if pm.reduced_fanfile.exists():
+                logger.debug("Writing final_fanfile for %s", id_)
                 pm.reduced_fandf.to_csv(pm.final_fanfile, index=False)
         else:
             # apply cut
