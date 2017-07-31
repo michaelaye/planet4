@@ -516,10 +516,10 @@ class DBScanner(object):
             outpath.parent.mkdir(exist_ok=True, parents=True)
             if outpath.exists():
                 outpath.unlink()
-            if len(outdata) == 0:
+            if not any(outdata):
+                logger.debug("No data for %s", str(outpath))
                 continue
             df = outdata
-            # df = outdata.apply(pd.to_numeric, errors='ignore')
             try:
                 df['n_votes'] = df['n_votes'].astype('int')
                 df['image_id'] = self.pm.id
