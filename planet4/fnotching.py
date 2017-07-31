@@ -183,18 +183,34 @@ def fnotch_image_ids(obsid, eps=20, savedir=None, scope='hirise'):
                 fans.to_csv(pm.reduced_fanfile, index=False)
 
 
-def get_slashed_for_path(path, pm):
-    id_ = get_id_from_path(path)
-    logger.debug("Slashing %s", id_)
-    pm.id = id_
-    try:
-        fnotches = pm.fnotchdf
-    except FileNotFoundError:
-        return None
-    # apply cut
-    slashed = fnotches[fnotches.vote_ratio > pm.cut]
-    return slashed
+def fnotch_obsid(obsid, eps=20, savedir=None):
+    pm = io.PathManager(obsid=obsid, datapath=savedir)
+    paths = pm.get_obsid_paths('L1A')
+    if len(paths) == 0:
+        logger.warning("No paths to fnotch found for %s", obsid)
+    fans = []
+    blotches = []
+    for path in paths:
+        f, b = get_clusters_in_path(path)
+        fans.append(f)
+        blotches.append(b)
+    fans = pd.concat(fans, ignore_index=True)
+    blotches = pd.concat(blotches, ignore_index=True)
+    return fans, blotches
 
+
+# def get_slashed_for_path(path, pm):
+#     id_ = get_id_from_path(path)
+#     logger.debug("Slashing %s", id_)
+#     pm.id = id_
+#     try:
+#         fnotches = pm.fnotchdf
+#     except FileNotFoundError:
+#         return None
+#     # apply cut
+#     slashed = fnotches[fnotches.vote_ratio > pm.cut]
+#     return slashed
+#
 
 def write_l1c(kind, slashed, pm):
     """Write the L1C for marking `kind`.
