@@ -394,6 +394,11 @@ class DBScanner(object):
             self.remaining = []
         else:
             self.remaining = data_in[~data_in.isin(clustered).all(1)]
+        if self.current_kind == 'blotch' and len(self.remaining) > 0:
+            eps = 0.00001
+            blotch_defaults = ((self.remaining.radius_1 - 10) < eps) &\
+                ((self.remaining.radius_2 - 10).abs() < eps)
+            self.remaining = self.remaining[~blotch_defaults]
 
     def _cluster_pipeline(self, kind, data, eps, eps_rad):
         """Cluster pipeline that can cluster over xy, angles and radii.
