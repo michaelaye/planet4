@@ -39,7 +39,7 @@ def get_clusters_in_path(path):
     return clusters
 
 
-def data_to_centers(df, kind):
+def data_to_centers(df, kind, scope='hirise'):
     """Convert a dataframe with marking data to an array of center coords.
 
     Parameters
@@ -58,7 +58,7 @@ def data_to_centers(df, kind):
         Marking = markings.Blotch
     else:
         Marking = markings.Fan
-    return np.vstack(Marking(row, scope='hirise').center for _, row in df.iterrows())
+    return np.vstack(Marking(row, scope=scope).center for _, row in df.iterrows())
 
 
 def calc_indices_from_index(n, c):
@@ -125,11 +125,13 @@ def remove_opposing_fans(fans, eps=20):
     return fans.drop(ind_to_remove)
 
 
-def fnotch_image_ids(obsid, eps=20, savedir=None):
+def fnotch_image_ids(obsid, eps=20, savedir=None, scope='hirise'):
     "Cluster each image_id for an obsid separately."
     # the clustering results were stored as L1A products
     pm = io.PathManager(obsid=obsid, datapath=savedir)
     paths = pm.get_obsid_paths('L1A')
+    if len(paths) == 0:
+        logger.warning("No paths to fnotch found for %s", obsid)
     for path in paths:
         id_ = get_id_from_path(path)
         pm.id = id_
@@ -142,7 +144,8 @@ def fnotch_image_ids(obsid, eps=20, savedir=None):
             fans = remove_opposing_fans(fans)
         if not any([fans is None, blotches is None]):
             logger.debug("Fnotching %s", id_)
-            distances = cdist(data_to_centers(fans, 'fan'), data_to_centers(blotches, 'blotch'))
+            distances = cdist(data_to_centers(fans, 'fan', scope=scope),
+                              data_to_centers(blotches, 'blotch', scope=scope))
             X, Y = np.where(distances < eps)
             # X are the indices along the fans input, Y for blotches respectively
 
