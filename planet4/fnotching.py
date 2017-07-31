@@ -224,8 +224,9 @@ def write_l1c(kind, slashed, pm):
     pm : io.PathManager
         The PathManager for the current image_id
     """
+    logger.debug("Writing l1c for %s", kind)
     try:
-        new_kinds = slashed.loc[[kind]]
+        new_kinds = slashed.loc[[kind]].copy()
     except KeyError:
         logger.debug("No %s in slashed dataframe.", kind)
         new_kinds = pd.DataFrame()
