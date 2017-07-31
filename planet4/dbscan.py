@@ -346,12 +346,17 @@ class DBScanner(object):
 
         eps_values = self.eps_values if eps_values is None else eps_values
         self.write_settings_file(eps_values)
-
         # set up storage for results
         self.reduced_data = {}
         self.final_clusters = {}
+        old_val = self.do_large_run
         for kind in ['fan', 'blotch']:
             logger.info("Working on %s.", kind)
+            self.current_kind = kind
+            if kind == 'fan':
+                self.do_large_run = False
+            else:
+                self.do_large_run = old_val
             # fill in empty lists in case we need to bail for not enough data
             self.final_clusters[kind] = []
             self.reduced_data[kind] = []
