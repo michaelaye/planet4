@@ -91,7 +91,7 @@ class DBScanner(object):
         'fan': {
             'xy': {  # in pixels
                 'small': 10,
-                'large': 50,
+                'large': 25,
             },
             'angle': 20,  # degrees
             'radius': {
@@ -102,7 +102,7 @@ class DBScanner(object):
         'blotch': {
             'xy': {  # in pixels
                 'small': 10,
-                'large': 50,
+                'large': 25,
             },
             'angle': None,  # for now deactivated
             'radius': {
@@ -302,6 +302,7 @@ class DBScanner(object):
         eps_values['only_core_samples'] = self.only_core_samples
         settingspath = self.pm.blotchfile.parent / 'clustering_settings.yaml'
         settingspath.parent.mkdir(exist_ok=True, parents=True)
+        logger.info("Writing settings file at %s", str(settingspath))
         with open(settingspath, 'w') as fp:
             pyaml.dump(eps_values, fp)
 
@@ -309,7 +310,7 @@ class DBScanner(object):
         """Interface function for users to cluster data for one P4 image_id.
 
         This method does the data splitting in case it is required and calls the
-        `_cluster_pipeline` that goes over all dimensions to cluster.
+        `_setup_and_call_clustering` that goes over all dimensions to cluster.
 
 
         Parameters
@@ -378,6 +379,11 @@ class DBScanner(object):
             self.store_clustered(self.reduced_data)
 
     def _setup_and_call_clustering(self, eps_values, dataset, kind, size):
+        """setup helper for the clustering pipeline.
+
+        This just reads out the values from the eps_values structure and then calls
+        `_cluster_pipeline`.
+        """
         logger.info("Processing %s dataset.", size)
         eps_xy = eps_values[kind]['xy'][size]
         eps_rad = eps_values[kind]['radius'][size]
