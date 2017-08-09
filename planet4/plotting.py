@@ -1,10 +1,15 @@
+import itertools
 import logging
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
 import yaml
+from ipywidgets import interact
 
-from . import io, markings
+from . import io, markings, projection
 
 logger = logging.getLogger(__name__)
 
