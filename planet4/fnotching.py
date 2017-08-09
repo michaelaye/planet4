@@ -32,7 +32,7 @@ def get_clusters_in_path(path):
     id_ = get_id_from_path(path)
     for kind in ['fans', 'blotches']:
         try:
-            df = pd.read_csv(str(path / f"L1A_{id_}_{kind}.csv"))
+            df = pd.read_csv(str(path / f"{id_}_L1A_{kind}.csv"))
         except FileNotFoundError:
             df = None
         clusters.append(df)
@@ -196,21 +196,49 @@ def fnotch_obsid(obsid, eps=20, savedir=None):
         blotches.append(b)
     fans = pd.concat(fans, ignore_index=True)
     blotches = pd.concat(blotches, ignore_index=True)
-    return fans, blotches
+    if fans is not None and len(fans) > 1:
+        # clean up fans with opposite angles
+        fans = remove_opposing_fans(fans)
+    if not any([fans is None, blotches is None]):
+        distances = cdist(data_to_centers(fans, 'fan', scope='hirise'),
+                          data_to_centers(blotches, 'blotch', scope='hirise'))
+        X, Y = np.where(distances < eps)
+        # X are the indices along the fans input, Y for blotches respectively
 
+        # loop over fans and blotches that are within `eps` pixels:
+        fnotches = []
+        for fan_loc, blotch_loc in zip(X, Y):
+            fan = fans.iloc[[fan_loc]]
+            blotch = blotches.iloc[[blotch_loc]]
+            fnotches.append(markings.Fnotch(fan, blotch).data)
 
-# def get_slashed_for_path(path, pm):
-#     id_ = get_id_from_path(path)
-#     logger.debug("Slashing %s", id_)
-#     pm.id = id_
-#     try:
-#         fnotches = pm.fnotchdf
-#     except FileNotFoundError:
-#         return None
-#     # apply cut
-#     slashed = fnotches[fnotches.vote_ratio > pm.cut]
-#     return slashed
-#
+        # store the combined fnotches into one file. The `votes_ratio` is
+        # stored as well, making it simple to filter/cut on these later for the
+        # L1C product.
+        try:
+            pm.fnotchfile.parent.mkdir(exist_ok=True)
+            pd.concat(fnotches).to_csv(pm.fnotchfile)
+        except ValueError as e:
+            # this is fine, just means notching to fnotch.
+            if e.args[0].startswith("No objects to concatenate"):
+                logger.debug("No fnotches found for %s.", obsid)
+            else:
+                # if it's a different error, raise it though:
+                raise ValueError
+
+        # write out the fans and blotches that where not within fnotching distance:
+        fans_remaining = fans.loc[set(fans.index) - set(X)]
+        if len(fans_remaining) > 0:
+            fans_remaining.to_csv(pm.reduced_fanfile, index=False)
+        blotches_remaining = blotches.loc[set(blotches.index) - set(Y)]
+        if len(blotches_remaining) > 0:
+            blotches_remaining.to_csv(pm.reduced_blotchfile, index=False)
+    else:
+        if blotches is not None:
+            blotches.to_csv(pm.reduced_blotchfile, index=False)
+        if fans is not None:
+            fans.to_csv(pm.reduced_fanfile, index=False)
+
 
 def write_l1c(kind, slashed, pm):
     """Write the L1C for marking `kind`.
@@ -244,6 +272,27 @@ def write_l1c(kind, slashed, pm):
     if len(combined) > 0:
         logger.debug("Writing %s", str(l1c))
         combined.to_csv(str(l1c), index=False)
+
+
+def apply_cut_obsid(obsid, cut=0.5, savedir=None):
+    pm = io.PathManager(obsid=obsid, cut=cut, datapath=savedir)
+    try:
+        fnotches = pm.fnotchdf
+    except FileNotFoundError:
+        # no fnotch df was found. Now need to copy over
+        # standard files to L1C folder
+        pm.final_blotchfile.parent.mkdir(exist_ok=True)
+        if pm.reduced_blotchfile.exists():
+            logger.debug("Writing final_blotchfile for %s", obsid)
+            pm.reduced_blotchdf.to_csv(pm.final_blotchfile, index=False)
+        if pm.reduced_fanfile.exists():
+            logger.debug("Writing final_fanfile for %s", obsid)
+            pm.reduced_fandf.to_csv(pm.final_fanfile, index=False)
+    else:
+        # apply cut
+        slashed = fnotches[fnotches.vote_ratio > pm.cut]
+        for kind in ['fan', 'blotch']:
+            write_l1c(kind, slashed, pm)
 
 
 def apply_cut(obsid, cut=0.5, savedir=None):
