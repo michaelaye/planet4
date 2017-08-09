@@ -366,13 +366,18 @@ class PathManager(object):
         try:
             p /= self.id
         except TypeError:
-            raise TypeError("self.id is not set!")
+            logging.warning("self.id not set. Storing in obsid level.")
+
+        id_ = self.id if self.id != '' else self.obsid
+
         # add the specific sub folder
         p /= specific
-        p /= f"{self.id}_{marking}{self.suffix}"
+
         if specific != '':
+            p /= f"{id_}_{specific}_{marking}{self.suffix}"
+        else:
             # prepend the data level to file name if given.
-            p = p.with_name(f"{specific}_{p.name}")
+            p /= f"{id_}_{marking}{self.suffix}"
         return p
 
     def get_obsid_paths(self, level):

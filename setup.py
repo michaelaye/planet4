@@ -23,7 +23,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name=DISTNAME,
-    version='0.8.0',
+    version='0.10.0',
     packages=find_packages(),
 
     install_requires=['pandas', 'numpy', 'matplotlib', 'pyaml'],
@@ -61,7 +61,7 @@ setup(
         'Intended Audience :: Science/Research',
         'Intended Audience :: Developers'
         'License :: OSI Approved :: ISC License (ISCL)',
-        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'Topic :: Scientific/Engineering :: Astronomy',
         'Topic :: Scientific/Engineering :: Information Analysis',
     ]

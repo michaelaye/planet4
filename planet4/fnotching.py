@@ -32,14 +32,14 @@ def get_clusters_in_path(path):
     id_ = get_id_from_path(path)
     for kind in ['fans', 'blotches']:
         try:
-            df = pd.read_csv(str(path / f"L1A_{id_}_{kind}.csv"))
+            df = pd.read_csv(str(path / f"{id_}_L1A_{kind}.csv"))
         except FileNotFoundError:
             df = None
         clusters.append(df)
     return clusters
 
 
-def data_to_centers(df):
+def data_to_centers(df, kind, scope='hirise'):
     """Convert a dataframe with marking data to an array of center coords.
 
     Parameters
@@ -47,18 +47,18 @@ def data_to_centers(df):
     df : pd.dataframe
         Dataframe with either fan or blotch marking data. It probes itself
         which one it is by looking at if distances and radii are defined.
-
+    kind : {'fan', 'blotch'}
     Returns
     -------
     np.array
         Array with the center coordinates, dimensions: (rows, 2)
     """
-    if all(np.isnan(df.distance)):
+    if kind == 'blotch':
         # only the blotch arrays have distance un-defined
         Marking = markings.Blotch
-    elif all(np.isnan(df.radius_1)) and all(np.isnan(df.radius_2)):
+    else:
         Marking = markings.Fan
-    return np.vstack(Marking(row, scope='hirise').center for _, row in df.iterrows())
+    return np.vstack(Marking(row, scope=scope).center for _, row in df.iterrows())
 
 
 def calc_indices_from_index(n, c):
@@ -105,7 +105,7 @@ def remove_opposing_fans(fans, eps=20):
     pd.DataFrame
         Data with opposing fans removed.
     """
-    distances = pdist(data_to_centers(fans))
+    distances = pdist(data_to_centers(fans, 'fan'))
     close_indices = np.where(distances < eps)[0]
     ind_to_remove = []
     for index in close_indices:
@@ -125,11 +125,13 @@ def remove_opposing_fans(fans, eps=20):
     return fans.drop(ind_to_remove)
 
 
-def fnotch_image_ids(obsid, eps=20, savedir=None):
+def fnotch_image_ids(obsid, eps=20, savedir=None, scope='hirise'):
     "Cluster each image_id for an obsid separately."
     # the clustering results were stored as L1A products
     pm = io.PathManager(obsid=obsid, datapath=savedir)
     paths = pm.get_obsid_paths('L1A')
+    if len(paths) == 0:
+        logger.warning("No paths to fnotch found for %s", obsid)
     for path in paths:
         id_ = get_id_from_path(path)
         pm.id = id_
@@ -142,7 +144,8 @@ def fnotch_image_ids(obsid, eps=20, savedir=None):
             fans = remove_opposing_fans(fans)
         if not any([fans is None, blotches is None]):
             logger.debug("Fnotching %s", id_)
-            distances = cdist(data_to_centers(fans), data_to_centers(blotches))
+            distances = cdist(data_to_centers(fans, 'fan', scope=scope),
+                              data_to_centers(blotches, 'blotch', scope=scope))
             X, Y = np.where(distances < eps)
             # X are the indices along the fans input, Y for blotches respectively
 
@@ -167,8 +170,12 @@ def fnotch_image_ids(obsid, eps=20, savedir=None):
                     raise ValueError
 
             # write out the fans and blotches that where not within fnotching distance:
-            fans.loc[set(fans.index) - set(X)].to_csv(pm.reduced_fanfile, index=False)
-            blotches.loc[set(blotches.index) - set(Y)].to_csv(pm.reduced_blotchfile, index=False)
+            fans_remaining = fans.loc[set(fans.index) - set(X)]
+            if len(fans_remaining) > 0:
+                fans_remaining.to_csv(pm.reduced_fanfile, index=False)
+            blotches_remaining = blotches.loc[set(blotches.index) - set(Y)]
+            if len(blotches_remaining) > 0:
+                blotches_remaining.to_csv(pm.reduced_blotchfile, index=False)
         else:
             if blotches is not None:
                 blotches.to_csv(pm.reduced_blotchfile, index=False)
@@ -176,17 +183,61 @@ def fnotch_image_ids(obsid, eps=20, savedir=None):
                 fans.to_csv(pm.reduced_fanfile, index=False)
 
 
-def get_slashed_for_path(path, pm):
-    id_ = get_id_from_path(path)
-    logger.debug("Slashing %s", id_)
-    pm.id = id_
-    try:
-        fnotches = pm.fnotchdf
-    except FileNotFoundError:
-        return None
-    # apply cut
-    slashed = fnotches[fnotches.vote_ratio > pm.cut]
-    return slashed
+def fnotch_obsid(obsid, eps=20, savedir=None):
+    pm = io.PathManager(obsid=obsid, datapath=savedir)
+    paths = pm.get_obsid_paths('L1A')
+    if len(paths) == 0:
+        logger.warning("No paths to fnotch found for %s", obsid)
+    fans = []
+    blotches = []
+    for path in paths:
+        f, b = get_clusters_in_path(path)
+        fans.append(f)
+        blotches.append(b)
+    fans = pd.concat(fans, ignore_index=True)
+    blotches = pd.concat(blotches, ignore_index=True)
+    if fans is not None and len(fans) > 1:
+        # clean up fans with opposite angles
+        fans = remove_opposing_fans(fans)
+    if not any([fans is None, blotches is None]):
+        distances = cdist(data_to_centers(fans, 'fan', scope='hirise'),
+                          data_to_centers(blotches, 'blotch', scope='hirise'))
+        X, Y = np.where(distances < eps)
+        # X are the indices along the fans input, Y for blotches respectively
+
+        # loop over fans and blotches that are within `eps` pixels:
+        fnotches = []
+        for fan_loc, blotch_loc in zip(X, Y):
+            fan = fans.iloc[[fan_loc]]
+            blotch = blotches.iloc[[blotch_loc]]
+            fnotches.append(markings.Fnotch(fan, blotch).data)
+
+        # store the combined fnotches into one file. The `votes_ratio` is
+        # stored as well, making it simple to filter/cut on these later for the
+        # L1C product.
+        try:
+            pm.fnotchfile.parent.mkdir(exist_ok=True)
+            pd.concat(fnotches).to_csv(pm.fnotchfile)
+        except ValueError as e:
+            # this is fine, just means notching to fnotch.
+            if e.args[0].startswith("No objects to concatenate"):
+                logger.debug("No fnotches found for %s.", obsid)
+            else:
+                # if it's a different error, raise it though:
+                raise ValueError
+
+        # write out the fans and blotches that where not within fnotching distance:
+        fans_remaining = fans.loc[set(fans.index) - set(X)]
+        if len(fans_remaining) > 0:
+            fans_remaining.to_csv(pm.reduced_fanfile, index=False)
+        blotches_remaining = blotches.loc[set(blotches.index) - set(Y)]
+        if len(blotches_remaining) > 0:
+            blotches_remaining.to_csv(pm.reduced_blotchfile, index=False)
+    else:
+        if blotches is not None:
+            blotches.to_csv(pm.reduced_blotchfile, index=False)
+        if fans is not None:
+            fans.to_csv(pm.reduced_fanfile, index=False)
 
 
 def write_l1c(kind, slashed, pm):
@@ -201,8 +252,9 @@ def write_l1c(kind, slashed, pm):
     pm : io.PathManager
         The PathManager for the current image_id
     """
+    logger.debug("Writing l1c for %s", kind)
     try:
-        new_kinds = slashed.loc[[kind]]
+        new_kinds = slashed.loc[[kind]].copy()
     except KeyError:
         logger.debug("No %s in slashed dataframe.", kind)
         new_kinds = pd.DataFrame()
@@ -213,13 +265,34 @@ def write_l1c(kind, slashed, pm):
         old_kinds = getattr(pm, f"reduced_{kind}df")
     except FileNotFoundError:
         logger.debug('No old %s file.', kind)
-        new_kinds.dropna(how='all', axis=1, inplace=True)
-        new_kinds.to_csv(str(l1c), index=False)
-    else:
-        logger.debug("Combining. Writing to %s", str(l1c))
-        combined = pd.concat([old_kinds, new_kinds], ignore_index=True)
-        combined.dropna(how='all', axis=1, inplace=True)
+        old_kinds = pd.DataFrame()
+    logger.debug("Combining. Writing to %s", str(l1c))
+    combined = pd.concat([old_kinds, new_kinds], ignore_index=True)
+    combined.dropna(how='all', axis=1, inplace=True)
+    if len(combined) > 0:
+        logger.debug("Writing %s", str(l1c))
         combined.to_csv(str(l1c), index=False)
+
+
+def apply_cut_obsid(obsid, cut=0.5, savedir=None):
+    pm = io.PathManager(obsid=obsid, cut=cut, datapath=savedir)
+    try:
+        fnotches = pm.fnotchdf
+    except FileNotFoundError:
+        # no fnotch df was found. Now need to copy over
+        # standard files to L1C folder
+        pm.final_blotchfile.parent.mkdir(exist_ok=True)
+        if pm.reduced_blotchfile.exists():
+            logger.debug("Writing final_blotchfile for %s", obsid)
+            pm.reduced_blotchdf.to_csv(pm.final_blotchfile, index=False)
+        if pm.reduced_fanfile.exists():
+            logger.debug("Writing final_fanfile for %s", obsid)
+            pm.reduced_fandf.to_csv(pm.final_fanfile, index=False)
+    else:
+        # apply cut
+        slashed = fnotches[fnotches.vote_ratio > pm.cut]
+        for kind in ['fan', 'blotch']:
+            write_l1c(kind, slashed, pm)
 
 
 def apply_cut(obsid, cut=0.5, savedir=None):
@@ -245,8 +318,10 @@ def apply_cut(obsid, cut=0.5, savedir=None):
             # standard files to L1C folder
             pm.final_blotchfile.parent.mkdir(exist_ok=True)
             if pm.reduced_blotchfile.exists():
+                logger.debug("Writing final_blotchfile for %s", id_)
                 pm.reduced_blotchdf.to_csv(pm.final_blotchfile, index=False)
             if pm.reduced_fanfile.exists():
+                logger.debug("Writing final_fanfile for %s", id_)
                 pm.reduced_fandf.to_csv(pm.final_fanfile, index=False)
         else:
             # apply cut
