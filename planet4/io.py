@@ -104,6 +104,7 @@ def analysis_folder():
 
 
 def check_and_pad_id(imgid):
+    "Does NOT work with pd.Series item."
     if imgid is None:
         return None
     imgid_template = "APF0000000"
