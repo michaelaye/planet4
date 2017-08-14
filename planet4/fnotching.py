@@ -194,8 +194,14 @@ def fnotch_obsid(obsid, eps=20, savedir=None):
         f, b = get_clusters_in_path(path)
         fans.append(f)
         blotches.append(b)
-    fans = pd.concat(fans, ignore_index=True)
-    blotches = pd.concat(blotches, ignore_index=True)
+    try:
+        fans = pd.concat(fans, ignore_index=True)
+    except ValueError:
+        fans = None
+    try:
+        blotches = pd.concat(blotches, ignore_index=True)
+    except ValueError:
+        blotches = None
     if fans is not None and len(fans) > 1:
         # clean up fans with opposite angles
         fans = remove_opposing_fans(fans)
@@ -235,8 +241,10 @@ def fnotch_obsid(obsid, eps=20, savedir=None):
             blotches_remaining.to_csv(pm.reduced_blotchfile, index=False)
     else:
         if blotches is not None:
+            pm.reduced_blotchfile.parent.mkdir(parents=True, exist_ok=True)
             blotches.to_csv(pm.reduced_blotchfile, index=False)
         if fans is not None:
+            pm.reduced_fanfile.parent.mkdir(parents=True, exist_ok=True)
             fans.to_csv(pm.reduced_fanfile, index=False)
 
 
