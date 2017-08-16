@@ -62,3 +62,7 @@ notebooks/vpython/pypet
 notebooks/print\.prt
 
 notebooks/myids\.npy
+
+*.tocampt
+
+*.npy
