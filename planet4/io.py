@@ -305,6 +305,10 @@ class PathManager(object):
             self._id = check_and_pad_id(value)
 
     @property
+    def clustering_logfile(self):
+        return self.fanfile.parent / 'clustering_settings.yaml'
+
+    @property
     def obsid(self):
         if self._obsid is '':
             if self.id is not '':
@@ -575,12 +579,3 @@ class DBManager(object):
 
     def get_general_filter(self, f):
         return pd.read_hdf(self.dbname, 'df', where=f)
-
-
-###
-# general database helpers
-###
-
-
-def remove_tutorial(df):
-    return df[df.image_name != 'tutorial']
