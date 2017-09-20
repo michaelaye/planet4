@@ -15,6 +15,8 @@ import seaborn as sns
 from matplotlib.patches import Ellipse
 from numpy import linalg as LA
 from numpy import arctan2
+from shapely import affinity
+from shapely.geometry import Point
 
 from . import io
 from .exceptions import NoFilesFoundError
@@ -114,6 +116,10 @@ class ImageID(object):
     @property
     def image_name(self):
         return self.data.image_name.iloc[0]
+
+    @property
+    def tile_coords(self):
+        return self.data[['x_tile', 'y_tile']].drop_duplicates().values[0]
 
     @property
     def blotchmask(self):
@@ -285,6 +291,16 @@ class Blotch(Ellipse):
             return True
         else:
             return False
+
+    def to_shapely(self):
+        """Convert a markings.Blotch to shapely Ellipse.
+
+        Code from https://gis.stackexchange.com/questions/243459/drawing-ellipse-with-shapely/243462
+        """
+        circ = Point(self.center).buffer(1)
+        ell = affinity.scale(circ, self.data.radius_1, self.data.radius_2)
+        ellr = affinity.rotate(ell, self.data.angle)
+        return ellr
 
     @property
     def area(self):
