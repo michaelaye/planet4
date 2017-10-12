@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 from pathlib import Path
+from urllib.error import URLError
 
 import matplotlib.image as mplimg
 import pandas as pd
@@ -126,7 +127,12 @@ def get_subframe(url):
     targetpath.parent.mkdir(exist_ok=True)
     if not targetpath.exists():
         logger.info("Did not find image in cache. Downloading ...")
-        path = urlretrieve(url)[0]
+        try:
+            path = urlretrieve(url)[0]
+        except URLError as e:
+            msg = "Cannot receive subframe image. No internet?"
+            logger.error(msg)
+            return None
         logger.debug("Done.")
         shutil.move(path, str(targetpath))
     else:
