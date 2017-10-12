@@ -183,6 +183,65 @@ def fnotch_image_ids(obsid, eps=20, savedir=None, scope='hirise'):
                 fans.to_csv(pm.reduced_fanfile, index=False)
 
 
+def fnotch_image_ids_with_shapely(obsid, eps=20, savedir=None, scope='hirise'):
+    "Cluster each image_id for an obsid separately."
+    # the clustering results were stored as L1A products
+    pm = io.PathManager(obsid=obsid, datapath=savedir)
+    paths = pm.get_obsid_paths('L1A')
+    if len(paths) == 0:
+        logger.warning("No paths to fnotch found for %s", obsid)
+    for path in paths:
+        id_ = get_id_from_path(path)
+        pm.id = id_
+        # make sure the L1B folder exists
+        pm.reduced_fanfile.parent.mkdir(parents=True, exist_ok=True)
+
+        fans, blotches = get_clusters_in_path(path)
+        if fans is not None and len(fans) > 1:
+            # clean up fans with opposite angles
+            fans = remove_opposing_fans(fans)
+        if not any([fans is None, blotches is None]):
+            logger.debug("Fnotching %s", id_)
+            distances = cdist(data_to_centers(fans, 'fan', scope=scope),
+                              data_to_centers(blotches, 'blotch', scope=scope))
+            X, Y = np.where(distances < eps)
+            # X are the indices along the fans input, Y for blotches respectively
+
+            # loop over fans and blotches that are within `eps` pixels:
+            fnotches = []
+            for fan_loc, blotch_loc in zip(X, Y):
+                fan = fans.iloc[[fan_loc]]
+                blotch = blotches.iloc[[blotch_loc]]
+                fnotches.append(markings.Fnotch(fan, blotch).data)
+
+            # store the combined fnotches into one file. The `votes_ratio` is
+            # stored as well, making it simple to filter/cut on these later for the
+            # L1C product.
+            try:
+                pd.concat(fnotches).to_csv(pm.fnotchfile)
+            except ValueError as e:
+                # this is fine, just means notching to fnotch.
+                if e.args[0].startswith("No objects to concatenate"):
+                    logger.debug("No fnotches found for %s.", id_)
+                else:
+                    # if it's a different error, raise it though:
+                    raise ValueError
+
+            # write out the fans and blotches that where not within fnotching distance:
+            fans_remaining = fans.loc[set(fans.index) - set(X)]
+            if len(fans_remaining) > 0:
+                fans_remaining.to_csv(pm.reduced_fanfile, index=False)
+            blotches_remaining = blotches.loc[set(blotches.index) - set(Y)]
+            if len(blotches_remaining) > 0:
+                blotches_remaining.to_csv(pm.reduced_blotchfile, index=False)
+        else:
+            if blotches is not None:
+                blotches.to_csv(pm.reduced_blotchfile, index=False)
+            if fans is not None:
+                fans.to_csv(pm.reduced_fanfile, index=False)
+
+
+
 def fnotch_obsid(obsid, eps=20, savedir=None):
     pm = io.PathManager(obsid=obsid, datapath=savedir)
     paths = pm.get_obsid_paths('L1A')
