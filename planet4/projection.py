@@ -7,6 +7,7 @@ import logging
 import sys
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pvl
 
@@ -193,6 +194,25 @@ def xy_to_hirise(x, y, xtile, ytile):
     return x_HiRISE, y_HiRISE
 
 
+def p4pix_to_hirise_pix(p4pix, tile, x_or_y):
+    """This convert either x or y coordinate of a planet4 pixel to Hirise coordinate.
+
+    Parameters
+    ----------
+    p4pix : int
+        Coordinate value for either x or y dimension of P4 pixel
+    tile : int
+        x or y tile coordinate of PlanetFour
+    x_or_y : {'x','y'}
+        Switch between different coordinate transformations
+    """
+    offset = dict(x=740, y=548)  # image width/height - 100
+    return p4pix + offset[x_or_y] * (np.array(tile) - 1)
+
+def p4tile_center_to_hirise_pix(tile, x_or_y):
+    p4pix = dict(x=420, y=324)  # half image sizes
+    return p4pix_to_hirise_pix(p4pix[x_or_y], tile, x_or_y)
+
 def tilecenter_to_hirise(x_tile, y_tile=None):
     "get HiRISE pixels for tile center"
     if y_tile is None:
@@ -220,37 +240,48 @@ class TileCalculator(object):
     def y_tile_max(self):
         return self.data.y_tile.max()
 
-    def calc_tile_coords(self):
-        x_tiles = range(1, self.x_tile_max+1)
-        y_tiles = range(1, self.y_tile_max+1)
-        from itertools import product
-        xy_tile = list(product(x_tiles, y_tiles))
-        df = pd.DataFrame(dict(xy_tile=xy_tile))
-        df['xy_hirise'] = df.xy_tile.apply(tilecenter_to_hirise)
-        df['x_hirise'] = df.xy_hirise.map(lambda x: x[0])
-        df['y_hirise'] = df.xy_hirise.map(lambda x: x[1])
-        temppath = self.cubepath.with_suffix('.tocampt')
-        df[['x_hirise', 'y_hirise']].to_csv(temppath,
-                                            header=False,
-                                            index=False)
+    @property
+    def campt_results_path(self):
         savename = f"{self.img_name}_campt_out.csv"
-        savepath = self.cubepath.parent / savename
-        do_campt(self.cubepath, savepath, temppath)
-        results = pd.read_csv(savepath)
-        subdf = results[['PlanetocentricLatitude',
+        return self.cubepath.parent / savename
+
+    def get_xy_tiles(self):
+        return np.mgrid[1:self.x_tile_max + 1,
+                        1:self.y_tile_max + 1]
+
+    def get_campt_input_coords(self):
+        xtiles, ytiles = self.get_xy_tiles()
+        df = pd.DataFrame(dict(x_tile=xtiles.ravel(), y_tile=ytiles.ravel()))
+        df['x_hirise'] = p4tile_center_to_hirise_pix(xtiles.ravel(), 'x')
+        df['y_hirise'] = p4tile_center_to_hirise_pix(ytiles.ravel(), 'y')
+        return df
+
+    @property
+    def temppath(self):
+        return self.cubepath.with_suffix('.tocampt')
+
+    def calc_tile_coords(self):
+        df = self.get_campt_input_coords()
+        df[['x_hirise', 'y_hirise']].to_csv(self.temppath, header=False, index=False)
+        do_campt(self.cubepath, self.campt_results_path, self.temppath)
+        results = pd.read_csv(self.campt_results_path)
+        subdf = results[['Sample', 'Line',
+                         'PlanetocentricLatitude',
                          'PlanetographicLatitude',
-                         'PositiveEast360Longitude']]
-        joined = df.join(subdf)
-        joined.set_index('xy_tile', inplace=True)
+                         'PositiveEast360Longitude',
+                         'BodyFixedCoordinateX',
+                         'BodyFixedCoordinateY',
+                         'BodyFixedCoordinateZ']]
+        joined = df.merge(subdf, left_on=['x_hirise', 'y_hirise'],
+                          right_on=['Sample', 'Line'])
+
         # now correlate tiles with image_id
         subset = self.data[['image_id', 'x_tile', 'y_tile']]
         # # this subset is not unique because it comes from marking data,
         # # there are many markings per tile, but i only need one line per tiles
         subset = subset.drop_duplicates()
-        # # now create the combined tile index for joining later:
-        subset['xy_tile'] = subset.apply(lambda x: (x['x_tile'], x['y_tile']), axis=1)
-        subset.set_index('xy_tile', inplace=True)
-        finaldf = joined.join(subset)
+        # df.merge will find the columns with same names for merging
+        finaldf = joined.merge(subset)
         final_fname = f"{self.img_name}_tile_coords.csv"
         final_path = self.cubepath.parent / final_fname
         finaldf.to_csv(final_path, index=False)
