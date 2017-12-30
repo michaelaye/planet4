@@ -15,10 +15,14 @@ from hirise_tools.products import RED_PRODUCT_ID
 from planet4 import io
 from pysis import CubeFile
 from pysis.exceptions import ProcessError
-from pysis.isis import (campt, cubenorm, getkey, handmos, hi2isis, histitch,
-                        spiceinit)
 
 logger = logging.getLogger(__name__)
+
+try:
+    from pysis.isis import (campt, cubenorm, getkey, handmos, hi2isis, histitch,
+                            spiceinit)
+except ImportError:
+    logger.warning("ISIS commands not found.")
 
 img_x_size = 840
 img_y_size = 648
@@ -271,7 +275,9 @@ class TileCalculator(object):
                          'PositiveEast360Longitude',
                          'BodyFixedCoordinateX',
                          'BodyFixedCoordinateY',
-                         'BodyFixedCoordinateZ']]
+                         'BodyFixedCoordinateZ',
+                         'LineResolution',
+                         'SampleResolution']]
         joined = df.merge(subdf, left_on=['x_hirise', 'y_hirise'],
                           right_on=['Sample', 'Line'])
 
