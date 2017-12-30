@@ -321,7 +321,12 @@ class PathManager(object):
                 logger.debug("Entering obsid search for known image_id.")
                 db = DBManager()
                 data = db.get_image_id_markings(self.id)
-                obsid = data.image_name.iloc[0]
+                try:
+                    obsid = data.image_name.iloc[0]
+                except IndexError:
+                    raise IndexError("obsid access broken. Did you forget to use the `obsid` keyword"
+                            " at initialization?")
+                    return None
                 logger.debug("obsid found: %s", obsid)
                 self._obsid = obsid
         return self._obsid
@@ -402,7 +407,7 @@ class PathManager(object):
         # cast to upper case for the lazy... ;)
         level = level.upper()
         image_id_paths = [item for item in folder.glob('*') if item.is_dir()]
-        return [p / f"{level}" for p in image_id_paths]
+        return [next(p.glob(f"{level}*")) for p in image_id_paths]
 
     def get_df(self, fpath):
         return self.reader(str(fpath))
@@ -545,8 +550,8 @@ class DBManager(object):
 
     @property
     def obsids(self):
-        "Alias to self.image_ids."
-        return self.image_ids
+        "Alias to self.image_names."
+        return self.image_names
 
     def get_all(self, datadir=None):
         return pd.read_hdf(str(self.dbname), 'df')
