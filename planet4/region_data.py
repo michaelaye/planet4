@@ -1,7 +1,204 @@
 class Seasoner:
     def get_all_obsids(self):
         return [item for sublist in self.seasons for item in sublist]
+    @property
+    def seasons(self):
+        bucket = []
+        for i in range(1, 10):
+            try:
+                attr = getattr(self, f'season{i}')
+            except:
+                pass
+            else:
+                bucket += attr
+        return bucket
 
+    @property
+    def available_seasons(self):
+        seasons = []
+        for i in range(1, 10):
+            s = f"season{i}"
+            try:
+                attr = getattr(self, s)
+            except:
+                pass
+            else:
+                seasons.append(s)
+        return seasons
+
+    @property
+    def name(self):
+        return self.__class__.__name__
+
+class Bilbao(Seasoner):
+    lat = -87.008
+    lon = 127.273
+    season2 = [
+        'ESP_011420_0930',
+        'ESP_011565_0930',
+        'ESP_011776_0930',
+        'ESP_012211_0930',
+        'ESP_012488_0930',
+        'ESP_012633_0930',
+        'ESP_012844_0930',
+
+        ]
+    season3 = [
+        'ESP_021903_0930',
+        'ESP_020558_0930',
+        'ESP_020347_0930',
+        ]
+
+
+class Oswego_Edge(Seasoner):
+    lat = -87
+    lon = 86.401
+    season2 = [
+        'ESP_011408_0930',
+        'ESP_011606_0930',
+        'ESP_012028_0930',
+        'ESP_012463_0930',
+        'ESP_012819_0930',
+        'ESP_013030_0930',
+        ]
+    season3 = [
+        'ESP_022379_0930',
+        'ESP_021654_0930',
+        'ESP_021522_0930',
+        'ESP_021483_0930',
+        'ESP_020955_0930',
+        'ESP_020731_0930',
+        'ESP_020678_0930',
+        'ESP_020533_0930',
+        'ESP_020322_0930',
+        'ESP_020229_0930',
+        ]
+
+
+class Manhattan_Frontinella(Seasoner):
+    lat = -86.987
+    lon = 99.367
+    season2 = [
+        'ESP_011711_0930',
+        'ESP_011856_0930',
+        'ESP_012634_0930',
+        'ESP_012779_0930',
+        'ESP_012990_0930',
+        ]
+    season3 = [
+        'ESP_020427_0930',
+        'ESP_020282_0930',
+        'ESP_020176_0930',
+        ]
+
+
+class Maccelsfield(Seasoner):
+    lat = -85.401
+    lon = 103.901
+    season2 = [
+        'ESP_011406_0945',
+        'ESP_011407_0945',
+        'ESP_011723_0945',
+        'ESP_011934_0945',
+        'ESP_012079_0945',
+        'ESP_012290_0945',
+        'ESP_012501_0945',
+        ]
+    season3 = [
+        'ESP_021494_0945',
+        'ESP_020927_0945',
+        'ESP_020782_0945',
+        'ESP_020716_0945',
+        'ESP_020571_0945',
+        'ESP_020294_0945',
+        'ESP_020242_0945',
+        ]
+
+
+class BuenosAires(Seasoner):
+    lat = -81.901
+    lon = 4.75
+    season2 = [
+        'ESP_011370_0980',
+        'ESP_011515_0980',
+        'ESP_011792_0980',
+        'ESP_012227_0980',
+        'ESP_012504_0980',
+        'ESP_012860_0980',
+        'ESP_012939_0980',
+        ]
+    season3 = [
+        'ESP_021642_0980',
+        'ESP_021497_0980',
+        'ESP_020930_0980',
+        'ESP_020719_0980',
+        'ESP_020508_0980',
+        'ESP_020376_0980',
+        'ESP_020297_0980',
+        ]
+
+
+class Starburst(Seasoner):
+    lat = - 81.801
+    lon = 76.14
+    season2 = [
+        'ESP_011341_0980',
+        'ESP_011486_0980',
+        'ESP_011697_0980',
+        'ESP_011842_0980',
+        'ESP_012053_0980',
+        'ESP_012264_0980',
+        'ESP_012607_0980',
+        ]
+    season3 = [
+        'ESP_021969_0980',
+        'ESP_020756_0980',
+        'ESP_020677_0980',
+            ]
+
+
+class Potsdam(Seasoner):
+    lat = - 81.684,
+    lon = 66.28
+    season2 = [
+        'ESP_011460_0980',
+        'ESP_011526_0980',
+        'ESP_011737_0980',
+        'ESP_012515_0980',
+        'ESP_012594_0980',
+        'ESP_012805_0980',
+        'ESP_012871_0980',
+        ]
+    season3 = [
+        'ESP_022510_0980',
+        'ESP_021587_0980',
+        'ESP_021574_0980',
+        'ESP_021521_0980',
+        'ESP_021508_0980',
+        'ESP_020941_0980',
+        'ESP_020875_0980',
+        'ESP_020374_0980',
+        'ESP_020163_0980',
+        ]
+
+class Portsmouth(Seasoner):
+    lat = -87.302
+    lon = 167.801
+    season2 = [
+        'ESP_011960_0925',
+        'ESP_012316_0925',
+        'ESP_012461_0925',
+        'ESP_012527_0925',
+        'ESP_012817_0925',
+        ]
+    season3 = [
+        'ESP_021520_0925',
+        'ESP_021454_0925',
+        'ESP_020953_0925',
+        'ESP_020742_0925',
+        'ESP_020597_0925',
+        'ESP_020386_0925',
+            ]
 
 class Manhattan(Seasoner):
     lat = -85.751
@@ -13,7 +210,6 @@ class Manhattan(Seasoner):
                'ESP_029406_0940',
                'ESP_029050_0940',
                'ESP_029024_0940']
-    seasons = [season1, season4]
 
 
 class Manhattan2(Seasoner):
@@ -41,6 +237,16 @@ class Manhattan2(Seasoner):
                'ESP_020321_0935',
                'ESP_020214_0935',
                'ESP_020202_0935']
+# Why does Meg have these only in season3:
+# ESP_022260_0935
+# ESP_021495_0935
+# ESP_021455_0935
+# ESP_020954_0935
+# ESP_020598_0935
+# ESP_020519_0935
+# ESP_020321_0935
+# ESP_020214_0935
+
     season2 = ['ESP_011394_0935',
                'ESP_011671_0935',
                'ESP_011961_0935',
@@ -67,8 +273,6 @@ class Manhattan2(Seasoner):
                'PSP_003575_0935',
                'PSP_003641_0935',
                'PSP_005579_0935']
-    seasons = [item for sublist in [season1, season2, season3, season4]
-               for item in sublist]
 
 
 class Giza(Seasoner):
@@ -112,7 +316,6 @@ class Giza(Seasoner):
                'PSP_004028_0850',
                'PSP_003474_0850',
                'PSP_004041_0850']
-    seasons = [season1, season2, season3, season4]
 
 
 class Inca(Seasoner):
@@ -176,7 +379,6 @@ class Inca(Seasoner):
                'PSP_003928_0815',
                'PSP_004081_0985',
                'PSP_004371_0985']
-    seasons = [season1, season2, season3, season4]
 
 
 class Ithaca(Seasoner):
@@ -218,7 +420,6 @@ class Ithaca(Seasoner):
                'PSP_004178_0945',
                'PSP_004666_0945',
                'PSP_004891_0945']
-    seasons = [season1, season2, season3]
 
 
 regions = [Giza, Inca, Ithaca, Manhattan, Manhattan2]
