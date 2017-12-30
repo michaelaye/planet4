@@ -42,6 +42,8 @@ def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
         and {1} being `savetitle`
     figtitle : str, optional
         Additional figure title to be displayed.
+    via_obsid : bool
+        Switch to look for different path when fnotched on hirise images
     """
     pm = io.PathManager(image_id, datapath=datapath)
     if datapath is not None:
@@ -110,7 +112,7 @@ def plot_raw_blotches(id_, ax=None):
 
 
 def plot_finals(id_, datapath=None, ax=None, scope='planet4',
-                via_obsid=False):
+                via_obsid=False, **kwargs):
     id_ = io.check_and_pad_id(id_)
     imgid = markings.ImageID(id_, scope=scope)
     if not via_obsid:
@@ -118,7 +120,7 @@ def plot_finals(id_, datapath=None, ax=None, scope='planet4',
     else:
         pm = io.PathManager(obsid=imgid.image_name,
                             datapath=datapath)
-        logger.debug("via obsid active. Fan path: %s", str(pm.final_fanfile))
+        logger.debug("via_obsid active. Fan path: %s", str(pm.final_fanfile))
         logger.debug("via_obsid active. Blotch path: %s", str(pm.final_blotchfile))
 
     if ax is None:
@@ -127,13 +129,13 @@ def plot_finals(id_, datapath=None, ax=None, scope='planet4',
         df = pm.final_fandf
         data = df[df.image_id==id_]
         logger.debug("Len of data: %i", len(df))
-        imgid.plot_fans(ax=ax, data=data, with_center=True)
+        imgid.plot_fans(ax=ax, data=data, with_center=True, **kwargs)
     else:
         logger.warning("File not found: %s", str(pm.final_fanfile))
     if pm.final_blotchfile.exists():
         df = pm.final_blotchdf
         data = df[df.image_id==id_]
-        imgid.plot_blotches(ax=ax, data=data, with_center=True)
+        imgid.plot_blotches(ax=ax, data=data, with_center=True, **kwargs)
     else:
         logger.warning("File not found: %s", str(pm.final_blotchfile))
 
@@ -222,12 +224,13 @@ def get_four_tiles_img(obsid, x0, y0):
     return all_
 
 
-def browse_images(df):
+def browse_images(obsid):
+    df = io.DBManager().get_image_name_markings(obsid)
     xmax = df.x_tile.max()
     ymax = df.y_tile.max()
 
     def view_image(xtile=1, ytile=1):
-        img = get_four_tiles_img(df, xtile, ytile)
+        img = get_four_tiles_img(obsid, xtile, ytile)
         print(img.shape)
         plt.imshow(img, origin='upper', aspect='auto')
         plt.title(f'x_tile: {xtile}, y_tile: {ytile}')
@@ -246,15 +249,6 @@ def get_finals_from_obsid(obsid, datapath, kind='blotch', ids=None):
         return df
 
 
-def plot_final_image_id_on_four(obsid, id_, datapath, kind='blotch', ax=None):
-    imgid = markings.ImageID(id_, scope='planet4')
-    plot_func = imgid.plot_blotches if kind == 'blotch' else imgid.plot_fans
-    df = get_finals_from_obsid(obsid, datapath, kind)
-    if ax is None:
-        _, ax = plt.subplots()
-    plot_func(ax=ax, data=df.query('image_id==@id_'), with_center=True)
-
-
 def plot_four_tiles(obsid, x0, y0, ax=None):
     img_x_size = 840
     img_y_size = 648
@@ -269,27 +263,16 @@ def plot_four_tiles(obsid, x0, y0, ax=None):
     return UL, LR, ax
 
 
-def plot_four_tiles_finals(obsid, datapath, x0, y0, kind='blotch'):
+def plot_four_tiles_finals(obsid, datapath, x0, y0):
     colors = itertools.cycle(sns.color_palette('bright', 12))
 
     obsid_data = io.DBManager().get_image_name_markings(obsid)
     p4data = get_four_tiles_df(obsid_data, x0, y0)
     image_ids = p4data.image_id.unique()
-    blotches = get_finals_from_obsid(obsid, datapath, 'blotch', ids=image_ids)
-
-    objects = [markings.Blotch(i, scope='hirise', with_center=True, lw=1)
-               for _, i in blotches.iterrows()]
-
     # plotting
     UL, LR, ax = plot_four_tiles(obsid, x0, y0)
-    for obj, color in zip(objects, colors):
-        obj.plot(color=color, ax=ax)
-
-    fans = get_finals_from_obsid(obsid, datapath, 'fan', ids=image_ids)
-    objects = [markings.Fan(i, scope='hirise', with_center=True, lw=1)
-               for _, i in fans.iterrows()]
-    for obj, color in zip(objects, colors):
-        obj.plot(color=color, ax=ax)
+    for id_ in image_ids:
+        plot_finals(id_, datapath, ax, scope='hirise', via_obsid=True)
 
     ax.set_xlim(UL[0], LR[0])
     ax.set_ylim(LR[1], UL[1])
