@@ -14,7 +14,7 @@ from ipyparallel.util import interactive
 
 from tqdm import tqdm
 
-from . import fnotching, io
+from . import io
 
 logger = logging.getLogger(__name__)
 # logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
