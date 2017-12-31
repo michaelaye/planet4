@@ -11,12 +11,16 @@ import logging
 import pandas as pd
 from ipyparallel import Client
 from ipyparallel.util import interactive
-
 from tqdm import tqdm
 
-from . import io
+from nbtools import execute_in_parallel
 
-logger = logging.getLogger(__name__)
+from . import io
+from .metadata import MetadataReader
+from .projection import create_RED45_mosaic, TileCalculator, xy_to_hirise
+
+
+LOGGER = logging.getLogger(__name__)
 # logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
 
@@ -50,13 +54,13 @@ def cluster_obsid(obsid=None, savedir=None, fnotch_via_obsid=False,
     dbscanner.cluster_image_name(obsid)
 
     # fnotching / combining ambiguous cluster results
-    ## fnotch across all the HiRISE image
-    ## does not work yet correctly! Needs to scale for n_classifications
+    # fnotch across all the HiRISE image
+    # does not work yet correctly! Needs to scale for n_classifications
     if fnotch_via_obsid is True:
         fnotching.fnotch_obsid(obsid, savedir=savedir)
         fnotching.apply_cut_obsid(obsid, savedir=savedir)
     else:
-        ## default case: Fnotch for each image_id separately.
+        # default case: Fnotch for each image_id separately.
         fnotching.fnotch_image_ids(obsid, savedir=savedir)
         fnotching.apply_cut(obsid, savedir=savedir)
     return obsid
@@ -65,6 +69,103 @@ def cluster_obsid(obsid=None, savedir=None, fnotch_via_obsid=False,
 def process_obsid_parallel(args):
     obsid, savedir = args
     return cluster_obsid(obsid, savedir)
+
+
+class ReleaseManager:
+    def __init__(self, version, obsids=None, overwrite=False):
+        self.catalog = f'P4_catalog_{version}'
+        self.overwrite = overwrite
+        self._obsids = obsids
+
+    @property
+    def savefolder(self):
+        return io.data_root / self.catalog
+
+    @property
+    def metadata_path(self):
+        return self.savefolder / f"{self.catalog}_metadata.csv"
+
+    @property
+    def tile_coords_path(self):
+        return self.savefolder / f"{self.catalog}_tile_coords.csv"
+
+    @property
+    def obsids(self):
+        if self._obsids is None:''
+            db = io.DBManager()
+            self._obsids = db.obsids
+        return self._obsids
+
+    @obsids.setter
+    def obsids(self, values):
+        self._obsids = values
+
+    @property
+    def fan_file(self):
+        return next(self.savefolder.glob("*_fan.csv"))
+
+    @property
+    def blotch_file(self):
+        return next(self.savefolder.glob("*_blotch.csv"))
+
+    def create_parallel_args(self):
+        bucket = []
+        for obsid in self.obsids:
+            pm = io.PathManager(obsid=obsid, datapath=savedir)
+            path = pm.obsid_results_savefolder / obsid
+            if path.exists() and self.overwrite is False:
+                continue
+            else:
+                bucket.append(obsid)
+        self.todo = [(i, self.catalog) for i in bucket]
+
+    def get_metadata(self):
+        metadata = []
+        for img in tqdm(self.obsids):
+            metadata.append(MetadataReader(img).get_data_dic())
+        df = pd.DataFrame(metadata)
+        df.to_csv(self.metadata_path, index=False)
+
+    def get_tile_coordinates(self):
+        edrpath = io.get_ground_projection_root()
+        cubepaths = [edrpath / obsid / f"{obsid}_mosaic_RED45.cub" for obsid in obsids]
+        todo = []
+        for cubepath in cubepaths:
+            tc = TileCalculator(cubepath, read_data=False)
+            if not tc.campt_results_path.exists():
+                todo.append(cubepath)
+
+        def get_tile_coords(cubepath):
+            from planet4.projection import TileCalculator
+            tilecalc = TileCalculator(cubepath)
+            tilecalc.calc_tile_coords()
+        results = execute_in_parallel(get_tile_coords, todo)
+
+        bucket = []
+        for cubepath in tqdm(cubepaths):
+            tc = TileCalculator(cubepath, read_data=False)
+            bucket.append(tc.tile_coords_df)
+        coords = pd.concat(bucket, ignore_index=True)
+        coords.to_csv(self.tile_coords_path, index=False)
+
+    def launch_catalog_production(self):
+        # perform the clustering
+        LOGGER.info("Performing the clustering.")
+        results = execute_in_parallel(process_obsid_parallel, self.todo)
+        # create summary CSV files of the clustering output
+        LOGGER.info("Creating L1C fan and blotch database files.")
+        create_roi_file(self.obsids, self.catalog, self.catalog)
+        # create the RED45 mosaics for all ground_projection calculations
+        LOGGER.info("Creating the required RED45 mosaics for ground projections.")
+        results = execute_in_parallel(create_RED45_mosaic, self.obsids)
+        # calculate center ground coordinates for all tiles involved
+        LOGGER.info("Calculating the ground coordinates for all P4 tiles.")
+        self.get_tile_coordinates()
+        # calculate all metadata required for P4 analysis
+        LOGGER.info("Writing summary metadata file.")
+        self.get_metadata()
+
+            
 
 
 @interactive
@@ -121,9 +222,8 @@ def read_csvfiles_into_lists_of_frames(folders):
     bucket = dict(fan=[], blotch=[])
     for folder in folders:
         for markingfile in folder.glob("*.csv"):
-            for key in bucket:
-                if key in str(markingfile):
-                    bucket[key].append(pd.read_csv(markingfile))
+            key = 'fan' if markingfile.name.endswith('fans.csv') else 'blotch'
+            bucket[key].append(pd.read_csv(markingfile))
     return bucket
 
 

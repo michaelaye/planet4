@@ -88,8 +88,8 @@ def filter_data(df):
     # delta value is how much I allow x and y positions to be outside the
     # planet4 tile
     delta = 25
-    q = "{} < x < {} and {} < y < {}".format(-delta, markings.img_x_size + delta,
-                                             -delta, markings.img_y_size + delta)
+    q = "{} < x < {} and {} < y < {}".format(-delta, markings.IMG_X_SIZE + delta,
+                                             -delta, markings.IMG_Y_SIZE + delta)
 
     rest = rest.query(q)
     return pd.concat([rest, none], ignore_index=True)

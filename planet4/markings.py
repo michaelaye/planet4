@@ -21,17 +21,17 @@ from shapely.geometry import Point
 from . import io
 from .exceptions import NoFilesFoundError
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 data_root = io.get_data_root()
 
-img_x_size = 840
-img_y_size = 648
+IMG_X_SIZE = 840
+IMG_Y_SIZE = 648
 
-img_shape = (img_y_size, img_x_size)
+IMG_SHAPE = (IMG_Y_SIZE, IMG_X_SIZE)
 
-gold_members = ['michaelaye', 'mschwamb', 'Portyankina', 'CJ-DPI']
-gold_plot_colors = list('cmyg')
+GOLD_MEMBERS = ['michaelaye', 'mschwamb', 'Portyankina', 'CJ-DPI']
+GOLD_PLOT_COLORS = list('cmyg')
 
 
 def example_p4id():
@@ -41,7 +41,7 @@ def example_p4id():
 
 def calc_fig_size(width):
     """Calc figure height in ratio of subframes."""
-    ratio = img_x_size / img_y_size
+    ratio = IMG_X_SIZE / IMG_Y_SIZE
     return (width, width / ratio)
 
 
@@ -52,7 +52,7 @@ def gold_legend(ax):
     line3 = plt.Line2D(range(10), range(10), marker='o', color=lcolors[2])
     line4 = plt.Line2D(range(10), range(10), marker='o', color=lcolors[3])
     ax.legend((line1, line2, line3, line4),
-              gold_members, numpoints=2, loc='best', fontsize=7)
+              GOLD_MEMBERS, numpoints=2, loc='best', fontsize=7)
 
 
 def set_upper_left_corner(ul_x, ul_y):
@@ -74,8 +74,8 @@ def diffangle(v1, v2, rads=True):
 
 def set_subframe_size(ax):
     """Set plot view limit on Planet 4 subframe size."""
-    ax.set_xlim(0, img_x_size)
-    ax.set_ylim(img_y_size, 0)
+    ax.set_xlim(0, IMG_X_SIZE)
+    ax.set_ylim(IMG_Y_SIZE, 0)
 
 
 class ImageID(object):
@@ -175,13 +175,13 @@ class ImageID(object):
     def plot_objects(self, objects, n=None, img=True, user_name=None, ax=None,
                      user_color=None, user_colors=None, without_users=None):
         """Plotting either fans or blotches with p4 subframe background."""
-        logger.debug("Entering markings.plot_objects")
-        logger.debug("Received %i objects to plot.", len(objects))
+        LOGGER.debug("Entering markings.plot_objects")
+        LOGGER.debug("Received %i objects to plot.", len(objects))
         if ax is None:
             _, ax = plt.subplots(figsize=calc_fig_size(8))
-            logger.debug("Created own axis.")
+            LOGGER.debug("Created own axis.")
         if img:
-            logger.debug("Plotting background image.")
+            LOGGER.debug("Plotting background image.")
             self.show_subframe(ax)
         counter = 0
         if user_colors is None:

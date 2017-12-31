@@ -15,12 +15,13 @@ from hirise_tools.products import RED_PRODUCT_ID
 from planet4 import io
 from pysis import CubeFile
 from pysis.exceptions import ProcessError
-
 logger = logging.getLogger(__name__)
+
+
 
 try:
     from pysis.isis import (campt, cubenorm, getkey, handmos, hi2isis, histitch,
-                            spiceinit)
+                        spiceinit)
 except ImportError:
     logger.warning("ISIS commands not found.")
 
@@ -105,7 +106,7 @@ def create_RED45_mosaic(obsid, overwrite=False):
     # bail out if exists:
     if mos_path.exists() and not overwrite:
         print(f'{mos_path} already exists and I am not allowed to overwrite.')
-        return obsid, False
+        return obsid, True
 
     products = get_RED45_mosaic_inputs(obsid, gp_root)
 
@@ -226,10 +227,11 @@ def tilecenter_to_hirise(x_tile, y_tile=None):
 
 
 class TileCalculator(object):
-    def __init__(self, cubepath):
+    def __init__(self, cubepath, read_data=True):
         self.cubepath = Path(cubepath)
         db = io.DBManager()
-        self.data = db.get_image_name_markings(self.img_name)
+        if read_data:
+            self.data = db.get_image_name_markings(self.img_name)
 
     @property
     def img_name(self):
@@ -264,6 +266,18 @@ class TileCalculator(object):
     def temppath(self):
         return self.cubepath.with_suffix('.tocampt')
 
+    @property
+    def final_path(self):
+        final_fname = f"{self.img_name}_tile_coords.csv"
+        final_path = self.cubepath.parent / final_fname
+        return final_path
+
+    @property
+    def tile_coords_df(self):
+        df = pd.read_csv(self.final_path)
+        df['obsid'] = self.img_name
+        return df
+
     def calc_tile_coords(self):
         df = self.get_campt_input_coords()
         df[['x_hirise', 'y_hirise']].to_csv(self.temppath, header=False, index=False)
@@ -275,9 +289,7 @@ class TileCalculator(object):
                          'PositiveEast360Longitude',
                          'BodyFixedCoordinateX',
                          'BodyFixedCoordinateY',
-                         'BodyFixedCoordinateZ',
-                         'LineResolution',
-                         'SampleResolution']]
+                         'BodyFixedCoordinateZ']]
         joined = df.merge(subdf, left_on=['x_hirise', 'y_hirise'],
                           right_on=['Sample', 'Line'])
 
@@ -288,7 +300,5 @@ class TileCalculator(object):
         subset = subset.drop_duplicates()
         # df.merge will find the columns with same names for merging
         finaldf = joined.merge(subset)
-        final_fname = f"{self.img_name}_tile_coords.csv"
-        final_path = self.cubepath.parent / final_fname
-        finaldf.to_csv(final_path, index=False)
+        finaldf.to_csv(self.final_path, index=False)
         print("Created", final_path)
