@@ -91,7 +91,7 @@ class ReleaseManager:
 
     @property
     def obsids(self):
-        if self._obsids is None:''
+        if self._obsids is None:
             db = io.DBManager()
             self._obsids = db.obsids
         return self._obsids
