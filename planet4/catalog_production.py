@@ -17,8 +17,7 @@ from nbtools import execute_in_parallel
 
 from . import io
 from .metadata import MetadataReader
-from .projection import create_RED45_mosaic, TileCalculator, xy_to_hirise
-
+from .projection import TileCalculator, create_RED45_mosaic, xy_to_hirise
 
 LOGGER = logging.getLogger(__name__)
 # logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
@@ -102,11 +101,28 @@ class ReleaseManager:
 
     @property
     def fan_file(self):
-        return next(self.savefolder.glob("*_fan.csv"))
+        try:
+            return next(self.savefolder.glob("*_fan.csv"))
+        except StopIteration:
+            print(f"No file found. Looking at {self.savefolder}.")
 
     @property
     def blotch_file(self):
         return next(self.savefolder.glob("*_blotch.csv"))
+
+    @property
+    def fan_merged(self):
+        return self.fan_file.parent / f"{self.fan_file.stem}_meta_merged.csv"
+
+    @property
+    def blotch_merged(self):
+        return self.blotch_file.parent / f"{self.blotch_file.stem}_meta_merged.csv"
+
+    def read_fan_file(self):
+        return pd.read_csv(self.fan_merged)
+
+    def read_blotch_file(self):
+        return pd.read_csv(self.blotch_merged)
 
     def create_parallel_args(self):
         bucket = []
@@ -128,7 +144,8 @@ class ReleaseManager:
 
     def get_tile_coordinates(self):
         edrpath = io.get_ground_projection_root()
-        cubepaths = [edrpath / obsid / f"{obsid}_mosaic_RED45.cub" for obsid in obsids]
+        cubepaths = [edrpath / obsid /
+                     f"{obsid}_mosaic_RED45.cub" for obsid in obsids]
         todo = []
         for cubepath in cubepaths:
             tc = TileCalculator(cubepath, read_data=False)
@@ -148,6 +165,27 @@ class ReleaseManager:
         coords = pd.concat(bucket, ignore_index=True)
         coords.to_csv(self.tile_coords_path, index=False)
 
+    @property
+    def cols_to_merge(self):
+        return ['BodyFixedCoordinateX', 'BodyFixedCoordinateY', 'BodyFixedCoordinateZ',
+                'Line', 'LineResolution', 'PlanetocentricLatitude',
+                'PlanetographicLatitude', 'PositiveEast360Longitude',
+                'PositiveWest360Longitude', 'Sample', 'SampleResolution', 'image_id']
+
+    def merge_all(self):
+        fans = self.read_fan_file()
+        blotches = self.read_blotch_file()
+        meta = pd.read_csv(self.metadata_path)
+        fans = fans.merge(meta, on='obsid')
+        blotches = blotches.merge(meta, on='obsid')
+        tile_coords = pd.read_csv(self.tile_coords_path)
+        fans = fans.merge(
+            tile_coords[self.cols_to_merge], on='image_id')
+        blotches = blotches.merge(
+            tile_coords[self.cols_to_merge], on='image_id')
+        fans.to_csv(self.fan_merged, index=False)
+        blotches.to_csv(self.blotch_merged, index=False)
+        
     def launch_catalog_production(self):
         # perform the clustering
         LOGGER.info("Performing the clustering.")
@@ -164,8 +202,8 @@ class ReleaseManager:
         # calculate all metadata required for P4 analysis
         LOGGER.info("Writing summary metadata file.")
         self.get_metadata()
-
-            
+        # merging metadata
+        self.merge_all()
 
 
 @interactive
