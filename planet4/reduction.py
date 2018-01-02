@@ -75,6 +75,11 @@ def filter_data(df):
     fan_defaults = (fans.angle.abs() < eps) & ((fans.distance - 10).abs() < eps)
 
     fans = fans[~(fzero_filter & fan_defaults)]
+
+    # added a second fan default filter:
+    fan_defaults2 = ((fans.angle.abs() - 90.0) < eps) & ((fans.spread -
+                                                          2.017450) < eps) & ((fans.distance - 10) < eps)
+    fans = fans[~fan_defaults2]
     blotches = blotches[~(bzero_filter & blotch_defaults)]
     rest = rest[~rest_zero_filter]
 
