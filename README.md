@@ -17,7 +17,7 @@ Poster at the DPS 2015 conference:
 
 ## Requirements
 
-I develop now exclusively on Python 3.5. If you are still on Python 2, you really should upgrade. Ana/Miniconda from continuum.io makes it easy to have both versions though, in case you need it.
+I develop now exclusively on Python 3.6. If you are still on Python 2, you really should upgrade. Ana/Miniconda from continuum.io makes it easy to have both versions though, in case you need it.
 
 ## Install:
 
