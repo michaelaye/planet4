@@ -422,7 +422,9 @@ class Ithaca(Seasoner):
                'PSP_004891_0945']
 
 
-regions = [Giza, Inca, Ithaca, Manhattan, Manhattan2]
+regions = [Giza, Inca, Ithaca, Manhattan, Manhattan2, Bilbao, 
+           Oswego_Edge, Manhattan_Frontinella, BuenosAires,
+           Maccelsfield, Starburst, Potsdam, Portsmouth]
 
 
 def get_seasons(season):
