@@ -22,7 +22,7 @@ def get_clustering_log(pm):
 
 def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
                            savetitle='', saveroot=None, figtitle='', via_obsid=True,
-                           **kwargs):
+                           figsize=None, **kwargs):
     """Plotting tool to show the results along the P4 pipeline.
 
     Parameters
@@ -57,7 +57,7 @@ def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
     # min_samples = 'no_log'
 
     n_classifications = imgid.n_marked_classifications
-    fig, axes = plt.subplots(nrows=2, ncols=3)
+    fig, axes = plt.subplots(nrows=2, ncols=3, figsize=figsize)
     axes = axes.ravel()
     for ax in axes:
         imgid.show_subframe(ax=ax)
