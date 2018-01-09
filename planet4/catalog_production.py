@@ -71,6 +71,18 @@ def process_obsid_parallel(args):
 
 
 class ReleaseManager:
+    """Class to manage releases and find relevant files.
+
+    Parameters
+    ----------
+    version : str
+        Version string for this catalog. Same as datapath in other P4 code.
+    obsids : iterable, optional
+        Iterable of obsids that should be used for catalog file. Default is to use the full list of the default database, which is Seasons 2 and 3 at this point.
+    overwrite : bool, optional
+        Switch to control if already existing result folders for an obsid should be overwritten.
+        Default: False
+    """
     def __init__(self, version, obsids=None, overwrite=False):
         self.catalog = f'P4_catalog_{version}'
         self.overwrite = overwrite
@@ -78,18 +90,25 @@ class ReleaseManager:
 
     @property
     def savefolder(self):
+        "Path to catalog folder"
         return io.data_root / self.catalog
 
     @property
     def metadata_path(self):
+        "Path to catalog metadata file."
         return self.savefolder / f"{self.catalog}_metadata.csv"
 
     @property
     def tile_coords_path(self):
+        "Path to catalog tile coordinates file."
         return self.savefolder / f"{self.catalog}_tile_coords.csv"
 
     @property
     def obsids(self):
+        """Return list of obsids for catalog production.
+        
+        If ._obsids is None, get default full obsids list for current default P4 database.
+        """
         if self._obsids is None:
             db = io.DBManager()
             self._obsids = db.obsids
@@ -101,6 +120,7 @@ class ReleaseManager:
 
     @property
     def fan_file(self):
+        "Return path to fan catalog file."
         try:
             return next(self.savefolder.glob("*_fan.csv"))
         except StopIteration:
@@ -108,7 +128,11 @@ class ReleaseManager:
 
     @property
     def blotch_file(self):
-        return next(self.savefolder.glob("*_blotch.csv"))
+        "Return path to blotch catalog file."
+        try:
+            return next(self.savefolder.glob("*_blotch.csv"))
+        except StopIteration:
+            print(f"No file found. Looking at {self.savefolder}.")
 
     @property
     def fan_merged(self):
@@ -141,11 +165,13 @@ class ReleaseManager:
             metadata.append(MetadataReader(img).get_data_dic())
         df = pd.DataFrame(metadata)
         df.to_csv(self.metadata_path, index=False)
+        LOGGER.info("Wrote %s", str(self.metadata_path))
 
     def get_tile_coordinates(self):
         edrpath = io.get_ground_projection_root()
         cubepaths = [edrpath / obsid /
-                     f"{obsid}_mosaic_RED45.cub" for obsid in obsids]
+                     f"{obsid}_mosaic_RED45.cub" for obsid in self.obsids]
+
         todo = []
         for cubepath in cubepaths:
             tc = TileCalculator(cubepath, read_data=False)
@@ -156,7 +182,8 @@ class ReleaseManager:
             from planet4.projection import TileCalculator
             tilecalc = TileCalculator(cubepath)
             tilecalc.calc_tile_coords()
-        results = execute_in_parallel(get_tile_coords, todo)
+        if not len(todo)== 0:
+            results = execute_in_parallel(get_tile_coords, todo)
 
         bucket = []
         for cubepath in tqdm(cubepaths):
@@ -164,6 +191,7 @@ class ReleaseManager:
             bucket.append(tc.tile_coords_df)
         coords = pd.concat(bucket, ignore_index=True)
         coords.to_csv(self.tile_coords_path, index=False)
+        LOGGER.info("Wrote %s", str(self.tile_coords_path))
 
     @property
     def cols_to_merge(self):
@@ -173,8 +201,8 @@ class ReleaseManager:
                 'PositiveWest360Longitude', 'Sample', 'SampleResolution', 'image_id']
 
     def merge_all(self):
-        fans = self.read_fan_file()
-        blotches = self.read_blotch_file()
+        fans = pd.read_csv(self.fan_file)
+        blotches = pd.read_csv(self.blotch_file)
         meta = pd.read_csv(self.metadata_path)
         fans = fans.merge(meta, on='obsid')
         blotches = blotches.merge(meta, on='obsid')
@@ -184,12 +212,14 @@ class ReleaseManager:
         blotches = blotches.merge(
             tile_coords[self.cols_to_merge], on='image_id')
         fans.to_csv(self.fan_merged, index=False)
+        LOGGER.info("Wrote %s", str(self.fan_merged))
         blotches.to_csv(self.blotch_merged, index=False)
+        LOGGER.info("Wrote %s", str(self.blotch_merged))
         
     def launch_catalog_production(self):
         # perform the clustering
         LOGGER.info("Performing the clustering.")
-        results = execute_in_parallel(process_obsid_parallel, self.todo)
+        results = execute_in_parallel(process_obsid_parallel, self.obsids)
         # create summary CSV files of the clustering output
         LOGGER.info("Creating L1C fan and blotch database files.")
         create_roi_file(self.obsids, self.catalog, self.catalog)
@@ -297,6 +327,7 @@ def create_roi_file(obsids, roi_name, datapath):
                 df['obsid'] = obsid
                 Bucket[key].append(df)
     savedir = pm.path_so_far.parent
+    LOGGER.info("Found %i fans and %i blotches.", len(Bucket['fan']), len(Bucket['blotch']))
     for key, val in Bucket.items():
         try:
             df = pd.concat(val, ignore_index=True)
@@ -306,6 +337,7 @@ def create_roi_file(obsids, roi_name, datapath):
             savename = f"{roi_name}_{pm.L1C_folder}_{key}.csv"
             savepath = savedir / savename
             df.to_csv(savepath, index=False)
+            print(f"Created {savepath}.")
 
 
 def main():
