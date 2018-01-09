@@ -10,8 +10,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import progressbar
 from ipyparallel import Client
+from tqdm import tqdm
 
 from . import markings
 from .io import DBManager, data_root
@@ -71,8 +71,10 @@ def filter_data(df):
     bzero_filter = (blotches.x.abs() < eps) & (blotches.y.abs() < eps)
     fzero_filter = (fans.x.abs() < eps) & (fans.y.abs() < eps)
     rest_zero_filter = (rest.x.abs() < eps) & (rest.y.abs() < eps)
-    blotch_defaults = ((blotches.radius_1 - 10) < eps) & ((blotches.radius_2 - 10).abs() < eps)
-    fan_defaults = (fans.angle.abs() < eps) & ((fans.distance - 10).abs() < eps)
+    blotch_defaults = ((blotches.radius_1 - 10) <
+                       eps) & ((blotches.radius_2 - 10).abs() < eps)
+    fan_defaults = (fans.angle.abs() < eps) & (
+        (fans.distance - 10).abs() < eps)
 
     fans = fans[~(fzero_filter & fan_defaults)]
 
@@ -199,7 +201,8 @@ def merge_temp_files(dbname, image_names=None):
     df = []
     for image_name in image_names:
         try:
-            df.append(pd.read_hdf(get_temp_fname(image_name, dbname.parent), 'df'))
+            df.append(pd.read_hdf(get_temp_fname(
+                image_name, dbname.parent), 'df'))
         except OSError:
             continue
         else:
@@ -241,7 +244,7 @@ def remove_duplicates(df):
 
 
 def display_multi_progress(results, objectlist, sleep=1):
-    with progressbar.ProgressBar(min_value=0, max_value=len(list(objectlist)) - 1) as bar:
+    with tqdm(total=len(list(objectlist))) as bar:
         while not results.ready():
             bar.update(results.progress)
             time.sleep(sleep)
@@ -279,9 +282,11 @@ def remove_duplicates_from_image_name_data(data):
     c_ids = []
 
     def process_user_group(g):
-        c_ids.append(g[g.created_at == g.created_at.min()].classification_id.min())
+        c_ids.append(g[g.created_at == g.created_at.min()
+                       ].classification_id.min())
 
-    data.groupby(['image_id', 'user_name'], sort=False).apply(process_user_group)
+    data.groupby(['image_id', 'user_name'],
+                 sort=False).apply(process_user_group)
     return data.set_index('classification_id').loc[set(c_ids)].reset_index()
 
 
@@ -307,7 +312,8 @@ def remove_duplicates_from_file(dbname):
     logger.info('Done clean up. Now concatenating results.')
     all_df = pd.concat(results, ignore_index=True)
     logger.info("Writing cleaned database file.")
-    all_df.to_hdf(get_cleaned_dbname(dbname), 'df', format='table', data_columns=data_columns)
+    all_df.to_hdf(get_cleaned_dbname(dbname), 'df',
+                  format='table', data_columns=data_columns)
     # merge_temp_files(dbname, image_names)
     logger.info("Done.")
 
@@ -445,8 +451,10 @@ def main():
     normalize_fan_angles(df)
 
     # calculate x_angle and y_angle for clustering on angles
+    # pylint: disable=E1101
     df = df.assign(x_angle=np.cos(np.deg2rad(df['angle'])),
                    y_angle=np.sin(np.deg2rad(df['angle'])))
+    # pylint: enable=E1101
 
     if args.do_fastread:
         produce_fast_read(rootpath, df)
