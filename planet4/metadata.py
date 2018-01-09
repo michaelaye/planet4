@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pvl
 from osgeo import gdal
 
@@ -70,7 +71,7 @@ class MetadataReader:
         """
         label = self.label
         labelpath = self.labelpath
-        d = dict(obsid=obsid, path=labelpath, binning=label.binning,
+        d = dict(obsid=self.obsid, path=labelpath, binning=label.binning,
                  l_s=label.l_s, line_samples=label.line_samples,
                  lines=label.lines, map_scale=label.map_scale)
         d['north_azimuth'] = self.campt_out_df['NorthAzimuth'].median()
