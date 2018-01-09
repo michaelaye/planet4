@@ -22,7 +22,7 @@ pkg_name = __name__.split('.')[0]
 
 configpath = Path.home() / ".{}.ini".format(pkg_name)
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def get_config():
@@ -126,17 +126,17 @@ def get_subframe(url):
     targetpath = data_root / 'images' / os.path.basename(url)
     targetpath.parent.mkdir(exist_ok=True)
     if not targetpath.exists():
-        logger.info("Did not find image in cache. Downloading ...")
+        LOGGER.info("Did not find image in cache. Downloading ...")
         try:
             path = urlretrieve(url)[0]
         except URLError as e:
             msg = "Cannot receive subframe image. No internet?"
-            logger.error(msg)
+            LOGGER.error(msg)
             return None
-        logger.debug("Done.")
+        LOGGER.debug("Done.")
         shutil.move(path, str(targetpath))
     else:
-        logger.debug("Found image in cache.")
+        LOGGER.debug("Found image in cache.")
     im = mplimg.imread(targetpath)
     return im
 
@@ -169,7 +169,10 @@ def get_latest_file(filenames):
 
 def get_latest_cleaned_db(datadir=None):
     datadir = data_root if datadir is None else Path(datadir)
-    h5files = datadir.glob('201*_queryable_cleaned*.h5')
+    h5files = list(datadir.glob('201*_queryable_cleaned*.h5'))
+    if len(h5files) == 0:
+        LOGGER.error("No files found. Searching in %s", str(datadir))
+        raise NoFilesFoundError(f"No files found. Searching in {str(datadir)}")
     return get_latest_file(h5files)
 
 
@@ -318,7 +321,7 @@ class PathManager(object):
     def obsid(self):
         if self._obsid is '':
             if self.id is not '':
-                logger.debug("Entering obsid search for known image_id.")
+                LOGGER.debug("Entering obsid search for known image_id.")
                 db = DBManager()
                 data = db.get_image_id_markings(self.id)
                 try:
@@ -327,7 +330,7 @@ class PathManager(object):
                     raise IndexError("obsid access broken. Did you forget to use the `obsid` keyword"
                             " at initialization?")
                     return None
-                logger.debug("obsid found: %s", obsid)
+                LOGGER.debug("obsid found: %s", obsid)
                 self._obsid = obsid
         return self._obsid
 
@@ -407,7 +410,13 @@ class PathManager(object):
         # cast to upper case for the lazy... ;)
         level = level.upper()
         image_id_paths = [item for item in folder.glob('*') if item.is_dir()]
-        return [next(p.glob(f"{level}*")) for p in image_id_paths]
+        bucket = []
+        for p in image_id_paths:
+            try:
+                bucket.append(next(p.glob(f"{level}*")))
+            except StopIteration:
+                continue
+        return bucket
 
     def get_df(self, fpath):
         return self.reader(str(fpath))
