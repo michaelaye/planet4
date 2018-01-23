@@ -83,6 +83,7 @@ class ReleaseManager:
         Switch to control if already existing result folders for an obsid should be overwritten.
         Default: False
     """
+
     def __init__(self, version, obsids=None, overwrite=False):
         self.catalog = f'P4_catalog_{version}'
         self.overwrite = overwrite
@@ -106,7 +107,7 @@ class ReleaseManager:
     @property
     def obsids(self):
         """Return list of obsids for catalog production.
-        
+
         If ._obsids is None, get default full obsids list for current default P4 database.
         """
         if self._obsids is None:
@@ -151,7 +152,7 @@ class ReleaseManager:
     def create_parallel_args(self):
         bucket = []
         for obsid in self.obsids:
-            pm = io.PathManager(obsid=obsid, datapath=savedir)
+            pm = io.PathManager(obsid=obsid, datapath=self.savefolder)
             path = pm.obsid_results_savefolder / obsid
             if path.exists() and self.overwrite is False:
                 continue
@@ -182,7 +183,7 @@ class ReleaseManager:
             from planet4.projection import TileCalculator
             tilecalc = TileCalculator(cubepath)
             tilecalc.calc_tile_coords()
-        if not len(todo)== 0:
+        if not len(todo) == 0:
             results = execute_in_parallel(get_tile_coords, todo)
 
         bucket = []
@@ -207,24 +208,26 @@ class ReleaseManager:
         fans = fans.merge(meta, on='obsid')
         blotches = blotches.merge(meta, on='obsid')
         tile_coords = pd.read_csv(self.tile_coords_path)
-        fans = fans.merge(
-            tile_coords[self.cols_to_merge], on='image_id')
-        blotches = blotches.merge(
-            tile_coords[self.cols_to_merge], on='image_id')
+        # fans = fans.merge(
+        #     tile_coords[self.cols_to_merge], on='image_id')
+        # blotches = blotches.merge(
+        #     tile_coords[self.cols_to_merge], on='image_id')
         fans.to_csv(self.fan_merged, index=False)
         LOGGER.info("Wrote %s", str(self.fan_merged))
         blotches.to_csv(self.blotch_merged, index=False)
         LOGGER.info("Wrote %s", str(self.blotch_merged))
-        
+
     def launch_catalog_production(self):
+        self.create_parallel_args()
         # perform the clustering
         LOGGER.info("Performing the clustering.")
-        results = execute_in_parallel(process_obsid_parallel, self.obsids)
+        results = execute_in_parallel(process_obsid_parallel, self.todo)
         # create summary CSV files of the clustering output
         LOGGER.info("Creating L1C fan and blotch database files.")
         create_roi_file(self.obsids, self.catalog, self.catalog)
         # create the RED45 mosaics for all ground_projection calculations
-        LOGGER.info("Creating the required RED45 mosaics for ground projections.")
+        LOGGER.info(
+            "Creating the required RED45 mosaics for ground projections.")
         results = execute_in_parallel(create_RED45_mosaic, self.obsids)
         # calculate center ground coordinates for all tiles involved
         LOGGER.info("Calculating the ground coordinates for all P4 tiles.")
@@ -327,7 +330,8 @@ def create_roi_file(obsids, roi_name, datapath):
                 df['obsid'] = obsid
                 Bucket[key].append(df)
     savedir = pm.path_so_far.parent
-    LOGGER.info("Found %i fans and %i blotches.", len(Bucket['fan']), len(Bucket['blotch']))
+    LOGGER.info("Found %i fans and %i blotches.", len(
+        Bucket['fan']), len(Bucket['blotch']))
     for key, val in Bucket.items():
         try:
             df = pd.concat(val, ignore_index=True)
