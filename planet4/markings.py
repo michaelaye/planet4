@@ -23,8 +23,6 @@ from .exceptions import NoFilesFoundError
 
 LOGGER = logging.getLogger(__name__)
 
-data_root = io.get_data_root()
-
 IMG_X_SIZE = 840
 IMG_Y_SIZE = 648
 
@@ -462,7 +460,8 @@ class Fan(lines.Line2D):
         actual_x = 'x' if scope == 'planet4' else 'image_x'
         actual_y = 'y' if scope == 'planet4' else 'image_y'
         try:
-            self.base = self.data.loc[[actual_x, actual_y]].values.astype('float')
+            self.base = self.data.loc[[
+                actual_x, actual_y]].values.astype('float')
         except KeyError:
             print("No x and y in the data:\n{}".format(data))
             raise KeyError
