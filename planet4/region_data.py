@@ -1,8 +1,9 @@
 class Seasoner:
     def get_all_obsids(self):
         return [item for sublist in self.seasons for item in sublist]
+
     @property
-    def seasons(self):
+    def all_obsids(self):
         bucket = []
         for i in range(1, 10):
             try:
@@ -30,6 +31,7 @@ class Seasoner:
     def name(self):
         return self.__class__.__name__
 
+
 class Bilbao(Seasoner):
     lat = -87.008
     lon = 127.273
@@ -42,12 +44,12 @@ class Bilbao(Seasoner):
         'ESP_012633_0930',
         'ESP_012844_0930',
 
-        ]
+    ]
     season3 = [
         'ESP_021903_0930',
         'ESP_020558_0930',
         'ESP_020347_0930',
-        ]
+    ]
 
 
 class Oswego_Edge(Seasoner):
@@ -60,7 +62,7 @@ class Oswego_Edge(Seasoner):
         'ESP_012463_0930',
         'ESP_012819_0930',
         'ESP_013030_0930',
-        ]
+    ]
     season3 = [
         'ESP_022379_0930',
         'ESP_021654_0930',
@@ -72,7 +74,7 @@ class Oswego_Edge(Seasoner):
         'ESP_020533_0930',
         'ESP_020322_0930',
         'ESP_020229_0930',
-        ]
+    ]
 
 
 class Manhattan_Frontinella(Seasoner):
@@ -84,12 +86,12 @@ class Manhattan_Frontinella(Seasoner):
         'ESP_012634_0930',
         'ESP_012779_0930',
         'ESP_012990_0930',
-        ]
+    ]
     season3 = [
         'ESP_020427_0930',
         'ESP_020282_0930',
         'ESP_020176_0930',
-        ]
+    ]
 
 
 class Maccelsfield(Seasoner):
@@ -103,7 +105,7 @@ class Maccelsfield(Seasoner):
         'ESP_012079_0945',
         'ESP_012290_0945',
         'ESP_012501_0945',
-        ]
+    ]
     season3 = [
         'ESP_021494_0945',
         'ESP_020927_0945',
@@ -112,7 +114,7 @@ class Maccelsfield(Seasoner):
         'ESP_020571_0945',
         'ESP_020294_0945',
         'ESP_020242_0945',
-        ]
+    ]
 
 
 class BuenosAires(Seasoner):
@@ -126,7 +128,7 @@ class BuenosAires(Seasoner):
         'ESP_012504_0980',
         'ESP_012860_0980',
         'ESP_012939_0980',
-        ]
+    ]
     season3 = [
         'ESP_021642_0980',
         'ESP_021497_0980',
@@ -135,7 +137,7 @@ class BuenosAires(Seasoner):
         'ESP_020508_0980',
         'ESP_020376_0980',
         'ESP_020297_0980',
-        ]
+    ]
 
 
 class Starburst(Seasoner):
@@ -149,12 +151,12 @@ class Starburst(Seasoner):
         'ESP_012053_0980',
         'ESP_012264_0980',
         'ESP_012607_0980',
-        ]
+    ]
     season3 = [
         'ESP_021969_0980',
         'ESP_020756_0980',
         'ESP_020677_0980',
-            ]
+    ]
 
 
 class Potsdam(Seasoner):
@@ -168,7 +170,7 @@ class Potsdam(Seasoner):
         'ESP_012594_0980',
         'ESP_012805_0980',
         'ESP_012871_0980',
-        ]
+    ]
     season3 = [
         'ESP_022510_0980',
         'ESP_021587_0980',
@@ -179,7 +181,8 @@ class Potsdam(Seasoner):
         'ESP_020875_0980',
         'ESP_020374_0980',
         'ESP_020163_0980',
-        ]
+    ]
+
 
 class Portsmouth(Seasoner):
     lat = -87.302
@@ -190,7 +193,7 @@ class Portsmouth(Seasoner):
         'ESP_012461_0925',
         'ESP_012527_0925',
         'ESP_012817_0925',
-        ]
+    ]
     season3 = [
         'ESP_021520_0925',
         'ESP_021454_0925',
@@ -198,7 +201,8 @@ class Portsmouth(Seasoner):
         'ESP_020742_0925',
         'ESP_020597_0925',
         'ESP_020386_0925',
-            ]
+    ]
+
 
 class Manhattan(Seasoner):
     lat = -85.751
@@ -422,7 +426,7 @@ class Ithaca(Seasoner):
                'PSP_004891_0945']
 
 
-regions = [Giza, Inca, Ithaca, Manhattan, Manhattan2, Bilbao, 
+regions = [Giza, Inca, Ithaca, Manhattan, Manhattan2, Bilbao,
            Oswego_Edge, Manhattan_Frontinella, BuenosAires,
            Maccelsfield, Starburst, Potsdam, Portsmouth]
 
