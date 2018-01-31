@@ -66,6 +66,7 @@ def cluster_obsid(obsid=None, savedir=None, fnotch_via_obsid=False,
 
 
 def process_obsid_parallel(args):
+    "Create argument tuples for cluster_obsid, for parallel usage."
     obsid, savedir = args
     return cluster_obsid(obsid, savedir)
 
