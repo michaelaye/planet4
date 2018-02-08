@@ -301,4 +301,4 @@ class TileCalculator(object):
         # df.merge will find the columns with same names for merging
         finaldf = joined.merge(subset)
         finaldf.to_csv(self.final_path, index=False)
-        print("Created", final_path)
+        print("Created", self.final_path)

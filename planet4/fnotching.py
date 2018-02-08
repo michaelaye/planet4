@@ -241,7 +241,6 @@ def fnotch_image_ids_with_shapely(obsid, eps=20, savedir=None, scope='hirise'):
                 fans.to_csv(pm.reduced_fanfile, index=False)
 
 
-
 def fnotch_obsid(obsid, eps=20, savedir=None):
     pm = io.PathManager(obsid=obsid, datapath=savedir)
     paths = pm.get_obsid_paths('L1A')
