@@ -24,7 +24,7 @@ def get_fraction_of_black_pixels(savepath):
     fractions = []
     for band in data:
         nonzeros = band.nonzero()[0]
-        fractions.append((band.size - nonzeros.size)/band.size)
+        fractions.append((band.size - nonzeros.size) / band.size)
     return np.array(fractions).mean()
 
 
@@ -60,18 +60,18 @@ class MetadataReader:
 
     def get_data_dic(self):
         """Defines a dictionary with metadata
-        
+
         Uses mostly the mosaic label data, but adds the previously
         SPICE-calculated NorthAzimuth angle from `campt` ISIS tool.
 
         Prerequisite for this call is, that the campt files have all been
         created for the obsids to be done.
-        This is usually the case after all tile coordinates have been created 
+        This is usually the case after all tile coordinates have been created
         using projection.TileCalculator.
         """
         label = self.label
         labelpath = self.labelpath
-        d = dict(obsid=self.obsid, path=labelpath, binning=label.binning,
+        d = dict(obsid=self.obsid,
                  l_s=label.l_s, line_samples=label.line_samples,
                  lines=label.lines, map_scale=label.map_scale)
         d['north_azimuth'] = self.campt_out_df['NorthAzimuth'].median()
