@@ -6,7 +6,9 @@ If you execute this locally, you can create one with `ipcluster start -n <no>`, 
 of cores you want to provide to the parallel processing routines.
 """
 import argparse
+import itertools
 import logging
+import string
 
 import pandas as pd
 from ipyparallel import Client
@@ -15,7 +17,7 @@ from tqdm import tqdm
 
 from nbtools import execute_in_parallel
 
-from . import io
+from . import fnotching, io
 from .metadata import MetadataReader
 from .projection import TileCalculator, create_RED45_mosaic, xy_to_hirise
 
@@ -23,8 +25,48 @@ LOGGER = logging.getLogger(__name__)
 # logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
 
-def cluster_obsid(obsid=None, savedir=None, fnotch_via_obsid=False,
-                  imgid=None):
+def fan_id_generator():
+    for newid in itertools.product(string.digits + 'abcdef', repeat=6):
+        yield 'F' + ''.join(newid)
+
+
+def blotch_id_generator():
+    for newid in itertools.product(string.digits + 'abcdef', repeat=6):
+        yield 'B' + ''.join(newid)
+
+
+def add_marking_ids(path, fan_id, blotch_id):
+    """Add marking_ids for catalog to cluster results.
+
+    Parameters
+    ----------
+    path : str, pathlib.Path
+        Path to L1A image_id clustering result directory
+    fan_id, blotch_id : generator
+        Generator for marking_id
+    """
+    image_id = path.parent.name
+    for kind, id_ in zip(['fans', 'blotches'], [fan_id, blotch_id]):
+        fname = str(path / f"{image_id}_L1A_{kind}.csv")
+        try:
+            df = pd.read_csv(fname)
+        except FileNotFoundError:
+            continue
+        else:
+            marking_ids = []
+            for i in range(df.shape[0]):
+                marking_ids.append(next(id_))
+            df['marking_id'] = marking_ids
+            df.to_csv(fname, index=False)
+
+
+def get_L1A_paths(obsid, savefolder):
+    pm = io.PathManager(obsid=obsid, datapath=savefolder)
+    paths = pm.get_obsid_paths('L1A')
+    return paths
+
+
+def cluster_obsid(obsid=None, savedir=None, imgid=None):
     """Cluster all image_ids for given obsid (=image_name).
 
     Parameters
@@ -34,13 +76,11 @@ def cluster_obsid(obsid=None, savedir=None, fnotch_via_obsid=False,
     savedir : str or pathlib.Path
         Top directory path where the catalog will be stored. Will create folder if it
         does not exist yet.
-    fnotch_via_obsid : bool, optional
-        Switch to control if fnotching happens per image_id or per obsid
     imgid : str, optional
         Convenience parameter: If `obsid` is not given, and `obsid` is none, this `image_id` can
         be used to receive the respective `obsid` from the ImageID class.
     """
-    from planet4 import dbscan, fnotching, markings
+    from planet4 import dbscan, markings
 
     # parameter checks
     if obsid is None and imgid is not None:
@@ -51,6 +91,15 @@ def cluster_obsid(obsid=None, savedir=None, fnotch_via_obsid=False,
     # cluster
     dbscanner = dbscan.DBScanner(savedir=savedir)
     dbscanner.cluster_image_name(obsid)
+
+
+def fnotch_obsid(obsid=None, savedir=None, fnotch_via_obsid=False,
+                 imgid=None):
+    """
+    fnotch_via_obsid: bool, optional
+        Switch to control if fnotching happens per image_id or per obsid
+    """
+    from planet4 import fnotching
 
     # fnotching / combining ambiguous cluster results
     # fnotch across all the HiRISE image
@@ -65,10 +114,16 @@ def cluster_obsid(obsid=None, savedir=None, fnotch_via_obsid=False,
     return obsid
 
 
-def process_obsid_parallel(args):
+def cluster_obsid_parallel(args):
     "Create argument tuples for cluster_obsid, for parallel usage."
     obsid, savedir = args
     return cluster_obsid(obsid, savedir)
+
+
+def fnotch_obsid_parallel(args):
+    "Create argument tuples for cluster_obsid, for parallel usage."
+    obsid, savedir = args
+    return fnotch_obsid(obsid, savedir)
 
 
 class ReleaseManager:
@@ -84,6 +139,10 @@ class ReleaseManager:
         Switch to control if already existing result folders for an obsid should be overwritten.
         Default: False
     """
+    drop_for_fans = ['radius_1', 'radius_2', 'x_tile', 'y_tile']
+    drop_for_blotches = ['spread', 'distance', 'version', 'x_tile', 'y_tile']
+    drop_for_tile_coords = ['xy_hirise', 'SampleResolution',
+                            'LineResolution', 'PositiveWest360Longitude']
 
     def __init__(self, version, obsids=None, overwrite=False):
         self.catalog = f'P4_catalog_{version}'
@@ -104,6 +163,11 @@ class ReleaseManager:
     def tile_coords_path(self):
         "Path to catalog tile coordinates file."
         return self.savefolder / f"{self.catalog}_tile_coords.csv"
+
+    @property
+    def tile_coords_path_final(self):
+        "Path to final catalog tile coordinates file."
+        return self.savefolder / f"{self.catalog}_tile_coords_final.csv"
 
     @property
     def obsids(self):
@@ -150,7 +214,7 @@ class ReleaseManager:
     def read_blotch_file(self):
         return pd.read_csv(self.blotch_merged)
 
-    def create_parallel_args(self):
+    def check_for_todo(self):
         bucket = []
         for obsid in self.obsids:
             pm = io.PathManager(obsid=obsid, datapath=self.savefolder)
@@ -159,7 +223,10 @@ class ReleaseManager:
                 continue
             else:
                 bucket.append(obsid)
-        self.todo = [(i, self.catalog) for i in bucket]
+        self.todo = bucket
+
+    def get_parallel_args(self):
+        return [(i, self.catalog) for i in self.todo]
 
     def get_metadata(self):
         metadata = []
@@ -197,32 +264,56 @@ class ReleaseManager:
 
     @property
     def cols_to_merge(self):
-        return ['BodyFixedCoordinateX', 'BodyFixedCoordinateY', 'BodyFixedCoordinateZ',
-                'Line', 'LineResolution', 'PlanetocentricLatitude',
-                'PlanetographicLatitude', 'PositiveEast360Longitude',
-                'PositiveWest360Longitude', 'Sample', 'SampleResolution', 'image_id']
+        return ['BodyFixedCoordinateX', 'BodyFixedCoordinateY',
+                'BodyFixedCoordinateZ',
+                'Line', 'LineResolution',
+                'PlanetocentricLatitude', 'PlanetographicLatitude', 'PositiveEast360Longitude', 'Sample', 'SampleResolution', 'image_id']
 
     def merge_all(self):
+        # read in data files
         fans = pd.read_csv(self.fan_file)
         blotches = pd.read_csv(self.blotch_file)
         meta = pd.read_csv(self.metadata_path)
+        meta.drop(['line_samples', 'lines'], axis=1, inplace=True)
+        tile_coords = pd.read_csv(self.tile_coords_path)
+
+        # merge meta
         fans = fans.merge(meta, on='obsid')
         blotches = blotches.merge(meta, on='obsid')
-        tile_coords = pd.read_csv(self.tile_coords_path)
+
+        # drop unnecessary columns
+        fans.drop(self.drop_for_fans, axis=1, inplace=True)
+        blotches.drop(self.drop_for_blotches, axis=1, inplace=True)
+        tile_coords.drop(self.drop_for_tile_coords, axis=1, inplace=True)
         # fans = fans.merge(
         #     tile_coords[self.cols_to_merge], on='image_id')
         # blotches = blotches.merge(
         #     tile_coords[self.cols_to_merge], on='image_id')
+
+        # write out final catalog files
+        fans.vote_ratio.fillna(1, inplace=True)
         fans.to_csv(self.fan_merged, index=False)
         LOGGER.info("Wrote %s", str(self.fan_merged))
+        blotches.vote_ratio.fillna(0, inplace=True)
         blotches.to_csv(self.blotch_merged, index=False)
         LOGGER.info("Wrote %s", str(self.blotch_merged))
+        tile_coords.to_csv(self.tile_coords_path_final, index=False)
 
     def launch_catalog_production(self):
-        self.create_parallel_args()
+        self.check_for_todo()
         # perform the clustering
         LOGGER.info("Performing the clustering.")
-        results = execute_in_parallel(process_obsid_parallel, self.todo)
+        results = execute_in_parallel(
+            cluster_obsid_parallel, self.get_parallel_args())
+        # create marking_ids
+        fan_id = fan_id_generator()
+        blotch_id = blotch_id_generator()
+        for obsid in self.todo:
+            paths = get_L1A_paths(obsid, self.catalog)
+            for path in paths:
+                add_marking_ids(path, fan_id, blotch_id)
+        # fnotch and apply cuts
+        execute_in_parallel(fnotch_obsid_parallel, self.get_parallel_args())
         # create summary CSV files of the clustering output
         LOGGER.info("Creating L1C fan and blotch database files.")
         create_roi_file(self.obsids, self.catalog, self.catalog)
@@ -240,54 +331,54 @@ class ReleaseManager:
         self.merge_all()
 
 
-@interactive
-def do_clustering(p4img, kind='fans'):
-    from planet4 import clustering
-    import pandas as pd
+# @interactive
+# def do_clustering(p4img, kind='fans'):
+#     from planet4 import clustering
+#     import pandas as pd
 
-    reduced = clustering.perform_dbscan(p4img, kind)
-    if reduced is None:
-        return None
-    series = [cluster.data for cluster in reduced]
-    n_members = [cluster.n_members for cluster in reduced]
-    n_rejected = [cluster.n_rejected for cluster in reduced]
-    df = pd.DataFrame(series)
-    df['image_id'] = p4img.imgid
-    df['n_members'] = n_members
-    df['n_rejected'] = n_rejected
-    return df
+#     reduced = clustering.perform_dbscan(p4img, kind)
+#     if reduced is None:
+#         return None
+#     series = [cluster.data for cluster in reduced]
+#     n_members = [cluster.n_members for cluster in reduced]
+#     n_rejected = [cluster.n_rejected for cluster in reduced]
+#     df = pd.DataFrame(series)
+#     df['image_id'] = p4img.imgid
+#     df['n_members'] = n_members
+#     df['n_rejected'] = n_rejected
+#     return df
 
 
-@interactive
-def process_image_name(image_name):
-    from os.path import join as pjoin
-    import os
-    import pandas as pd
-    from planet4 import markings
-    HOME = os.environ['HOME']
+# @interactive
+# def process_image_name(image_name):
+#     from os.path import join as pjoin
+#     import os
+#     import pandas as pd
+#     from planet4 import markings
+#     HOME = os.environ['HOME']
 
-    dirname = pjoin(HOME, 'data/planet4/catalog_2_and_3')
-    if not os.path.exists(dirname):
-        os.makedirs(dirname)
-    blotchfname = pjoin(dirname, image_name + '_reduced_blotches.hdf')
-    fanfname = pjoin(dirname, image_name + '_reduced_fans.hdf')
-    if os.path.exists(blotchfname) and\
-            os.path.exists(fanfname):
-        return image_name + ' already done.'
-    db = io.DBManager()
-    data = db.get_image_name_markings(image_name)
-    img_ids = data.image_id.unique()
-    blotches = []
-    fans = []
-    for img_id in img_ids:
-        p4img = markings.ImageID(img_id)
-        blotches.append(do_clustering(p4img, 'blotches'))
-        fans.append(do_clustering(p4img, 'fans'))
-    blotches = pd.concat(blotches, ignore_index=True)
-    blotches.to_hdf(blotchfname, 'df')
-    fans = pd.concat(fans, ignore_index=True)
-    fans.to_hdf(fanfname, 'df')
-    return image_name
+#     dirname = pjoin(HOME, 'data/planet4/catalog_2_and_3')
+#     if not os.path.exists(dirname):
+#         os.makedirs(dirname)
+#     blotchfname = pjoin(dirname, image_name + '_reduced_blotches.hdf')
+#     fanfname = pjoin(dirname, image_name + '_reduced_fans.hdf')
+#     if os.path.exists(blotchfname) and\
+#             os.path.exists(fanfname):
+#         return image_name + ' already done.'
+#     db = io.DBManager()
+#     data = db.get_image_name_markings(image_name)
+#     img_ids = data.image_id.unique()
+#     blotches = []
+#     fans = []
+#     for img_id in img_ids:
+#         p4img = markings.ImageID(img_id)
+#         blotches.append(do_clustering(p4img, 'blotches'))
+#         fans.append(do_clustering(p4img, 'fans'))
+#     blotches = pd.concat(blotches, ignore_index=True)
+#     blotches.to_hdf(blotchfname, 'df')
+#     fans = pd.concat(fans, ignore_index=True)
+#     fans.to_hdf(fanfname, 'df')
+#     return image_name
 
 
 def read_csvfiles_into_lists_of_frames(folders):
@@ -341,7 +432,11 @@ def create_roi_file(obsids, roi_name, datapath):
         else:
             savename = f"{roi_name}_{pm.L1C_folder}_{key}.csv"
             savepath = savedir / savename
-            df.to_csv(savepath, index=False)
+            for col in ['x_tile', 'y_tile']:
+                df[col] = pd.to_numeric(df[col], downcast='signed')
+            if 'version' in df.columns:
+                df['version'] = pd.to_numeric(df['version'], downcast='signed')
+            df.to_csv(savepath, index=False, float_format="%.2f")
             print(f"Created {savepath}.")
 
 
