@@ -204,7 +204,7 @@ class Portsmouth(Seasoner):
     ]
 
 
-class Manhattan(Seasoner):
+class Manhattan2(Seasoner):
     lat = -85.751
     lon = 105.971
     season1 = ['PSP_002770_0940',
@@ -216,7 +216,7 @@ class Manhattan(Seasoner):
                'ESP_029024_0940']
 
 
-class Manhattan2(Seasoner):
+class Manhattan(Seasoner):
     lat = -86.39
     lon = 99
     season4 = ['ESP_028932_0935',
