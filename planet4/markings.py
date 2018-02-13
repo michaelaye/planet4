@@ -204,6 +204,20 @@ class ImageID(object):
         return with_center, user_name, without_users, lw
 
     def plot_markings(self, kind, data=None, **kwargs):
+        """General plotting method for both fans and blotches.
+
+        Also accepts any derived set of objects in the `data` parameter.
+
+        Parameters:
+        ----------
+        kind : {'blotch','fan'}
+            Switch between specialized plotting features
+        **kwargs : {dict}
+            Any keywords to hand down to other methods here and/or matplotlib
+        data : {list, pd.core.frame.DataFrame}, optional
+            Any marking objects related to this image_id (the default is None, which will plot the raw data.)
+
+        """
         with_center, user_name, without_users, lw = self.pop_kwargs(kwargs)
         if data is None:
             data = self.filter_data(kind, user_name, without_users)
