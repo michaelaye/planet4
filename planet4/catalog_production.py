@@ -19,7 +19,7 @@ from nbtools import execute_in_parallel
 
 from . import fnotching, io
 from .metadata import MetadataReader
-from .projection import TileCalculator, create_RED45_mosaic, xy_to_hirise
+from .projection import TileCalculator, create_RED45_mosaic, xy_to_hirise, XY2LATLON
 
 LOGGER = logging.getLogger(__name__)
 # logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
@@ -139,9 +139,10 @@ class ReleaseManager:
         Switch to control if already existing result folders for an obsid should be overwritten.
         Default: False
     """
-    drop_for_fans = ['radius_1', 'radius_2', 'x_tile', 'y_tile']
-    drop_for_blotches = ['spread', 'distance', 'version', 'x_tile', 'y_tile']
-    drop_for_tile_coords = ['xy_hirise', 'SampleResolution',
+    DROP_FOR_FANS = ['radius_1', 'radius_2', 'x_tile', 'y_tile', 'image_name']
+    DROP_FOR_BLOTCHES = ['spread', 'distance',
+                         'version', 'x_tile', 'y_tile', 'image_name']
+    DROP_FOR_TILE_COORDS = ['xy_hirise', 'SampleResolution',
                             'LineResolution', 'PositiveWest360Longitude']
 
     def __init__(self, version, obsids=None, overwrite=False):
@@ -228,7 +229,7 @@ class ReleaseManager:
     def get_parallel_args(self):
         return [(i, self.catalog) for i in self.todo]
 
-    def get_metadata(self):
+    def calc_metadata(self):
         metadata = []
         for img in tqdm(self.obsids):
             metadata.append(MetadataReader(img).get_data_dic())
@@ -236,7 +237,7 @@ class ReleaseManager:
         df.to_csv(self.metadata_path, index=False)
         LOGGER.info("Wrote %s", str(self.metadata_path))
 
-    def get_tile_coordinates(self):
+    def calc_tile_coordinates(self):
         edrpath = io.get_ground_projection_root()
         cubepaths = [edrpath / obsid /
                      f"{obsid}_mosaic_RED45.cub" for obsid in self.obsids]
@@ -263,11 +264,10 @@ class ReleaseManager:
         LOGGER.info("Wrote %s", str(self.tile_coords_path))
 
     @property
-    def cols_to_merge(self):
-        return ['BodyFixedCoordinateX', 'BodyFixedCoordinateY',
-                'BodyFixedCoordinateZ',
-                'Line', 'LineResolution',
-                'PlanetocentricLatitude', 'PlanetographicLatitude', 'PositiveEast360Longitude', 'Sample', 'SampleResolution', 'image_id']
+    def COLS_TO_MERGE(self):
+        return ['obsid', 'image_x', 'image_y',
+                'BodyFixedCoordinateX', 'BodyFixedCoordinateY', 'BodyFixedCoordinateZ',
+                'PlanetocentricLatitude', 'PlanetographicLatitude', 'PositiveEast360Longitude']
 
     def merge_all(self):
         # read in data files
@@ -282,29 +282,67 @@ class ReleaseManager:
         blotches = blotches.merge(meta, on='obsid')
 
         # drop unnecessary columns
-        fans.drop(self.drop_for_fans, axis=1, inplace=True)
-        blotches.drop(self.drop_for_blotches, axis=1, inplace=True)
-        tile_coords.drop(self.drop_for_tile_coords, axis=1, inplace=True)
-        # fans = fans.merge(
-        #     tile_coords[self.cols_to_merge], on='image_id')
-        # blotches = blotches.merge(
-        #     tile_coords[self.cols_to_merge], on='image_id')
-
-        # write out final catalog files
-        fans.vote_ratio.fillna(1, inplace=True)
-        fans.to_csv(self.fan_merged, index=False)
-        LOGGER.info("Wrote %s", str(self.fan_merged))
-        blotches.vote_ratio.fillna(0, inplace=True)
-        blotches.to_csv(self.blotch_merged, index=False)
-        LOGGER.info("Wrote %s", str(self.blotch_merged))
+        fans.drop(self.DROP_FOR_FANS, axis=1, inplace=True)
+        blotches.drop(self.DROP_FOR_BLOTCHES, axis=1, inplace=True)
+        tile_coords.drop(self.DROP_FOR_TILE_COORDS, axis=1, inplace=True)
+        # save cleaned tile_coords
         tile_coords.to_csv(self.tile_coords_path_final, index=False)
 
+        # merge campt results into catalog files
+        fans, blotches = self.merge_campt_results(fans, blotches)
+
+        # write out fans catalog
+        fans.vote_ratio.fillna(1, inplace=True)
+        fans.rename({'image_id': 'tile_id'}, axis=1, inplace=True)
+        fans.version = fans.version.astype('int')
+        fans.to_csv(self.fan_merged, index=False)
+        LOGGER.info("Wrote %s", str(self.fan_merged))
+
+        # write out blotches catalog
+        blotches.vote_ratio.fillna(0, inplace=True)
+        blotches.rename({'image_id': 'tile_id'}, axis=1, inplace=True)
+        blotches.to_csv(self.blotch_merged, index=False)
+        LOGGER.info("Wrote %s", str(self.blotch_merged))
+
+    def calc_marking_coordinates(self):
+        fans = pd.read_csv(self.fan_file)
+        blotches = pd.read_csv(self.blotch_file)
+        combined = pd.concat([fans, blotches])
+
+        for obsid in tqdm(self.obsids):
+            data = combined[combined.image_name == obsid]
+            xy = XY2LATLON(data, self.savefolder)
+            xy.process_inpath()
+
+    def collect_marking_coordinates(self):
+        bucket = []
+        for obsid in self.obsids:
+            xy = XY2LATLON(None, self.savefolder, obsid=obsid)
+            bucket.append(pd.read_csv(xy.savepath).assign(obsid=obsid))
+
+        ground = pd.concat(bucket).drop_duplicates()
+        ground.rename(dict(Sample='image_x', Line='image_y'),
+                      axis=1, inplace=True)
+        return ground
+
+    def merge_campt_results(self, fans, blotches):
+        INDEX = ['obsid', 'image_x', 'image_y']
+
+        ground = self.collect_marking_coordinates()
+        fans = fans.merge(ground[self.COLS_TO_MERGE], on=INDEX)
+        blotches = blotches.merge(ground[self.COLS_TO_MERGE], on=INDEX)
+        return fans, blotches
+
     def launch_catalog_production(self):
+
+        # check for data that is unprocessed
         self.check_for_todo()
+
         # perform the clustering
         LOGGER.info("Performing the clustering.")
         results = execute_in_parallel(
             cluster_obsid_parallel, self.get_parallel_args())
+
         # create marking_ids
         fan_id = fan_id_generator()
         blotch_id = blotch_id_generator()
@@ -312,21 +350,28 @@ class ReleaseManager:
             paths = get_L1A_paths(obsid, self.catalog)
             for path in paths:
                 add_marking_ids(path, fan_id, blotch_id)
+
         # fnotch and apply cuts
         execute_in_parallel(fnotch_obsid_parallel, self.get_parallel_args())
+
         # create summary CSV files of the clustering output
         LOGGER.info("Creating L1C fan and blotch database files.")
         create_roi_file(self.obsids, self.catalog, self.catalog)
-        # create the RED45 mosaics for all ground_projection calculations
+
         LOGGER.info(
             "Creating the required RED45 mosaics for ground projections.")
         results = execute_in_parallel(create_RED45_mosaic, self.obsids)
-        # calculate center ground coordinates for all tiles involved
-        LOGGER.info("Calculating the ground coordinates for all P4 tiles.")
-        self.get_tile_coordinates()
+
+        LOGGER.info(
+            "Calculating the center ground coordinates for all P4 tiles.")
+        self.calc_tile_coordinates()
+
+        LOGGER.info("Calculating ground coordinates for catalog.")
+        self.calc_marking_coordinates()
+
         # calculate all metadata required for P4 analysis
         LOGGER.info("Writing summary metadata file.")
-        self.get_metadata()
+        self.calc_metadata()
         # merging metadata
         self.merge_all()
 

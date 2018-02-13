@@ -18,10 +18,9 @@ from pysis.exceptions import ProcessError
 logger = logging.getLogger(__name__)
 
 
-
 try:
     from pysis.isis import (campt, cubenorm, getkey, handmos, hi2isis, histitch,
-                        spiceinit)
+                            spiceinit)
 except ImportError:
     logger.warning("ISIS commands not found.")
 
@@ -92,7 +91,8 @@ def get_RED45_mosaic_inputs(obsid, saveroot):
     inputs = []
     for channel in [4, 5]:
         for chip in [0, 1]:
-            inputs.append(RED_PRODUCT_ID(obsid, channel, chip, saveroot=saveroot))
+            inputs.append(RED_PRODUCT_ID(
+                obsid, channel, chip, saveroot=saveroot))
     return inputs
 
 
@@ -214,15 +214,17 @@ def p4pix_to_hirise_pix(p4pix, tile, x_or_y):
     offset = dict(x=740, y=548)  # image width/height - 100
     return p4pix + offset[x_or_y] * (np.array(tile) - 1)
 
+
 def p4tile_center_to_hirise_pix(tile, x_or_y):
     p4pix = dict(x=420, y=324)  # half image sizes
     return p4pix_to_hirise_pix(p4pix[x_or_y], tile, x_or_y)
+
 
 def tilecenter_to_hirise(x_tile, y_tile=None):
     "get HiRISE pixels for tile center"
     if y_tile is None:
         x_tile, y_tile = x_tile
-    return xy_to_hirise(img_x_size/2, img_y_size/2,
+    return xy_to_hirise(img_x_size / 2, img_y_size / 2,
                         x_tile, y_tile)
 
 
@@ -280,7 +282,8 @@ class TileCalculator(object):
 
     def calc_tile_coords(self):
         df = self.get_campt_input_coords()
-        df[['x_hirise', 'y_hirise']].to_csv(self.temppath, header=False, index=False)
+        df[['x_hirise', 'y_hirise']].to_csv(
+            self.temppath, header=False, index=False)
         do_campt(self.cubepath, self.campt_results_path, self.temppath)
         results = pd.read_csv(self.campt_results_path)
         subdf = results[['Sample', 'Line',
@@ -302,3 +305,58 @@ class TileCalculator(object):
         finaldf = joined.merge(subset)
         finaldf.to_csv(self.final_path, index=False)
         print("Created", self.final_path)
+
+
+class XY2LATLON:
+    edrpath = io.get_ground_projection_root()
+
+    def __init__(self, df, inpath, overwrite=False, obsid=None):
+        self.obsid = obsid
+        self.df = df
+        self.inpath = inpath
+        self.overwrite = overwrite
+        self._obsid = obsid
+
+    @property
+    def obsid(self):
+        return self.df.image_name.iloc[0] if self._obsid is None else self._obsid
+
+    @obsid.setter
+    def obsid(self, value):
+        self._obsid = value
+
+    @property
+    def mosaicname(self):
+        return f"{self.obsid}_mosaic_RED45.cub"
+
+    @property
+    def mosaicpath(self):
+        return self.edrpath / self.obsid / self.mosaicname
+
+    @property
+    def savepath(self):
+        return self.inpath / f"{self.obsid}_campt_out.csv"
+
+    @property
+    def savepath_blotch(self):
+        return self.inpath / f"{self.obsid}_blotch_campt_out.csv"
+
+    @property
+    def savepath_fan(self):
+        return self.inpath / f"{self.obsid}_fan_campt_out.csv"
+
+    @property
+    def temppath(self):
+        return self.inpath / f"{self.obsid}.tocampt"
+
+    def process_inpath(self):
+        df = self.df
+        tempcoords = ['image_x', 'image_y']
+        df[tempcoords].to_csv(str(self.temppath), header=False, index=False)
+        if self.savepath.exists() and self.overwrite is False:
+            return
+        try:
+            do_campt(self.mosaicpath, self.savepath, self.temppath)
+        except Exception as e:
+            print(e)
+            return False
