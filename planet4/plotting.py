@@ -111,6 +111,26 @@ def plot_raw_blotches(id_, ax=None):
     imgid.plot_blotches(ax=ax)
 
 
+def plot_finals_with_input(id_, datapath=None, horizontal=True, scope='planet4'):
+    imgid = markings.ImageID(id_, scope=scope)
+    pm = io.PathManager(id_=id_, datapath=datapath)
+    if horizontal is True:
+        kwargs = {'ncols': 2}
+    else:
+        kwargs = {'nrows': 2}
+    fig, ax = plt.subplots(figsize=(4, 5), **kwargs)
+    ax[0].set_title(imgid.imgid, fontsize=6)
+    imgid.show_subframe(ax=ax[0])
+    for marking in ['fan', 'blotch']:
+        try:
+            f = getattr(pm, f"final_{marking}df")
+        except:
+            continue
+        else:
+            data = df[df.image_id == id_]
+            imgid.plot_markings(marking, data, ax=ax[1])
+
+
 def plot_finals(id_, datapath=None, ax=None, scope='planet4',
                 via_obsid=False, **kwargs):
     id_ = io.check_and_pad_id(id_)
@@ -121,20 +141,21 @@ def plot_finals(id_, datapath=None, ax=None, scope='planet4',
         pm = io.PathManager(obsid=imgid.image_name,
                             datapath=datapath)
         logger.debug("via_obsid active. Fan path: %s", str(pm.final_fanfile))
-        logger.debug("via_obsid active. Blotch path: %s", str(pm.final_blotchfile))
+        logger.debug("via_obsid active. Blotch path: %s",
+                     str(pm.final_blotchfile))
 
     if ax is None:
         _, ax = plt.subplots()
     if pm.final_fanfile.exists():
         df = pm.final_fandf
-        data = df[df.image_id==id_]
+        data = df[df.image_id == id_]
         logger.debug("Len of data: %i", len(df))
         imgid.plot_fans(ax=ax, data=data, with_center=True, **kwargs)
     else:
         logger.warning("File not found: %s", str(pm.final_fanfile))
     if pm.final_blotchfile.exists():
         df = pm.final_blotchdf
-        data = df[df.image_id==id_]
+        data = df[df.image_id == id_]
         imgid.plot_blotches(ax=ax, data=data, with_center=True, **kwargs)
     else:
         logger.warning("File not found: %s", str(pm.final_blotchfile))
@@ -149,7 +170,7 @@ def blotches_all(id_, datapath=None):
 
 
 def plot_clustered_markings(image_id, kind, datapath=None, ax=None, obsid=None,
-                        **kwargs):
+                            **kwargs):
     """Plot the reduced/clustered objects.
 
     Plot the clustered fans for a planet4 image_id.
@@ -202,7 +223,7 @@ def get_tile_image(df, xtile, ytile):
 
 def get_four_tiles_df(df, x0, y0):
     query = ('x_tile > {} and x_tile < {} and y_tile > {} and y_tile < {}'.
-             format(x0-1, x0+2, y0-1, y0+2))
+             format(x0 - 1, x0 + 2, y0 - 1, y0 + 2))
     return df.query(query).sort_values(by=['x_tile', 'y_tile'])
 
 
@@ -210,9 +231,9 @@ def get_four_tiles_img(obsid, x0, y0):
     df = io.DBManager().get_image_name_markings(obsid)
     tiles = []
     # loop along columns (= to the right)
-    for xtile in [x0, x0+1]:
+    for xtile in [x0, x0 + 1]:
         # loop along rows (= down)
-        for ytile in [y0, y0+1]:
+        for ytile in [y0, y0 + 1]:
             tiles.append(get_tile_image(df, xtile, ytile))
 
     # tiles[0] and tiles[1] are the left most tiles
@@ -235,7 +256,7 @@ def browse_images(obsid):
         plt.imshow(img, origin='upper', aspect='auto')
         plt.title(f'x_tile: {xtile}, y_tile: {ytile}')
         plt.show()
-    interact(view_image, xtile=(1, xmax-1), ytile=(1, ymax-1))
+    interact(view_image, xtile=(1, xmax - 1), ytile=(1, ymax - 1))
 
 
 def get_finals_from_obsid(obsid, datapath, kind='blotch', ids=None):
@@ -255,7 +276,7 @@ def plot_four_tiles(obsid, x0, y0, ax=None):
 
     all_ = get_four_tiles_img(obsid, x0, y0)
     UL = projection.xy_to_hirise(0, 0, x0, y0)
-    LR = projection.xy_to_hirise(img_x_size, img_y_size, x0+1, y0+1)
+    LR = projection.xy_to_hirise(img_x_size, img_y_size, x0 + 1, y0 + 1)
     extent = [UL[0], LR[0], LR[1], UL[1]]
     if ax is None:
         _, ax = plt.subplots()
