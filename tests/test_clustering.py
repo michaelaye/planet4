@@ -18,7 +18,7 @@ def data():
 
 @pytest.fixture(scope='module',
                 params=['APF000012w', 'APF000012q'])
-def img_id(request):
+def img_id(request, data):
     imid = request.param
     return data[data.image_id == imid]
 
@@ -38,7 +38,7 @@ def test_dbscanner_init():
     assert isinstance(dbscanner.eps_values, dict)
 
 
-def test_cluster_image_id():
-    dbscan = DBScanner(save_results=False)
+def test_cluster_image_id(data):
+    dbscan = DBScanner(save_results=False, data=data)
     dbscan.cluster_image_id('12w')
     assert dbscan.reduced_data['fan'].shape == (4, 15)
