@@ -26,7 +26,8 @@ setup(
     version='0.11.0',
     packages=find_packages(),
 
-    install_requires=['pandas', 'numpy', 'matplotlib', 'pyaml'],
+    install_requires=['pandas', 'numpy', 'matplotlib', 'pyaml',
+                      'shapely'],
     tests_require=['pytest'],
     setup_requires=['pytest-runner'],
     package_data={
