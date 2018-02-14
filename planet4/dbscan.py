@@ -113,7 +113,8 @@ class DBScanner(object):
     }
 
     def __init__(self, msf=0.13, savedir=None, with_angles=True, with_radii=True,
-                 do_large_run=True, save_results=True, only_core_samples=False):
+                 do_large_run=True, save_results=True, only_core_samples=False,
+                 data=None):
         self.msf = msf
         self.savedir = savedir
         self.with_angles = with_angles
@@ -121,7 +122,7 @@ class DBScanner(object):
         self.do_large_run = do_large_run
         self.save_results = save_results
         self.only_core_samples = only_core_samples
-
+        self.data = data
         self.pm = io.PathManager(datapath=savedir)
 
     def show_markings(self, id_):
@@ -330,7 +331,7 @@ class DBScanner(object):
         results pd.DataFrame and then being stored per marking kind in the dictionary
         `self.reduced_data`.
         """
-        self.p4id = markings.ImageID(img_id, scope='planet4')
+        self.p4id = markings.ImageID(img_id, scope='planet4', data=self.data)
         self.pm.obsid = self.p4id.image_name
         self.pm.id = img_id
 
@@ -371,11 +372,14 @@ class DBScanner(object):
             if len(self.remaining) > self.min_samples and self.do_large_run is True:
                 # if we allow it, and more than min_samples are left, do 2nd round
                 # with parameters for large objects
-                logger.info("Clustering on remaining data with large parameter set.")
-                self._setup_and_call_clustering(eps_values, self.remaining, kind, 'large')
+                logger.info(
+                    "Clustering on remaining data with large parameter set.")
+                self._setup_and_call_clustering(
+                    eps_values, self.remaining, kind, 'large')
             # merging small and large clustering results
             try:
-                self.reduced_data[kind] = pd.concat(self.reduced_data[kind], ignore_index=True)
+                self.reduced_data[kind] = pd.concat(
+                    self.reduced_data[kind], ignore_index=True)
             except ValueError as e:
                 # i can just continue here, as I stored an empty list above already
                 continue
@@ -393,8 +397,10 @@ class DBScanner(object):
         eps_xy = eps_values[kind]['xy'][size]
         eps_rad = eps_values[kind]['radius'][size]
         logger.debug("Length of dataset: %i", len(dataset))
-        self.reduced_data[kind].append(self._cluster_pipeline(kind, dataset, eps_xy, eps_rad))
-        logger.debug("Appending %i items to final_clusters", len(self.finalclusters))
+        self.reduced_data[kind].append(
+            self._cluster_pipeline(kind, dataset, eps_xy, eps_rad))
+        logger.debug("Appending %i items to final_clusters",
+                     len(self.finalclusters))
         self.final_clusters[kind].append(self.finalclusters)
 
     def _calculate_unclustered(self, data, xyclusters):
