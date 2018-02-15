@@ -216,31 +216,31 @@ def merge_temp_files(dbname, image_names=None):
     return dbnamenew
 
 
-def remove_duplicates(df):
-    logger.info('Removing duplicates.')
+# def remove_duplicates(df):
+#     logger.info('Removing duplicates.')
 
-    image_names = df.image_name.unique()
+#     image_names = df.image_name.unique()
 
-    def process_image_name(image_name):
-        data = df[df.image_name == image_name]
-        data = remove_duplicates_from_image_name_data(data)
-        data.to_hdf(get_temp_fname(image_name), 'df')
+#     def process_image_name(image_name):
+#         data = df[df.image_name == image_name]
+#         data = remove_duplicates_from_image_name_data(data)
+#         data.to_hdf(get_temp_fname(image_name), 'df')
 
-    # parallel approach, u need to launch an ipcluster/controller for this work!
-    lbview = setup_parallel()
-    lbview.map_sync(process_image_name, image_names)
+#     # parallel approach, u need to launch an ipcluster/controller for this work!
+#     lbview = setup_parallel()
+#     lbview.map_sync(process_image_name, image_names)
 
-    df = []
-    for image_name in image_names:
-        try:
-            df.append(pd.read_hdf(get_temp_fname(image_name), 'df'))
-        except OSError:
-            continue
-        else:
-            os.remove(get_temp_fname(image_name))
-    df = pd.concat(df, ignore_index=True)
-    logger.info('Duplicates removal complete.')
-    return df
+#     df = []
+#     for image_name in image_names:
+#         try:
+#             df.append(pd.read_hdf(get_temp_fname(image_name), 'df'))
+#         except OSError:
+#             continue
+#         else:
+#             os.remove(get_temp_fname(image_name))
+#     df = pd.concat(df, ignore_index=True)
+#     logger.info('Duplicates removal complete.')
+#     return df
 
 
 def display_multi_progress(results, objectlist, sleep=1):
@@ -299,7 +299,7 @@ def remove_duplicates_from_file(dbname):
     def process_image_name(image_name):
         from pandas import read_hdf
         # the where string fishes `image_name` from this scope
-        data = read_hdf(dbname, 'df', where='image_name=image_name')
+        data = read_hdf(dbname, 'df', mode='r', where='image_name=image_name')
         tmp = remove_duplicates_from_image_name_data(data)
         # data.to_hdf(get_temp_fname(image_name, dbname.parent), 'df')
         return tmp
@@ -430,6 +430,8 @@ def main():
 
     # first read CSV into dataframe
     df = read_csv_into_df(fname, chunks, args.test_n_rows)
+    length = len(df)
+    logger.info("Length of first import: %i", length)
 
     # convert times to datetime object
     if not args.raw_times:
@@ -437,15 +439,18 @@ def main():
 
     # split off tutorials
     df = splitting_tutorials(rootpath, df)
+    logger.info("Length after splitting off tutorials: %i", df.shape[0])
 
     logger.info('Scanning for and dropping empty lines now.')
     df = df.dropna(how='all')
     logger.info("Dropped empty lines.")
+    logger.info("New length: %i", df.shape[0])
 
     if not args.keep_dirt:
         logger.info("Now filtering for unwanted data.")
         df = filter_data(df)
-        logger.info("Done removing incompletes.")
+        logger.info("Done cleaning bad data.")
+        logger.info("New length: %i", df.shape[0])
 
     convert_ellipse_angles(df)
     normalize_fan_angles(df)
