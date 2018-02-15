@@ -143,7 +143,8 @@ class ReleaseManager:
     DROP_FOR_BLOTCHES = ['spread', 'distance',
                          'version', 'x_tile', 'y_tile', 'image_name']
     DROP_FOR_TILE_COORDS = ['xy_hirise', 'SampleResolution',
-                            'LineResolution', 'PositiveWest360Longitude']
+                            'LineResolution', 'PositiveWest360Longitude',
+                            'Line', 'Sample']
 
     def __init__(self, version, obsids=None, overwrite=False):
         self.catalog = f'P4_catalog_{version}'
@@ -291,16 +292,18 @@ class ReleaseManager:
         # merge campt results into catalog files
         fans, blotches = self.merge_campt_results(fans, blotches)
 
+        # rename image_id to tile_id
+        for data in [fans, blotches, tile_coords]:
+            data.rename({'image_id': 'tile_id'})
+
         # write out fans catalog
         fans.vote_ratio.fillna(1, inplace=True)
-        fans.rename({'image_id': 'tile_id'}, axis=1, inplace=True)
         fans.version = fans.version.astype('int')
         fans.to_csv(self.fan_merged, index=False)
         LOGGER.info("Wrote %s", str(self.fan_merged))
 
         # write out blotches catalog
         blotches.vote_ratio.fillna(0, inplace=True)
-        blotches.rename({'image_id': 'tile_id'}, axis=1, inplace=True)
         blotches.to_csv(self.blotch_merged, index=False)
         LOGGER.info("Wrote %s", str(self.blotch_merged))
 
@@ -493,7 +496,7 @@ def main():
     args = parser.parse_args()
 
     image_names = io.get_image_names_from_db(args.db_fname)
-    logger.info('Found %i image_names', len(image_names))
+    LOGGER.info('Found %i image_names', len(image_names))
 
     c = Client()
     dview = c.direct_view()
@@ -512,4 +515,4 @@ def main():
         time.sleep(10)
     for res in results.result:
         print(res)
-    logger.info('Catalog production done. Results in %s.', dirname)
+    LOGGER.info('Catalog production done. Results in %s.', dirname)
