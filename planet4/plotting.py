@@ -123,7 +123,7 @@ def plot_finals_with_input(id_, datapath=None, horizontal=True, scope='planet4')
     imgid.show_subframe(ax=ax[0])
     for marking in ['fan', 'blotch']:
         try:
-            f = getattr(pm, f"final_{marking}df")
+            df = getattr(pm, f"final_{marking}df")
         except:
             continue
         else:
