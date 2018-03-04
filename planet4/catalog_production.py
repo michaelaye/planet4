@@ -303,7 +303,7 @@ class ReleaseManager:
         LOGGER.info("Wrote %s", str(self.fan_merged))
 
         # write out blotches catalog
-        blotches.vote_ratio.fillna(0, inplace=True)
+        blotches.vote_ratio.fillna(1, inplace=True)
         blotches.to_csv(self.blotch_merged, index=False)
         LOGGER.info("Wrote %s", str(self.blotch_merged))
 
