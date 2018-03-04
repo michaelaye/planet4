@@ -50,7 +50,7 @@ def gold_legend(ax):
     line3 = plt.Line2D(range(10), range(10), marker='o', color=lcolors[2])
     line4 = plt.Line2D(range(10), range(10), marker='o', color=lcolors[3])
     ax.legend((line1, line2, line3, line4),
-              GOLD_MEMBERS, numpoints=2, loc='best', fontsize=7)
+              GOLD_MEMBERS, numpoints=2, bbox_to_anchor=(1., 1.), fontsize=7)
 
 
 def set_upper_left_corner(ul_x, ul_y):
