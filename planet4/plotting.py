@@ -21,7 +21,7 @@ def get_clustering_log(pm):
 
 
 def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
-                           savetitle='', saveroot=None, figtitle='', via_obsid=True,
+                           savetitle='', saveroot=None, do_title=True, via_obsid=True,
                            figsize=None, **kwargs):
     """Plotting tool to show the results along the P4 pipeline.
 
@@ -79,16 +79,17 @@ def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
     # for ax in axes:
     #     ax.set_axis_off()
 
-    if figtitle == '':
+    if do_title is True:
         figtitle = "min_samples: {}".format(min_samples)
         figtitle += ", n_(blotch|fan) classif.: {}".format(n_classifications)
         figtitle += ("\nn_clustered_fans: {}, n_clustered_blotches: {}"
                      .format(n_clust_fans, n_clust_blotches))
-    fig.suptitle(image_id + ', ' + str(figtitle))
+        fig.suptitle(image_id + ', ' + str(figtitle))
+
     fig.subplots_adjust(left=None, top=None, bottom=None, right=None,
                         wspace=0.01, hspace=0.01)
     if save:
-        fname = "{}_{}.png".format(imgid.imgid, savetitle)
+        fname = "P4_pipeline_{}_{}.png".format(imgid.imgid, savetitle)
         if saveroot is None:
             saveroot = pm.final_fanfile.parent / 'plots'
         else:
@@ -96,7 +97,7 @@ def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
         saveroot.mkdir(exist_ok=True)
         fpath = saveroot / fname
         logging.debug("Saving plot at %s", str(fpath))
-        plt.savefig(str(fpath), dpi=200)
+        plt.savefig(str(fpath), dpi=200, bbox_inches='tight')
 
 
 def plot_raw_fans(id_, ax=None, dbname=None):
@@ -152,13 +153,13 @@ def plot_finals(id_, datapath=None, ax=None, scope='planet4',
         logger.debug("Len of data: %i", len(df))
         imgid.plot_fans(ax=ax, data=data, with_center=True, **kwargs)
     else:
-        logger.warning("File not found: %s", str(pm.final_fanfile))
+        logger.info("File not found: %s", str(pm.final_fanfile))
     if pm.final_blotchfile.exists():
         df = pm.final_blotchdf
         data = df[df.image_id == id_]
         imgid.plot_blotches(ax=ax, data=data, with_center=True, **kwargs)
     else:
-        logger.warning("File not found: %s", str(pm.final_blotchfile))
+        logger.info("File not found: %s", str(pm.final_blotchfile))
 
 
 def blotches_all(id_, datapath=None):
@@ -200,7 +201,7 @@ def plot_clustered_markings(image_id, kind, datapath=None, ax=None, obsid=None,
         pm = io.PathManager(id_=image_id, datapath=datapath)
         objectfile = getattr(pm, f"{kind}file")
         if not objectfile.exists():
-            logger.warning("Clustered/reduced %sfile not found", kind)
+            logger.info("Clustered/reduced %sfile not found", kind)
             return
         data = getattr(pm, f"{kind}df")
 
