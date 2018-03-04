@@ -28,8 +28,8 @@ IMG_Y_SIZE = 648
 
 IMG_SHAPE = (IMG_Y_SIZE, IMG_X_SIZE)
 
-GOLD_MEMBERS = ['michaelaye', 'mschwamb', 'Portyankina', 'CJ-DPI']
-GOLD_PLOT_COLORS = list('cmyg')
+GOLD_MEMBERS = ['michaelaye', 'mschwamb', 'Portyankina']  # 'CJ-DPI']
+GOLD_PLOT_COLORS = list('bmg')
 
 
 def example_p4id():
