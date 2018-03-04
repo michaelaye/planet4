@@ -247,7 +247,7 @@ class DBScanner(object):
         eps = eps_values[kind]['xy']['small']
         eps_large = eps_values[kind]['xy']['large']
         ax.set_title(f"ID: {img_id}, "
-                     f"n_clusters: {n_reduced}\n"
+                     f"n: {n_reduced}\n"
                      f"MS: {self.min_samples}, "
                      f"EPS: {eps}, "
                      f"EPS_LARGE: {eps_large}",
