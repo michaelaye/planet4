@@ -170,8 +170,8 @@ class ImageID(object):
         ax.imshow(self.subframe, origin='upper', aspect=aspect)
         ax.set_axis_off()
 
-    def plot_objects(self, objects, n=None, img=True, user_name=None, ax=None,
-                     user_color=None, user_colors=None, without_users=None):
+    def plot_objects(self, objects, n=None, img=True, ax=None,
+                     user_color=None, user_colors=None, wind_pointer=False):
         """Plotting either fans or blotches with p4 subframe background."""
         LOGGER.debug("Entering markings.plot_objects")
         LOGGER.debug("Received %i objects to plot.", len(objects))
@@ -190,6 +190,8 @@ class ImageID(object):
             if user_color is not None:
                 color = user_color
             obj.plot(color=color, ax=ax)
+            if wind_pointer is True and isinstance(obj, Fan):
+                obj.add_mean_wind_pointer(color=color, ax=ax)
             counter += 1
             if counter == n:
                 break
@@ -561,12 +563,12 @@ class Fan(lines.Line2D):
 
     def add_mean_wind_pointer(self, ax, color='b', ls='-'):
         "Draw a thicker mean wind direction pointer for better visibility in plots."
-        endpoint = rotate_vector([2 * self.armlength, 0], self.data.angle)
+        endpoint = rotate_vector([3 * self.armlength, 0], self.data.angle)
         coords = np.vstack((self.base,
                             self.base + endpoint))
         self.wind_pointer_end = coords[1]
         pointer = lines.Line2D(coords[:, 0], coords[:, 1],
-                               alpha=0.65, linewidth=2, linestyle=ls)
+                               alpha=0.65, linewidth=1, linestyle=ls)
         pointer.set_color(color)
         ax.add_line(pointer)
 
