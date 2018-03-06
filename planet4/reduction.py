@@ -326,7 +326,7 @@ def create_season2_and_3_database():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("db_fname",
-                        help="path to database to be used.")
+                        help="path to HDF database to be used.")
     args = parser.parse_args()
     logger.info('Starting production of season 2 and 3 database.')
     # read data for season2 and 3
