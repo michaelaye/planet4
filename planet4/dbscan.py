@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import pyaml
 import seaborn as sns
-from scipy.stats import circmean
+from scipy.stats import circmean, circstd
 from sklearn.cluster import DBSCAN
 
 from . import io, markings
@@ -42,8 +42,8 @@ def get_average_objects(clusters, kind):
         meandata = cluster_df.mean()
         # this determines the upper limit for circular mean
         high = 180 if kind == 'blotch' else 360
-        avg = circmean(cluster_df.angle, high=high)
-        meandata.angle = avg
+        meandata.angle = circmean(cluster_df.angle, high=high)
+        meandata['angle_std'] = circstd(cluster_df.angle, high=high)
         meandata['n_votes'] = len(cluster_df)
         yield meandata.to_frame().T
 
@@ -86,31 +86,6 @@ class DBScanner(object):
     save_results : bool
         Switch to control if the resulting clustered objects should be written to disk.
     """
-    # set all the different eps values for the different clustering loops here:
-    eps_values = {
-        'fan': {
-            'xy': {  # in pixels
-                'small': 10,
-                'large': 25,
-            },
-            'angle': 20,  # degrees
-            'radius': {
-                'small': None,  # not in use currently for fans`
-                'large': None,  # ditto
-            }
-        },
-        'blotch': {
-            'xy': {  # in pixels
-                'small': 10,
-                'large': 25,
-            },
-            'angle': None,  # for now deactivated
-            'radius': {
-                'small': 30,
-                'large': 50,
-            }
-        }
-    }
 
     def __init__(self, msf=0.13, savedir=None, with_angles=True, with_radii=True,
                  do_large_run=True, save_results=True, only_core_samples=False,
@@ -124,6 +99,34 @@ class DBScanner(object):
         self.only_core_samples = only_core_samples
         self.data = data
         self.pm = io.PathManager(datapath=savedir)
+        self.noise = []
+
+        # This needs to be on instance level, so that a new object always has these default numbers
+        # It sets all the different eps values for the different clustering loops here:
+        self.eps_values = {
+            'fan': {
+                'xy': {  # in pixels
+                    'small': 10,
+                    'large': 25,
+                },
+                'angle': 20,  # degrees
+                'radius': {
+                    'small': None,  # not in use currently for fans`
+                    'large': None,  # ditto
+                }
+            },
+            'blotch': {
+                'xy': {  # in pixels
+                    'small': 10,
+                    'large': 25,
+                },
+                'angle': None,  # for now deactivated
+                'radius': {
+                    'small': 30,
+                    'large': 50,
+                }
+            }
+        }
 
     def show_markings(self, id_):
         p4id = markings.ImageID(id_)
@@ -147,6 +150,7 @@ class DBScanner(object):
         for k in unique_labels:
             class_member_mask = (labels == k)
             if k == -1:
+                self.noise.append(class_member_mask)
                 continue
             if self.only_core_samples is True:
                 # this has a potentially large effect and can make the number
@@ -159,7 +163,7 @@ class DBScanner(object):
 
     def cluster_xy(self, data, eps):
         logger.info("Clustering x,y with eps: %i", eps)
-        X = data[['x', 'y']].as_matrix()
+        X = data[['x', 'y']].values
         for cluster_index in self.cluster_any(X, eps):
             yield data.loc[cluster_index]
 
@@ -379,7 +383,7 @@ class DBScanner(object):
             # merging small and large clustering results
             try:
                 self.reduced_data[kind] = pd.concat(
-                    self.reduced_data[kind], ignore_index=True)
+                    self.reduced_data[kind], ignore_index=True, sort=True)
             except ValueError as e:
                 # i can just continue here, as I stored an empty list above already
                 continue
@@ -440,7 +444,7 @@ class DBScanner(object):
         self.finalclusters = finalclusters
         averaged = get_average_objects(finalclusters, kind)
         try:
-            reduced_data = pd.concat(averaged, ignore_index=True)
+            reduced_data = pd.concat(averaged, ignore_index=True, sort=True)
         except ValueError as e:
             if e.args[0].startswith("No objects to concatenate"):
                 logger.warning("No clusters survived.")
