@@ -53,7 +53,7 @@ def add_marking_ids(path, fan_id, blotch_id):
             continue
         else:
             marking_ids = []
-            for i in range(df.shape[0]):
+            for _ in range(df.shape[0]):
                 marking_ids.append(next(id_))
             df['marking_id'] = marking_ids
             df.to_csv(fname, index=False)

@@ -335,7 +335,6 @@ class PathManager(object):
                 except IndexError:
                     raise IndexError("obsid access broken. Did you forget to use the `obsid` keyword"
                                      " at initialization?")
-                    return None
                 LOGGER.debug("obsid found: %s", obsid)
                 self._obsid = obsid
         return self._obsid

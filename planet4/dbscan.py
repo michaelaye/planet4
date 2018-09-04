@@ -52,7 +52,7 @@ def plot_results(p4id, labels, data=None, kind=None, reduced_data=None, ax=None)
     functions = dict(blotch=p4id.plot_blotches,
                      fan=p4id.plot_fans)
     if ax is None:
-        fig, ax = plt.subplots()
+        _, ax = plt.subplots()
 
     plot_kwds = {'alpha': 0.8, 's': 10, 'linewidths': 0}
     palette = sns.color_palette('bright', len(labels))
@@ -384,7 +384,7 @@ class DBScanner(object):
             try:
                 self.reduced_data[kind] = pd.concat(
                     self.reduced_data[kind], ignore_index=True, sort=True)
-            except ValueError as e:
+            except ValueError:
                 # i can just continue here, as I stored an empty list above already
                 continue
 

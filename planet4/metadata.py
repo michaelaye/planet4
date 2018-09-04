@@ -79,18 +79,20 @@ class MetadataReader:
         created for the obsids to be done.
         This is usually the case after all tile coordinates have been created
         using projection.TileCalculator.
-        """
-        edrindex = pd.read_hdf("/Volumes/Data/hirise/EDRCUMINDEX.hdf")
-        p4_edr = edrindex[edrindex.OBSERVATION_ID.isin(obsids)].query(
-            'CCD_NAME=="RED4"').drop_duplicates(subset='OBSERVATION_ID')
 
-        label = self.label
-        labelpath = self.labelpath
-        d = dict(obsid=self.obsid,
-                 l_s=label.l_s, line_samples=label.line_samples,
-                 lines=label.lines, map_scale=label.map_scale)
-        d['north_azimuth'] = self.campt_out_df['NorthAzimuth'].median()
-        return d
+        FIXME
+        """
+        # edrindex = pd.read_hdf("/Volumes/Data/hirise/EDRCUMINDEX.hdf")
+        # p4_edr = edrindex[edrindex.OBSERVATION_ID.isin(obsids)].query(
+        #     'CCD_NAME=="RED4"').drop_duplicates(subset='OBSERVATION_ID')
+
+        # label = self.label
+        # labelpath = self.labelpath
+        # d = dict(obsid=self.obsid,
+        #          l_s=label.l_s, line_samples=label.line_samples,
+        #          lines=label.lines, map_scale=label.map_scale)
+        # d['north_azimuth'] = self.campt_out_df['NorthAzimuth'].median()
+        # return d
 
 
 def get_north_azimuths_from_SPICE(obsids):
