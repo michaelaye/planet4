@@ -45,7 +45,7 @@ def get_no_tiles_done(df, limit=30):
 
 def get_status_per_classifications(df, limit=30):
     "Returns status in percent of limit*n_unique_image_ids."
-    no_all = df.image_id.unique().size
+    no_all = df.image_id.nunique()
     sum_classifications = classification_counts_per_image(df).sum()
     try:
         return np.round(100.0 * sum_classifications / (limit * no_all), 1)
@@ -87,10 +87,21 @@ def unique_image_ids_per_season(df):
     return df.image_id.groupby(df.season, sort=False).agg(size_of_unique)
 
 
-def define_season_column(df):
-    thousands = df.image_name.str[5:7].astype('int')
+def define_season_column(df, colname='image_name'):
+    """Create new column that indicates the MRO season.
+
+    Seasons 1,2, and 3 are MY28, 29, and 30 respectively.
+
+    Parameters:
+    ----------
+    df : {pandas.DataFrame}
+        Dataframe that should have a column with name `colname` as deciding factor.
+    colname : str
+        Name of column to be used as HiRISE observation ID.
+    """
+    thousands = df[colname].str[5:7].astype('int')
     df['season'] = 0
-    df.loc[df.image_name.str.startswith('PSP'), 'season'] = 1
+    df.loc[df[colname].str.startswith('PSP'), 'season'] = 1
     df.loc[(thousands > 10) & (thousands < 15), 'season'] = 2
     df.loc[(thousands > 15) & (thousands < 25), 'season'] = 3
     df.loc[(thousands > 25) & (thousands < 35), 'season'] = 4
@@ -99,4 +110,4 @@ def define_season_column(df):
 
 # def get_markings_count_per_obsid(obsid):
 #     for kind in ['fan', 'blotches']:
-#         
+#
