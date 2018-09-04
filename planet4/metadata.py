@@ -1,15 +1,22 @@
 """Provides tools to create the required metadata for the analysis of P4 data.
 """
+import logging
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pvl
-from osgeo import gdal
 
 from hirise_tools import downloads, labels, products
 
 from . import io
+
+logger = logging.getLogger(__name__)
+
+try:
+    from osgeo import gdal
+except ImportError:
+    logger.warn("GDAL not available.")
 
 REGIONS = ['Inca', 'Ithaca', 'Giza', 'Manhattan2', 'Starburst', 'Oswego_Edge',
            'Maccelsfield', 'BuenosAires', 'Potsdam']
@@ -37,6 +44,10 @@ class MetadataReader:
         self.prodid.kind = 'COLOR'
         if not self.labelpath.exists():
             self.download_label()
+
+    def read_edr_index(self):
+        edrindex = pd.read_hdf("/Volumes/Data/hirise/EDRCUMINDEX.hdf")
+        return edrindex
 
     @property
     def labelpath(self):
@@ -69,6 +80,10 @@ class MetadataReader:
         This is usually the case after all tile coordinates have been created
         using projection.TileCalculator.
         """
+        edrindex = pd.read_hdf("/Volumes/Data/hirise/EDRCUMINDEX.hdf")
+        p4_edr = edrindex[edrindex.OBSERVATION_ID.isin(obsids)].query(
+            'CCD_NAME=="RED4"').drop_duplicates(subset='OBSERVATION_ID')
+
         label = self.label
         labelpath = self.labelpath
         d = dict(obsid=self.obsid,
@@ -76,6 +91,14 @@ class MetadataReader:
                  lines=label.lines, map_scale=label.map_scale)
         d['north_azimuth'] = self.campt_out_df['NorthAzimuth'].median()
         return d
+
+
+def get_north_azimuths_from_SPICE(obsids):
+    NAs = []
+    for obsid in obsids:
+        meta = MetadataReader(obsid)
+        NAs.append(meta.campt_out_df['NorthAzimuth'].median())
+    return pd.DataFrame(dict(OBSERVATION_ID=obsids, north_azimuth=NAs))
 
 #     savedir = downloads.hirise_dropbox() / 'browse'
 #     savepath = savedir / prodid.browse_path.name

@@ -139,8 +139,9 @@ class ReleaseManager:
         Switch to control if already existing result folders for an obsid should be overwritten.
         Default: False
     """
-    DROP_FOR_FANS = ['radius_1', 'radius_2', 'x_tile', 'y_tile', 'image_name']
-    DROP_FOR_BLOTCHES = ['spread', 'distance',
+    DROP_FOR_FANS = ['radius_1', 'radius_2', 'x_tile',
+                     'y_tile', 'image_name', 'OBSERVATION_ID']
+    DROP_FOR_BLOTCHES = ['spread', 'distance', 'OBSERVATION_ID',
                          'version', 'x_tile', 'y_tile', 'image_name']
     DROP_FOR_TILE_COORDS = ['xy_hirise', 'SampleResolution',
                             'LineResolution', 'PositiveWest360Longitude',
@@ -283,7 +284,7 @@ class ReleaseManager:
             tc = TileCalculator(cubepath, read_data=False)
             bucket.append(tc.tile_coords_df)
         coords = pd.concat(bucket, ignore_index=True)
-        coords.to_csv(self.tile_coords_path, index=False)
+        coords.to_csv(self.tile_coords_path, index=False, float_format="%.7f")
         LOGGER.info("Wrote %s", str(self.tile_coords_path))
 
     @property
@@ -319,18 +320,18 @@ class ReleaseManager:
         # merge campt results into catalog files
         fans, blotches = self.merge_campt_results(fans, blotches)
 
-        # rename image_id to tile_id
-        for data in [fans, blotches, tile_coords]:
-            data.rename({'image_id': 'tile_id'})
-
         # write out fans catalog
         fans.vote_ratio.fillna(1, inplace=True)
         fans.version = fans.version.astype('int')
+        fans.rename(
+            {'image_id': 'tile_id', 'SOLAR_LONGITUDE': 'l_s'}, axis=1, inplace=True)
         fans.to_csv(self.fan_merged, index=False)
         LOGGER.info("Wrote %s", str(self.fan_merged))
 
         # write out blotches catalog
         blotches.vote_ratio.fillna(1, inplace=True)
+        blotches.rename(
+            {'image_id': 'tile_id', 'SOLAR_LONGITUDE': 'l_s'}, axis=1, inplace=True)
         blotches.to_csv(self.blotch_merged, index=False)
         LOGGER.info("Wrote %s", str(self.blotch_merged))
 
@@ -355,10 +356,16 @@ class ReleaseManager:
                       axis=1, inplace=True)
         return ground
 
+    def fix_marking_coordinates_precision(self, df):
+        fname = 'tempfile.csv'
+        df.to_csv(fname, float_format="%.7f")
+        return pd.read_csv(fname, dtype='str')
+
     def merge_campt_results(self, fans, blotches):
         INDEX = ['obsid', 'image_x', 'image_y']
 
-        ground = self.collect_marking_coordinates()
+        ground = self.collect_marking_coordinates().round(decimals=7)
+        # ground = self.fix_marking_coordinates_precision(ground)
         fans = fans.merge(ground[self.COLS_TO_MERGE], on=INDEX)
         blotches = blotches.merge(ground[self.COLS_TO_MERGE], on=INDEX)
         return fans, blotches
