@@ -76,7 +76,8 @@ def get_ground_projection_root():
 
 if not configpath.exists():
     print("No configuration file {} found.\n".format(configpath))
-    savepath = input("Please provide the path where you want to store planet4 results:")
+    savepath = input(
+        "Please provide the path where you want to store planet4 results:")
     set_database_path(savepath)
 else:
     data_root = get_data_root()
@@ -129,7 +130,7 @@ def get_subframe(url):
         LOGGER.info("Did not find image in cache. Downloading ...")
         try:
             path = urlretrieve(url)[0]
-        except URLError as e:
+        except URLError:
             msg = "Cannot receive subframe image. No internet?"
             LOGGER.error(msg)
             return None
@@ -304,6 +305,11 @@ class PathManager(object):
         elif suffix == '.csv':
             self.reader = pd.read_csv
 
+        # making sure to warn the user here if the data isn't where it's expected to be
+        if id_ != '':
+            if not self.path_so_far.exists():
+                raise FileNotFoundError(f"{self.path_so_far} does not exist.")
+
     @property
     def id(self):
         return self._id
@@ -328,7 +334,7 @@ class PathManager(object):
                     obsid = data.image_name.iloc[0]
                 except IndexError:
                     raise IndexError("obsid access broken. Did you forget to use the `obsid` keyword"
-                            " at initialization?")
+                                     " at initialization?")
                     return None
                 LOGGER.debug("obsid found: %s", obsid)
                 self._obsid = obsid
@@ -593,7 +599,8 @@ class DBManager(object):
     def season2and3_image_names(self):
         "numpy.array : List of image_names for season 2 and 3."
         image_names = self.image_names
-        metadf = pd.DataFrame(pd.Series(image_names).astype('str'), columns=['image_name'])
+        metadf = pd.DataFrame(pd.Series(image_names).astype(
+            'str'), columns=['image_name'])
         stats.define_season_column(metadf)
         return metadf[(metadf.season > 1) & (metadf.season < 4)].image_name.unique()
 
