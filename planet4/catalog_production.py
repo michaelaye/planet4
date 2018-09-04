@@ -17,8 +17,7 @@ from tqdm import tqdm
 
 from nbtools import execute_in_parallel
 
-from . import fnotching, io
-from .metadata import MetadataReader
+from . import fnotching, io, metadata as p4meta
 from .projection import TileCalculator, create_RED45_mosaic, xy_to_hirise, XY2LATLON
 
 LOGGER = logging.getLogger(__name__)
@@ -231,12 +230,34 @@ class ReleaseManager:
     def get_parallel_args(self):
         return [(i, self.catalog) for i in self.todo]
 
+    def get_no_of_tiles_per_obsid(self):
+        db = io.DBManager()
+        all_data = db.get_all()
+        return all_data.groupby('image_name').image_id.nunique()
+
+    @property
+    def EDRINDEX_meta_path(self):
+        return self.savefolder / f"{self.catalog}_EDRINDEX_metadata.csv"
+
     def calc_metadata(self):
-        metadata = []
-        for img in tqdm(self.obsids):
-            metadata.append(MetadataReader(img).get_data_dic())
-        df = pd.DataFrame(metadata)
-        df.to_csv(self.metadata_path, index=False)
+        if not self.EDRINDEX_meta_path.exists():
+            NAs = p4meta.get_north_azimuths_from_SPICE(self.obsids)
+            edrindex = pd.read_hdf("/Volumes/Data/hirise/EDRCUMINDEX.hdf")
+            p4_edr = edrindex[edrindex.OBSERVATION_ID.isin(self.obsids)].query(
+                'CCD_NAME=="RED4"').drop_duplicates(subset='OBSERVATION_ID')
+            p4_edr = p4_edr.set_index('OBSERVATION_ID').join(
+                NAs.set_index('OBSERVATION_ID'))
+            p4_edr = p4_edr.join(self.get_no_of_tiles_per_obsid())
+            p4_edr.rename(dict(image_id="# of tiles"), axis=1, inplace=True)
+            p4_edr['map_scale'] = 0.25 * p4_edr.BINNING
+            p4_edr.reset_index(inplace=True)
+            p4_edr.to_csv(self.EDRINDEX_meta_path)
+        else:
+            p4_edr = pd.read_csv(self.EDRINDEX_meta_path)
+        cols = ['OBSERVATION_ID', 'IMAGE_CENTER_LATITUDE', 'IMAGE_CENTER_LONGITUDE', 'SOLAR_LONGITUDE', 'START_TIME',
+                'map_scale', 'north_azimuth', '# of tiles']
+        metadata = p4_edr[cols]
+        metadata.to_csv(self.metadata_path, index=False, float_format="%.7f")
         LOGGER.info("Wrote %s", str(self.metadata_path))
 
     def calc_tile_coordinates(self):
@@ -275,20 +296,25 @@ class ReleaseManager:
         # read in data files
         fans = pd.read_csv(self.fan_file)
         blotches = pd.read_csv(self.blotch_file)
-        meta = pd.read_csv(self.metadata_path)
-        meta.drop(['line_samples', 'lines'], axis=1, inplace=True)
-        tile_coords = pd.read_csv(self.tile_coords_path)
+        meta = pd.read_csv(self.metadata_path, dtype='str')
+        tile_coords = pd.read_csv(self.tile_coords_path, dtype='str')
 
         # merge meta
-        fans = fans.merge(meta, on='obsid')
-        blotches = blotches.merge(meta, on='obsid')
+        cols_to_merge = ['OBSERVATION_ID',
+                         'SOLAR_LONGITUDE', 'north_azimuth', 'map_scale']
+        fans = fans.merge(meta[cols_to_merge],
+                          left_on='obsid', right_on='OBSERVATION_ID')
+        blotches = blotches.merge(
+            meta[cols_to_merge], left_on='obsid', right_on='OBSERVATION_ID')
 
         # drop unnecessary columns
         fans.drop(self.DROP_FOR_FANS, axis=1, inplace=True)
         blotches.drop(self.DROP_FOR_BLOTCHES, axis=1, inplace=True)
         tile_coords.drop(self.DROP_FOR_TILE_COORDS, axis=1, inplace=True)
         # save cleaned tile_coords
-        tile_coords.to_csv(self.tile_coords_path_final, index=False)
+        tile_coords.rename({'image_id': 'tile_id'}, axis=1, inplace=True)
+        tile_coords.to_csv(self.tile_coords_path_final,
+                           index=False, float_format='%.7f')
 
         # merge campt results into catalog files
         fans, blotches = self.merge_campt_results(fans, blotches)
