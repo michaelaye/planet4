@@ -21,7 +21,7 @@ def get_clustering_log(pm):
 
 
 def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
-                           savetitle='', saveroot=None, do_title=True, via_obsid=True,
+                           savetitle='', saveroot=None, do_title=True, via_obsid=False,
                            figsize=None, **kwargs):
     """Plotting tool to show the results along the P4 pipeline.
 
@@ -151,13 +151,13 @@ def plot_finals(id_, datapath=None, ax=None, scope='planet4',
         df = pm.final_fandf
         data = df[df.image_id == id_]
         logger.debug("Len of data: %i", len(df))
-        imgid.plot_fans(ax=ax, data=data, with_center=True, **kwargs)
+        imgid.plot_fans(ax=ax, data=data, with_center=False, **kwargs)
     else:
         logger.info("File not found: %s", str(pm.final_fanfile))
     if pm.final_blotchfile.exists():
         df = pm.final_blotchdf
         data = df[df.image_id == id_]
-        imgid.plot_blotches(ax=ax, data=data, with_center=True, **kwargs)
+        imgid.plot_blotches(ax=ax, data=data, with_center=False, **kwargs)
     else:
         logger.info("File not found: %s", str(pm.final_blotchfile))
 
@@ -294,7 +294,7 @@ def plot_four_tiles_finals(obsid, datapath, x0, y0):
     # plotting
     UL, LR, ax = plot_four_tiles(obsid, x0, y0)
     for id_ in image_ids:
-        plot_finals(id_, datapath, ax, scope='hirise', via_obsid=True)
+        plot_finals(id_, datapath, ax, scope='hirise', via_obsid=False)
 
     ax.set_xlim(UL[0], LR[0])
     ax.set_ylim(LR[1], UL[1])
