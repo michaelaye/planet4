@@ -77,9 +77,10 @@ def cluster_obsid(obsid=None, savedir=None, imgid=None):
         Top directory path where the catalog will be stored. Will create folder if it
         does not exist yet.
     imgid : str, optional
-        Convenience parameter: If `obsid` is not given, and `obsid` is none, this `image_id` can
+        Convenience parameter: If `obsid` is not given and therefore is None, this `image_id` can
         be used to receive the respective `obsid` from the ImageID class.
     """
+    # import here to support parallel execution
     from planet4 import dbscan, markings
 
     # parameter checks
