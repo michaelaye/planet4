@@ -139,13 +139,24 @@ class ReleaseManager:
         Switch to control if already existing result folders for an obsid should be overwritten.
         Default: False
     """
-    DROP_FOR_FANS = ['radius_1', 'radius_2', 'x_tile',
-                     'y_tile', 'image_name', 'OBSERVATION_ID']
-    DROP_FOR_BLOTCHES = ['spread', 'distance', 'OBSERVATION_ID',
-                         'version', 'x_tile', 'y_tile', 'image_name']
     DROP_FOR_TILE_COORDS = ['xy_hirise', 'SampleResolution',
                             'LineResolution', 'PositiveWest360Longitude',
                             'Line', 'Sample']
+
+    FAN_COLUMNS_AS_PUBLISHED = [
+        'marking_id', 'angle', 'distance', 'tile_id', 'image_x', 'image_y', 'n_votes',
+        'obsid', 'spread', 'version', 'vote_ratio', 'x', 'y', 'x_angle', 'y_angle', 'l_s',
+        'map_scale', 'north_azimuth', 'BodyFixedCoordinateX', 'BodyFixedCoordinateY',
+        'BodyFixedCoordinateZ', 'PlanetocentricLatitude', 'PlanetographicLatitude',
+        'Longitude'
+    ]
+    BLOTCH_COLUMNS_AS_PUBLISHED = [
+        'marking_id', 'angle', 'tile_id', 'image_x', 'image_y', 'n_votes', 'obsid',
+        'radius_1', 'radius_2', 'vote_ratio', 'x', 'y', 'x_angle', 'y_angle', 'l_s',
+        'map_scale', 'north_azimuth', 'BodyFixedCoordinateX', 'BodyFixedCoordinateY',
+        'BodyFixedCoordinateZ', 'PlanetocentricLatitude', 'PlanetographicLatitude',
+        'Longitude'
+    ]
 
     def __init__(self, version, obsids=None, overwrite=False):
         self.catalog = f'P4_catalog_{version}'
@@ -283,7 +294,7 @@ class ReleaseManager:
         for cubepath in tqdm(cubepaths):
             tc = TileCalculator(cubepath, read_data=False)
             bucket.append(tc.tile_coords_df)
-        coords = pd.concat(bucket, ignore_index=True)
+        coords = pd.concat(bucket, ignore_index=True, sort=False)
         coords.to_csv(self.tile_coords_path, index=False, float_format="%.7f")
         LOGGER.info("Wrote %s", str(self.tile_coords_path))
 
@@ -293,12 +304,34 @@ class ReleaseManager:
                 'BodyFixedCoordinateX', 'BodyFixedCoordinateY', 'BodyFixedCoordinateZ',
                 'PlanetocentricLatitude', 'PlanetographicLatitude', 'PositiveEast360Longitude']
 
+    def merge_fnotch_results(self, fans, blotches):
+        """Average multiple objects from fnotching into one.
+
+        Because fnotching can compare the same object with more than one, it can appear more than once
+        with different `vote_ratio` values in the results. We merge them here into one, simply
+        averaging the vote_ratio. This increases the value of the `vote_ratio` number as it now
+        has been created by several comparisons. It only occurs for 0.5 % of fans though.
+        """
+        out = []
+        for df in [fans, blotches]:
+            averaged = df.groupby('marking_id').mean()
+            tmp = df.drop_duplicates(
+                subset='marking_id').set_index('marking_id')
+            averaged = averaged.join(
+                tmp[['image_id', 'obsid']], how='inner')
+            out.append(averaged.reset_index())
+
+        return out
+
     def merge_all(self):
         # read in data files
         fans = pd.read_csv(self.fan_file)
         blotches = pd.read_csv(self.blotch_file)
         meta = pd.read_csv(self.metadata_path, dtype='str')
         tile_coords = pd.read_csv(self.tile_coords_path, dtype='str')
+
+        # average multiple fnotch results
+        fans, blotches = self.merge_fnotch_results(fans, blotches)
 
         # merge meta
         cols_to_merge = ['OBSERVATION_ID',
@@ -309,8 +342,6 @@ class ReleaseManager:
             meta[cols_to_merge], left_on='obsid', right_on='OBSERVATION_ID')
 
         # drop unnecessary columns
-        fans.drop(self.DROP_FOR_FANS, axis=1, inplace=True)
-        blotches.drop(self.DROP_FOR_BLOTCHES, axis=1, inplace=True)
         tile_coords.drop(self.DROP_FOR_TILE_COORDS, axis=1, inplace=True)
         # save cleaned tile_coords
         tile_coords.rename({'image_id': 'tile_id'}, axis=1, inplace=True)
@@ -324,21 +355,25 @@ class ReleaseManager:
         fans.vote_ratio.fillna(1, inplace=True)
         fans.version = fans.version.astype('int')
         fans.rename(
-            {'image_id': 'tile_id', 'SOLAR_LONGITUDE': 'l_s'}, axis=1, inplace=True)
-        fans.to_csv(self.fan_merged, index=False)
+            {'image_id': 'tile_id', 'SOLAR_LONGITUDE': 'l_s',
+             'PositiveEast360Longitude': 'Longitude'}, axis=1, inplace=True)
+        fans[self.FAN_COLUMNS_AS_PUBLISHED].to_csv(
+            self.fan_merged, index=False)
         LOGGER.info("Wrote %s", str(self.fan_merged))
 
         # write out blotches catalog
         blotches.vote_ratio.fillna(1, inplace=True)
         blotches.rename(
-            {'image_id': 'tile_id', 'SOLAR_LONGITUDE': 'l_s'}, axis=1, inplace=True)
-        blotches.to_csv(self.blotch_merged, index=False)
+            {'image_id': 'tile_id', 'SOLAR_LONGITUDE': 'l_s',
+             'PositiveEast360Longitude': 'Longitude'}, axis=1, inplace=True)
+        blotches[self.BLOTCH_COLUMNS_AS_PUBLISHED].to_csv(
+            self.blotch_merged, index=False)
         LOGGER.info("Wrote %s", str(self.blotch_merged))
 
     def calc_marking_coordinates(self):
         fans = pd.read_csv(self.fan_file)
         blotches = pd.read_csv(self.blotch_file)
-        combined = pd.concat([fans, blotches])
+        combined = pd.concat([fans, blotches], sort=False)
 
         for obsid in tqdm(self.obsids):
             data = combined[combined.image_name == obsid]
@@ -351,7 +386,7 @@ class ReleaseManager:
             xy = XY2LATLON(None, self.savefolder, obsid=obsid)
             bucket.append(pd.read_csv(xy.savepath).assign(obsid=obsid))
 
-        ground = pd.concat(bucket).drop_duplicates()
+        ground = pd.concat(bucket, sort=False).drop_duplicates()
         ground.rename(dict(Sample='image_x', Line='image_y'),
                       axis=1, inplace=True)
         return ground
@@ -376,20 +411,22 @@ class ReleaseManager:
         self.check_for_todo()
 
         # perform the clustering
-        LOGGER.info("Performing the clustering.")
-        results = execute_in_parallel(
-            cluster_obsid_parallel, self.get_parallel_args())
+        if len(self.todo) > 0:
+            LOGGER.info("Performing the clustering.")
+            results = execute_in_parallel(
+                cluster_obsid_parallel, self.get_parallel_args())
 
-        # create marking_ids
-        fan_id = fan_id_generator()
-        blotch_id = blotch_id_generator()
-        for obsid in self.todo:
-            paths = get_L1A_paths(obsid, self.catalog)
-            for path in paths:
-                add_marking_ids(path, fan_id, blotch_id)
+            # create marking_ids
+            fan_id = fan_id_generator()
+            blotch_id = blotch_id_generator()
+            for obsid in self.todo:
+                paths = get_L1A_paths(obsid, self.catalog)
+                for path in paths:
+                    add_marking_ids(path, fan_id, blotch_id)
 
-        # fnotch and apply cuts
-        execute_in_parallel(fnotch_obsid_parallel, self.get_parallel_args())
+            # fnotch and apply cuts
+            execute_in_parallel(fnotch_obsid_parallel,
+                                self.get_parallel_args())
 
         # create summary CSV files of the clustering output
         LOGGER.info("Creating L1C fan and blotch database files.")
@@ -497,7 +534,7 @@ def create_roi_file(obsids, roi_name, datapath):
         bucket = read_csvfiles_into_lists_of_frames(folders)
         for key, val in bucket.items():
             try:
-                df = pd.concat(val, ignore_index=True)
+                df = pd.concat(val, ignore_index=True, sort=False)
             except ValueError:
                 continue
             else:
@@ -508,7 +545,7 @@ def create_roi_file(obsids, roi_name, datapath):
         Bucket['fan']), len(Bucket['blotch']))
     for key, val in Bucket.items():
         try:
-            df = pd.concat(val, ignore_index=True)
+            df = pd.concat(val, ignore_index=True, sort=False)
         except ValueError:
             continue
         else:
@@ -522,31 +559,33 @@ def create_roi_file(obsids, roi_name, datapath):
             print(f"Created {savepath}.")
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('db_fname',
-                        help="Provide the filename of the HDF database "
-                             "file here.")
-    args = parser.parse_args()
+# Main not functional
 
-    image_names = io.get_image_names_from_db(args.db_fname)
-    LOGGER.info('Found %i image_names', len(image_names))
+# def main():
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument('db_fname',
+#                         help="Provide the filename of the HDF database "
+#                              "file here.")
+#     args = parser.parse_args()
 
-    c = Client()
-    dview = c.direct_view()
-    lbview = c.load_balanced_view()
+#     image_names = io.get_image_names_from_db(args.db_fname)
+#     LOGGER.info('Found %i image_names', len(image_names))
 
-    dview.push({'do_clustering': do_clustering,
-                'dbfile': args.db_fname})
-    results = lbview.map_async(process_image_name, image_names)
-    import time
-    import sys
-    import os
-    dirname = os.path.join(os.environ['HOME'], 'data/planet4/catalog_2_and_3')
-    while not results.ready():
-        print("{:.1f} %".format(100 * results.progress / len(image_names)))
-        sys.stdout.flush()
-        time.sleep(10)
-    for res in results.result:
-        print(res)
-    LOGGER.info('Catalog production done. Results in %s.', dirname)
+#     c = Client()
+#     dview = c.direct_view()
+#     lbview = c.load_balanced_view()
+
+#     dview.push({'do_clustering': do_clustering,
+#                 'dbfile': args.db_fname})
+#     results = lbview.map_async(process_image_name, image_names)
+#     import time
+#     import sys
+#     import os
+#     dirname = os.path.join(os.environ['HOME'], 'data/planet4/catalog_2_and_3')
+#     while not results.ready():
+#         print("{:.1f} %".format(100 * results.progress / len(image_names)))
+#         sys.stdout.flush()
+#         time.sleep(10)
+#     for res in results.result:
+#         print(res)
+#     LOGGER.info('Catalog production done. Results in %s.', dirname)
