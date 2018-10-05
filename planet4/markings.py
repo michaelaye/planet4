@@ -13,10 +13,10 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib.patches import Ellipse
-from numpy import linalg as LA
 from numpy import arctan2
+from numpy import linalg as LA
 from shapely import affinity
-from shapely.geometry import Point
+from shapely import geometry as geom
 
 from . import io
 from .exceptions import NoFilesFoundError
@@ -311,7 +311,7 @@ class Blotch(Ellipse):
 
         Code from https://gis.stackexchange.com/questions/243459/drawing-ellipse-with-shapely/243462
         """
-        circ = Point(self.center).buffer(1)
+        circ = geom.Point(self.center).buffer(1)
         ell = affinity.scale(circ, self.data.radius_1, self.data.radius_2)
         ellr = affinity.rotate(ell, self.data.angle)
         return ellr
@@ -628,11 +628,40 @@ class Fan(lines.Line2D):
             out['arm{}_x'.format(i + 1)] = (self.base + arm)[0]
             out['arm{}_y'.format(i + 1)] = (self.base + arm)[1]
         if 'image_id' not in out.index:
-            out['image_id'] = self.image_id
+            # out['image_id'] = self.image_id
+            raise AttributeError("Storage of image_id failed.")
         if fpath is not None:
             out.to_hdf(str(fpath.with_suffix('.hdf')), 'df')
         out['n_members'] = self.n_members
         return out
+
+    def to_shapely(self):
+        """Create a shapely half circle rotated by the fan's angle.
+
+        Notes
+        =====
+        `Motivated by: <https://stackoverflow.com/a/30762727/680232>`_
+        """
+        # Define the arc (presumably ezdxf uses a similar convention)
+        centerx, centery = self.semi_circle_center
+
+        # make a semi-circle first that points to the x-axis, rotate later.
+        start_angle = 270  # In degrees
+
+        # number of elements for the semi-circle
+        numsegments = 100
+
+        # The coordinates of the arc
+        theta = np.radians(np.linspace(start_angle, start_angle+180, numsegments))
+        x = centerx + self.radius * np.cos(theta)
+        y = centery + self.radius * np.sin(theta)
+
+        arc = geom.LineString(np.column_stack([x, y]))
+
+        rotated = affinity.rotate(arc, self.data.angle,
+                                  origin=tuple(self.semi_circle_center))
+
+        return geom.Polygon(np.vstack([self.coords[::-1][:2], np.array(rotated)]))
 
 
 class HiFan(Blotch):
