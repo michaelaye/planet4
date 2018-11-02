@@ -26,7 +26,7 @@ cd <where_u_store_software_from_others>
 # next command will create folder `planet4`
 git clone https://github.com/michaelaye/planet4.git
 cd planet4
-python setup.py install
+pip install .
 ```
 
 This will add the module `planet4` to your importable list of modules. (Without the need of adapting PYTHONPATH)
