@@ -77,7 +77,7 @@ def cluster_obsid(obsid=None, savedir=None, imgid=None):
         does not exist yet.
     imgid : str, optional
         Convenience parameter: If `obsid` is not given and therefore is None, this `image_id` can
-        be used to receive the respective `obsid` from the ImageID class.
+        be used to receive the respective `obsid` from the TileID class.
     """
     # import here to support parallel execution
     from planet4 import dbscan, markings
@@ -490,7 +490,7 @@ class ReleaseManager:
 #     blotches = []
 #     fans = []
 #     for img_id in img_ids:
-#         p4img = markings.ImageID(img_id)
+#         p4img = markings.TileID(img_id)
 #         blotches.append(do_clustering(p4img, 'blotches'))
 #         fans.append(do_clustering(p4img, 'fans'))
 #     blotches = pd.concat(blotches, ignore_index=True)
