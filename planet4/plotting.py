@@ -50,7 +50,7 @@ def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
         datapath = Path(datapath)
     else:
         datapath = pm.path_so_far.parent
-    imgid = markings.ImageID(image_id, dbname=dbname, scope='planet4')
+    imgid = markings.TileID(image_id, dbname=dbname, scope='planet4')
 
     clustering_settings = get_clustering_log(pm)
     min_samples = clustering_settings['min_samples']
@@ -101,19 +101,19 @@ def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
 
 
 def plot_raw_fans(id_, ax=None, dbname=None):
-    imgid = markings.ImageID(id_, scope='planet4', dbname=dbname)
+    imgid = markings.TileID(id_, scope='planet4', dbname=dbname)
 
     imgid.plot_fans(ax=ax)
 
 
 def plot_raw_blotches(id_, ax=None):
-    imgid = markings.ImageID(id_, scope='planet4')
+    imgid = markings.TileID(id_, scope='planet4')
 
     imgid.plot_blotches(ax=ax)
 
 
 def plot_finals_with_input(id_, datapath=None, horizontal=True, scope='planet4'):
-    imgid = markings.ImageID(id_, scope=scope)
+    imgid = markings.TileID(id_, scope=scope)
     pm = io.PathManager(id_=id_, datapath=datapath)
     if horizontal is True:
         kwargs = {'ncols': 2}
@@ -135,7 +135,7 @@ def plot_finals_with_input(id_, datapath=None, horizontal=True, scope='planet4')
 def plot_finals(id_, datapath=None, ax=None, scope='planet4',
                 via_obsid=False, **kwargs):
     id_ = io.check_and_pad_id(id_)
-    imgid = markings.ImageID(id_, scope=scope)
+    imgid = markings.TileID(id_, scope=scope)
     if not via_obsid:
         pm = io.PathManager(id_=id_, datapath=datapath)
     else:
@@ -192,7 +192,7 @@ def plot_clustered_markings(image_id, kind, datapath=None, ax=None, obsid=None,
     obsid : str
         obsid (= image_name) to search in for image_id data.
     """
-    imgid = markings.ImageID(image_id, scope='planet4')
+    imgid = markings.TileID(image_id, scope='planet4')
     if obsid is not None:
         pm = io.PathManager(obsid=obsid, datapath=datapath)
         objects = getattr(pm, f"{kind}df")

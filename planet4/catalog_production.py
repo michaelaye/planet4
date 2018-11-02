@@ -84,7 +84,7 @@ def cluster_obsid(obsid=None, savedir=None, imgid=None):
 
     # parameter checks
     if obsid is None and imgid is not None:
-        obsid = markings.ImageID(imgid).image_name
+        obsid = markings.TileID(imgid).image_name
     elif obsid is None and imgid is None:
         raise ValueError("Provide either obsid or imgid.")
 

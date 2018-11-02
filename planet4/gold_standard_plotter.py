@@ -28,7 +28,7 @@ def main():
 
     for imgid in gold_ids[start:end]:
         print(imgid)
-        gold_id = markings.ImageID(imgid)
+        gold_id = markings.TileID(imgid)
         my_dpi = 96
         fig, axes = plt.subplots(2, 2,
                                  figsize=(1280/my_dpi, 1024/my_dpi),

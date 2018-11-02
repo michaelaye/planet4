@@ -34,7 +34,7 @@ GOLD_PLOT_COLORS = list('bmg')
 
 def example_p4id():
     db = io.DBManager()
-    return ImageID('APF00002rq', data=db.get_image_id_markings('APF00002rq'))
+    return TileID('APF00002rq', data=db.get_image_id_markings('APF00002rq'))
 
 
 def calc_fig_size(width):
@@ -76,7 +76,7 @@ def set_subframe_size(ax):
     ax.set_ylim(IMG_Y_SIZE, 0)
 
 
-class ImageID(object):
+class TileID(object):
 
     """Manage Planet 4 Image ids, getting data, plot stuff etc.
 
@@ -784,7 +784,7 @@ def main():
                         help='zooniverse image id to plot')
     args = parser.parse_args()
 
-    imgid = ImageID(args.imgid)
+    imgid = TileID(args.imgid)
     imgid.plot_all()
 
 

@@ -312,7 +312,7 @@ class ClusteringManager(object):
         data : pd.DataFrame, optional
             Dataframe with data for this clustering run
         """
-        self.p4id = markings.ImageID(image_id, scope='planet4')
+        self.p4id = markings.TileID(image_id, scope='planet4')
         logger.info("Clustering data for %s", image_id)
         self.pm.id_ = self.p4id.imgid
         if data is None:
@@ -411,7 +411,7 @@ def main():
     """
     gold_ids = io.common_gold_ids()
 
-    p4img = markings.ImageID(gold_ids[10])
+    p4img = markings.TileID(gold_ids[10])
     golddata = p4img.data[p4img.data.user_name.isin(markings.gold_members)]
     golddata = golddata[golddata.marking == 'fan']
     # citizens = set(p4img.data.user_name) - set(markings.gold_members)

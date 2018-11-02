@@ -129,7 +129,7 @@ class DBScanner(object):
         }
 
     def show_markings(self, id_):
-        p4id = markings.ImageID(id_)
+        p4id = markings.TileID(id_)
         p4id.plot_all()
 
     def cluster_any(self, X, eps):
@@ -335,7 +335,7 @@ class DBScanner(object):
         results pd.DataFrame and then being stored per marking kind in the dictionary
         `self.reduced_data`.
         """
-        self.p4id = markings.ImageID(img_id, scope='planet4', data=self.data)
+        self.p4id = markings.TileID(img_id, scope='planet4', data=self.data)
         self.pm.obsid = self.p4id.image_name
         self.pm.id = img_id
 

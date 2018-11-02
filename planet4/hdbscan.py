@@ -72,7 +72,7 @@ def plot_results(clusterer, data, p4id, kind, reduced_data=None, ax=None):
 def parameter_scan(img_id, kind,
                    cols='x y'.split(), only_core=True, do_scale=True,
                    proba_cut=0.9, factor=0.1):
-    p4id = markings.ImageID(img_id, scope='planet4')
+    p4id = markings.TileID(img_id, scope='planet4')
     functions = dict(blotch=p4id.plot_blotches,
                      fan=p4id.plot_fans)
     min_samples_base = round(factor * p4id.n_marked_classifications)
