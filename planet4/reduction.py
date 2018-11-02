@@ -201,8 +201,8 @@ def merge_temp_files(dbname, image_names=None):
     df = []
     for image_name in image_names:
         try:
-            df.append(pd.read_hdf(get_temp_fname(
-                image_name, dbname.parent), 'df'))
+            df.append(pd.read_hdf(get_temp_fname(image_name, dbname.parent),
+                                  'df', mode='r'))
         except OSError:
             continue
         else:
@@ -333,7 +333,7 @@ def create_season2_and_3_database():
     db = DBManager(args.db_fname)
     season23_image_names = db.season2and3_image_names
     where = "image_name in {}".format(list(season23_image_names))
-    season23 = pd.read_hdf(db.dbname, 'df', where=where)
+    season23 = pd.read_hdf(db.dbname, 'df', mode='r', where=where)
 
     fname_base = os.path.basename(db.dbname)
     root = os.path.dirname(db.dbname)
