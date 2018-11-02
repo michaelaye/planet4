@@ -1,6 +1,17 @@
+from math import tau
+
 import numpy as np
-from math import pi
-tau = 2 * pi
+import pandas as pd
+from pandas import to_datetime
+
+mars_years = {28: "2006-01-23",
+              29: "2007-12-10",
+              30: "2009-10-27",
+              31: "2011-09-15",
+              32: "2013-08-01",
+              33: "2015-06-19",
+              34: "2017-05-05",
+              35: "2019-03-24"}
 
 
 def get_fan_and_blotch_nunique_cids(data):
@@ -106,3 +117,11 @@ def define_season_column(df, colname='image_name'):
     df.loc[(thousands > 15) & (thousands < 25), 'season'] = 3
     df.loc[(thousands > 25) & (thousands < 35), 'season'] = 4
     df.loc[(thousands > 35), 'season'] = 5
+
+
+def define_martian_year(df, time_col_name):
+    mars_timestamps = {k: pd.to_datetime(v)
+                       for k, v in mars_years.items()}
+    df['MY'] = 0
+    for yr, t in mars_timestamps.items():
+        df.loc[df.time > t, 'MY'] = yr
