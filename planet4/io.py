@@ -63,7 +63,7 @@ def set_database_path(dbfolder):
 def get_data_root():
     d = get_config()
     data_root = Path(d['planet4_db']['path']).expanduser()
-    data_root.mkdir(exist_ok=True)
+    data_root.mkdir(exist_ok=True, parents=True)
     return data_root
 
 
