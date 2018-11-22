@@ -62,7 +62,7 @@ def set_database_path(dbfolder):
 
 def get_data_root():
     d = get_config()
-    data_root = Path(d['planet4_db']['path'])
+    data_root = Path(d['planet4_db']['path']).expanduser()
     data_root.mkdir(exist_ok=True)
     return data_root
 
@@ -81,11 +81,6 @@ if not configpath.exists():
     set_database_path(savepath)
 else:
     data_root = get_data_root()
-
-
-location_target_codes = {'giza': ['0850'],
-                         'spider_evolution': ['0950'],
-                         'ithaca': ['0945', '0850', '0950']}
 
 
 def dropbox():
