@@ -661,7 +661,8 @@ class Fan(lines.Line2D):
         rotated = affinity.rotate(arc, self.data.angle,
                                   origin=tuple(self.semi_circle_center))
 
-        return geom.Polygon(np.vstack([self.coords[::-1][:2], np.array(rotated)]))
+        df = pd.DataFrame(np.vstack([self.coords[::-1][:2], np.array(rotated)]))
+        return geom.Polygon(df.round(2).drop_duplicates().values)
 
 
 class HiFan(Blotch):
