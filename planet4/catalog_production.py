@@ -65,7 +65,7 @@ def get_L1A_paths(obsid, savefolder):
     return paths
 
 
-def cluster_obsid(obsid=None, savedir=None, imgid=None):
+def cluster_obsid(obsid=None, savedir=None, imgid=None, dbname=None):
     """Cluster all image_ids for given obsid (=image_name).
 
     Parameters
@@ -89,7 +89,7 @@ def cluster_obsid(obsid=None, savedir=None, imgid=None):
         raise ValueError("Provide either obsid or imgid.")
 
     # cluster
-    dbscanner = dbscan.DBScanner(savedir=savedir)
+    dbscanner = dbscan.DBScanner(savedir=savedir, dbname=dbname)
     dbscanner.cluster_image_name(obsid)
 
 
@@ -115,8 +115,8 @@ def fnotch_obsid(obsid=None, savedir=None, fnotch_via_obsid=False, imgid=None):
 
 def cluster_obsid_parallel(args):
     "Create argument tuples for cluster_obsid, for parallel usage."
-    obsid, savedir = args
-    return cluster_obsid(obsid, savedir)
+    obsid, savedir, dbname = args
+    return cluster_obsid(obsid, savedir, dbname=dbname)
 
 
 def fnotch_obsid_parallel(args):
@@ -200,7 +200,7 @@ class ReleaseManager:
         "Longitude",
     ]
 
-    def __init__(self, version, obsids=None, overwrite=False):
+    def __init__(self, version, obsids=None, overwrite=False, dbname=None):
         self.catalog = f"P4_catalog_{version}"
         self.overwrite = overwrite
         self._obsids = obsids
@@ -283,7 +283,7 @@ class ReleaseManager:
         self.todo = bucket
 
     def get_parallel_args(self):
-        return [(i, self.catalog) for i in self.todo]
+        return [(i, self.catalog, self.dbname) for i in self.todo]
 
     def get_no_of_tiles_per_obsid(self):
         db = io.DBManager()
@@ -335,13 +335,14 @@ class ReleaseManager:
 
         todo = []
         for cubepath in cubepaths:
-            tc = TileCalculator(cubepath, read_data=False)
+            tc = TileCalculator(cubepath, read_data=False, dbname=self.dbname)
             if not tc.campt_results_path.exists():
                 todo.append(cubepath)
 
         def get_tile_coords(cubepath):
             from planet4.projection import TileCalculator
-            tilecalc = TileCalculator(cubepath)
+
+            tilecalc = TileCalculator(cubepath, dbname=self.dbname)
             tilecalc.calc_tile_coords()
 
         if not len(todo) == 0:
@@ -349,7 +350,7 @@ class ReleaseManager:
 
         bucket = []
         for cubepath in tqdm(cubepaths):
-            tc = TileCalculator(cubepath, read_data=False)
+            tc = TileCalculator(cubepath, read_data=False, dbname=self.dbname)
             bucket.append(tc.tile_coords_df)
         coords = pd.concat(bucket, ignore_index=True, sort=False)
         coords.to_csv(self.tile_coords_path, index=False, float_format="%.7f")
