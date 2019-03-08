@@ -106,6 +106,7 @@ class DBScanner(object):
         self.data = data
         self.pm = io.PathManager(datapath=savedir)
         self.noise = []
+        self.dbname = dbname
 
         # This needs to be on instance level, so that a new object always has these default numbers
         # It sets all the different eps values for the different clustering loops here:
@@ -302,8 +303,7 @@ class DBScanner(object):
         self.setup_logfiles()
 
         logger.info("Clustering image_name %s with msf of %f.", image_name, self.msf)
-                    image_name, self.msf)
-        db = io.DBManager()
+        db = io.DBManager(self.dbname)
         data = db.get_image_name_markings(image_name)
         image_ids = data.image_id.unique()
         logger.debug("Number of image_ids found: %i", len(image_ids))
@@ -344,7 +344,9 @@ class DBScanner(object):
         results pd.DataFrame and then being stored per marking kind in the dictionary
         `self.reduced_data`.
         """
-        self.p4id = markings.TileID(img_id, scope='planet4', data=self.data)
+        self.p4id = markings.TileID(
+            img_id, scope="planet4", dbname=self.dbname, data=self.data
+        )
         self.pm.obsid = self.p4id.image_name
         self.pm.id = img_id
 
