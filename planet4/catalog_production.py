@@ -17,21 +17,21 @@ from tqdm import tqdm
 
 from nbtools import execute_in_parallel
 
-from . import fnotching, io, metadata as p4meta
-from .projection import TileCalculator, create_RED45_mosaic, xy_to_hirise, XY2LATLON
+from . import io, metadata as p4meta
+from .projection import TileCalculator, create_RED45_mosaic, XY2LATLON
 
 LOGGER = logging.getLogger(__name__)
 # logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
 
 def fan_id_generator():
-    for newid in itertools.product(string.digits + 'abcdef', repeat=6):
-        yield 'F' + ''.join(newid)
+    for newid in itertools.product(string.digits + "abcdef", repeat=6):
+        yield "F" + "".join(newid)
 
 
 def blotch_id_generator():
-    for newid in itertools.product(string.digits + 'abcdef', repeat=6):
-        yield 'B' + ''.join(newid)
+    for newid in itertools.product(string.digits + "abcdef", repeat=6):
+        yield "B" + "".join(newid)
 
 
 def add_marking_ids(path, fan_id, blotch_id):
@@ -45,7 +45,7 @@ def add_marking_ids(path, fan_id, blotch_id):
         Generator for marking_id
     """
     image_id = path.parent.name
-    for kind, id_ in zip(['fans', 'blotches'], [fan_id, blotch_id]):
+    for kind, id_ in zip(["fans", "blotches"], [fan_id, blotch_id]):
         fname = str(path / f"{image_id}_L1A_{kind}.csv")
         try:
             df = pd.read_csv(fname)
@@ -55,13 +55,13 @@ def add_marking_ids(path, fan_id, blotch_id):
             marking_ids = []
             for _ in range(df.shape[0]):
                 marking_ids.append(next(id_))
-            df['marking_id'] = marking_ids
+            df["marking_id"] = marking_ids
             df.to_csv(fname, index=False)
 
 
 def get_L1A_paths(obsid, savefolder):
     pm = io.PathManager(obsid=obsid, datapath=savefolder)
-    paths = pm.get_obsid_paths('L1A')
+    paths = pm.get_obsid_paths("L1A")
     return paths
 
 
@@ -93,8 +93,7 @@ def cluster_obsid(obsid=None, savedir=None, imgid=None):
     dbscanner.cluster_image_name(obsid)
 
 
-def fnotch_obsid(obsid=None, savedir=None, fnotch_via_obsid=False,
-                 imgid=None):
+def fnotch_obsid(obsid=None, savedir=None, fnotch_via_obsid=False, imgid=None):
     """
     fnotch_via_obsid: bool, optional
         Switch to control if fnotching happens per image_id or per obsid
@@ -139,29 +138,73 @@ class ReleaseManager:
         Switch to control if already existing result folders for an obsid should be overwritten.
         Default: False
     """
-    DROP_FOR_TILE_COORDS = ['xy_hirise', 'SampleResolution',
-                            'LineResolution', 'PositiveWest360Longitude',
-                            'Line', 'Sample']
+
+    DROP_FOR_TILE_COORDS = [
+        "xy_hirise",
+        "SampleResolution",
+        "LineResolution",
+        "PositiveWest360Longitude",
+        "Line",
+        "Sample",
+    ]
 
     FAN_COLUMNS_AS_PUBLISHED = [
-        'marking_id', 'angle', 'distance', 'tile_id', 'image_x', 'image_y', 'n_votes',
-        'obsid', 'spread', 'version', 'vote_ratio', 'x', 'y', 'x_angle', 'y_angle', 'l_s',
-        'map_scale', 'north_azimuth', 'BodyFixedCoordinateX', 'BodyFixedCoordinateY',
-        'BodyFixedCoordinateZ', 'PlanetocentricLatitude', 'PlanetographicLatitude',
-        'Longitude'
+        "marking_id",
+        "angle",
+        "distance",
+        "tile_id",
+        "image_x",
+        "image_y",
+        "n_votes",
+        "obsid",
+        "spread",
+        "version",
+        "vote_ratio",
+        "x",
+        "y",
+        "x_angle",
+        "y_angle",
+        "l_s",
+        "map_scale",
+        "north_azimuth",
+        "BodyFixedCoordinateX",
+        "BodyFixedCoordinateY",
+        "BodyFixedCoordinateZ",
+        "PlanetocentricLatitude",
+        "PlanetographicLatitude",
+        "Longitude",
     ]
     BLOTCH_COLUMNS_AS_PUBLISHED = [
-        'marking_id', 'angle', 'tile_id', 'image_x', 'image_y', 'n_votes', 'obsid',
-        'radius_1', 'radius_2', 'vote_ratio', 'x', 'y', 'x_angle', 'y_angle', 'l_s',
-        'map_scale', 'north_azimuth', 'BodyFixedCoordinateX', 'BodyFixedCoordinateY',
-        'BodyFixedCoordinateZ', 'PlanetocentricLatitude', 'PlanetographicLatitude',
-        'Longitude'
+        "marking_id",
+        "angle",
+        "tile_id",
+        "image_x",
+        "image_y",
+        "n_votes",
+        "obsid",
+        "radius_1",
+        "radius_2",
+        "vote_ratio",
+        "x",
+        "y",
+        "x_angle",
+        "y_angle",
+        "l_s",
+        "map_scale",
+        "north_azimuth",
+        "BodyFixedCoordinateX",
+        "BodyFixedCoordinateY",
+        "BodyFixedCoordinateZ",
+        "PlanetocentricLatitude",
+        "PlanetographicLatitude",
+        "Longitude",
     ]
 
     def __init__(self, version, obsids=None, overwrite=False):
-        self.catalog = f'P4_catalog_{version}'
+        self.catalog = f"P4_catalog_{version}"
         self.overwrite = overwrite
         self._obsids = obsids
+        self.dbname = dbname
 
     @property
     def savefolder(self):
@@ -245,7 +288,7 @@ class ReleaseManager:
     def get_no_of_tiles_per_obsid(self):
         db = io.DBManager()
         all_data = db.get_all()
-        return all_data.groupby('image_name').image_id.nunique()
+        return all_data.groupby("image_name").image_id.nunique()
 
     @property
     def EDRINDEX_meta_path(self):
@@ -255,27 +298,40 @@ class ReleaseManager:
         if not self.EDRINDEX_meta_path.exists():
             NAs = p4meta.get_north_azimuths_from_SPICE(self.obsids)
             edrindex = pd.read_hdf("/Volumes/Data/hirise/EDRCUMINDEX.hdf")
-            p4_edr = edrindex[edrindex.OBSERVATION_ID.isin(self.obsids)].query(
-                'CCD_NAME=="RED4"').drop_duplicates(subset='OBSERVATION_ID')
-            p4_edr = p4_edr.set_index('OBSERVATION_ID').join(
-                NAs.set_index('OBSERVATION_ID'))
+            p4_edr = (
+                edrindex[edrindex.OBSERVATION_ID.isin(self.obsids)]
+                .query('CCD_NAME=="RED4"')
+                .drop_duplicates(subset="OBSERVATION_ID")
+            )
+            p4_edr = p4_edr.set_index("OBSERVATION_ID").join(
+                NAs.set_index("OBSERVATION_ID")
+            )
             p4_edr = p4_edr.join(self.get_no_of_tiles_per_obsid())
             p4_edr.rename(dict(image_id="# of tiles"), axis=1, inplace=True)
-            p4_edr['map_scale'] = 0.25 * p4_edr.BINNING
+            p4_edr["map_scale"] = 0.25 * p4_edr.BINNING
             p4_edr.reset_index(inplace=True)
             p4_edr.to_csv(self.EDRINDEX_meta_path)
         else:
             p4_edr = pd.read_csv(self.EDRINDEX_meta_path)
-        cols = ['OBSERVATION_ID', 'IMAGE_CENTER_LATITUDE', 'IMAGE_CENTER_LONGITUDE', 'SOLAR_LONGITUDE', 'START_TIME',
-                'map_scale', 'north_azimuth', '# of tiles']
+        cols = [
+            "OBSERVATION_ID",
+            "IMAGE_CENTER_LATITUDE",
+            "IMAGE_CENTER_LONGITUDE",
+            "SOLAR_LONGITUDE",
+            "START_TIME",
+            "map_scale",
+            "north_azimuth",
+            "# of tiles",
+        ]
         metadata = p4_edr[cols]
         metadata.to_csv(self.metadata_path, index=False, float_format="%.7f")
         LOGGER.info("Wrote %s", str(self.metadata_path))
 
     def calc_tile_coordinates(self):
         edrpath = io.get_ground_projection_root()
-        cubepaths = [edrpath / obsid /
-                     f"{obsid}_mosaic_RED45.cub" for obsid in self.obsids]
+        cubepaths = [
+            edrpath / obsid / f"{obsid}_mosaic_RED45.cub" for obsid in self.obsids
+        ]
 
         todo = []
         for cubepath in cubepaths:
@@ -287,6 +343,7 @@ class ReleaseManager:
             from planet4.projection import TileCalculator
             tilecalc = TileCalculator(cubepath)
             tilecalc.calc_tile_coords()
+
         if not len(todo) == 0:
             results = execute_in_parallel(get_tile_coords, todo)
 
@@ -300,9 +357,17 @@ class ReleaseManager:
 
     @property
     def COLS_TO_MERGE(self):
-        return ['obsid', 'image_x', 'image_y',
-                'BodyFixedCoordinateX', 'BodyFixedCoordinateY', 'BodyFixedCoordinateZ',
-                'PlanetocentricLatitude', 'PlanetographicLatitude', 'PositiveEast360Longitude']
+        return [
+            "obsid",
+            "image_x",
+            "image_y",
+            "BodyFixedCoordinateX",
+            "BodyFixedCoordinateY",
+            "BodyFixedCoordinateZ",
+            "PlanetocentricLatitude",
+            "PlanetographicLatitude",
+            "PositiveEast360Longitude",
+        ]
 
     def merge_fnotch_results(self, fans, blotches):
         """Average multiple objects from fnotching into one.
@@ -314,11 +379,9 @@ class ReleaseManager:
         """
         out = []
         for df in [fans, blotches]:
-            averaged = df.groupby('marking_id').mean()
-            tmp = df.drop_duplicates(
-                subset='marking_id').set_index('marking_id')
-            averaged = averaged.join(
-                tmp[['image_id', 'obsid']], how='inner')
+            averaged = df.groupby("marking_id").mean()
+            tmp = df.drop_duplicates(subset="marking_id").set_index("marking_id")
+            averaged = averaged.join(tmp[["image_id", "obsid"]], how="inner")
             out.append(averaged.reset_index())
 
         return out
@@ -327,47 +390,66 @@ class ReleaseManager:
         # read in data files
         fans = pd.read_csv(self.fan_file)
         blotches = pd.read_csv(self.blotch_file)
-        meta = pd.read_csv(self.metadata_path, dtype='str')
-        tile_coords = pd.read_csv(self.tile_coords_path, dtype='str')
+        meta = pd.read_csv(self.metadata_path, dtype="str")
+        tile_coords = pd.read_csv(self.tile_coords_path, dtype="str")
 
         # average multiple fnotch results
         fans, blotches = self.merge_fnotch_results(fans, blotches)
 
         # merge meta
-        cols_to_merge = ['OBSERVATION_ID',
-                         'SOLAR_LONGITUDE', 'north_azimuth', 'map_scale']
-        fans = fans.merge(meta[cols_to_merge],
-                          left_on='obsid', right_on='OBSERVATION_ID')
+        cols_to_merge = [
+            "OBSERVATION_ID",
+            "SOLAR_LONGITUDE",
+            "north_azimuth",
+            "map_scale",
+        ]
+        fans = fans.merge(
+            meta[cols_to_merge], left_on="obsid", right_on="OBSERVATION_ID"
+        )
         blotches = blotches.merge(
-            meta[cols_to_merge], left_on='obsid', right_on='OBSERVATION_ID')
+            meta[cols_to_merge], left_on="obsid", right_on="OBSERVATION_ID"
+        )
 
         # drop unnecessary columns
         tile_coords.drop(self.DROP_FOR_TILE_COORDS, axis=1, inplace=True)
         # save cleaned tile_coords
-        tile_coords.rename({'image_id': 'tile_id'}, axis=1, inplace=True)
-        tile_coords.to_csv(self.tile_coords_path_final,
-                           index=False, float_format='%.7f')
+        tile_coords.rename({"image_id": "tile_id"}, axis=1, inplace=True)
+        tile_coords.to_csv(
+            self.tile_coords_path_final, index=False, float_format="%.7f"
+        )
 
         # merge campt results into catalog files
         fans, blotches = self.merge_campt_results(fans, blotches)
 
         # write out fans catalog
         fans.vote_ratio.fillna(1, inplace=True)
-        fans.version = fans.version.astype('int')
+        fans.version = fans.version.astype("int")
         fans.rename(
-            {'image_id': 'tile_id', 'SOLAR_LONGITUDE': 'l_s',
-             'PositiveEast360Longitude': 'Longitude'}, axis=1, inplace=True)
-        fans[self.FAN_COLUMNS_AS_PUBLISHED].to_csv(
-            self.fan_merged, index=False)
+            {
+                "image_id": "tile_id",
+                "SOLAR_LONGITUDE": "l_s",
+                "PositiveEast360Longitude": "Longitude",
+            },
+            axis=1,
+            inplace=True,
+        )
+        fans[self.FAN_COLUMNS_AS_PUBLISHED].to_csv(self.fan_merged, index=False)
         LOGGER.info("Wrote %s", str(self.fan_merged))
 
         # write out blotches catalog
         blotches.vote_ratio.fillna(1, inplace=True)
         blotches.rename(
-            {'image_id': 'tile_id', 'SOLAR_LONGITUDE': 'l_s',
-             'PositiveEast360Longitude': 'Longitude'}, axis=1, inplace=True)
+            {
+                "image_id": "tile_id",
+                "SOLAR_LONGITUDE": "l_s",
+                "PositiveEast360Longitude": "Longitude",
+            },
+            axis=1,
+            inplace=True,
+        )
         blotches[self.BLOTCH_COLUMNS_AS_PUBLISHED].to_csv(
-            self.blotch_merged, index=False)
+            self.blotch_merged, index=False
+        )
         LOGGER.info("Wrote %s", str(self.blotch_merged))
 
     def calc_marking_coordinates(self):
@@ -387,17 +469,16 @@ class ReleaseManager:
             bucket.append(pd.read_csv(xy.savepath).assign(obsid=obsid))
 
         ground = pd.concat(bucket, sort=False).drop_duplicates()
-        ground.rename(dict(Sample='image_x', Line='image_y'),
-                      axis=1, inplace=True)
+        ground.rename(dict(Sample="image_x", Line="image_y"), axis=1, inplace=True)
         return ground
 
     def fix_marking_coordinates_precision(self, df):
-        fname = 'tempfile.csv'
+        fname = "tempfile.csv"
         df.to_csv(fname, float_format="%.7f")
-        return pd.read_csv(fname, dtype='str')
+        return pd.read_csv(fname, dtype="str")
 
     def merge_campt_results(self, fans, blotches):
-        INDEX = ['obsid', 'image_x', 'image_y']
+        INDEX = ["obsid", "image_x", "image_y"]
 
         ground = self.collect_marking_coordinates().round(decimals=7)
         # ground = self.fix_marking_coordinates_precision(ground)
@@ -414,7 +495,8 @@ class ReleaseManager:
         if len(self.todo) > 0:
             LOGGER.info("Performing the clustering.")
             results = execute_in_parallel(
-                cluster_obsid_parallel, self.get_parallel_args())
+                cluster_obsid_parallel, self.get_parallel_args()
+            )
 
             # create marking_ids
             fan_id = fan_id_generator()
@@ -425,19 +507,17 @@ class ReleaseManager:
                     add_marking_ids(path, fan_id, blotch_id)
 
             # fnotch and apply cuts
-            execute_in_parallel(fnotch_obsid_parallel,
-                                self.get_parallel_args())
+            LOGGER.info("Start fnotching")
+            execute_in_parallel(fnotch_obsid_parallel, self.get_parallel_args())
 
         # create summary CSV files of the clustering output
         LOGGER.info("Creating L1C fan and blotch database files.")
         create_roi_file(self.obsids, self.catalog, self.catalog)
 
-        LOGGER.info(
-            "Creating the required RED45 mosaics for ground projections.")
+        LOGGER.info("Creating the required RED45 mosaics for ground projections.")
         results = execute_in_parallel(create_RED45_mosaic, self.obsids)
 
-        LOGGER.info(
-            "Calculating the center ground coordinates for all P4 tiles.")
+        LOGGER.info("Calculating the center ground coordinates for all P4 tiles.")
         self.calc_tile_coordinates()
 
         LOGGER.info("Calculating ground coordinates for catalog.")
@@ -504,7 +584,7 @@ def read_csvfiles_into_lists_of_frames(folders):
     bucket = dict(fan=[], blotch=[])
     for folder in folders:
         for markingfile in folder.glob("*.csv"):
-            key = 'fan' if markingfile.name.endswith('fans.csv') else 'blotch'
+            key = "fan" if markingfile.name.endswith("fans.csv") else "blotch"
             bucket[key].append(pd.read_csv(markingfile))
     return bucket
 
@@ -530,7 +610,7 @@ def create_roi_file(obsids, roi_name, datapath):
     for obsid in tqdm(obsids):
         pm = io.PathManager(obsid=obsid, datapath=datapath)
         # get all L1C folders for current obsid:
-        folders = pm.get_obsid_paths('L1C')
+        folders = pm.get_obsid_paths("L1C")
         bucket = read_csvfiles_into_lists_of_frames(folders)
         for key, val in bucket.items():
             try:
@@ -538,11 +618,14 @@ def create_roi_file(obsids, roi_name, datapath):
             except ValueError:
                 continue
             else:
-                df['obsid'] = obsid
+                df["obsid"] = obsid
                 Bucket[key].append(df)
     savedir = pm.path_so_far.parent
-    LOGGER.info("Found %i fans and %i blotches.", len(
-        Bucket['fan']), len(Bucket['blotch']))
+    if len(Bucket) == 0:
+        func = LOGGER.warning
+    else:
+        func = LOGGER.info
+    func("Found %i fans and %i blotches.", len(Bucket["fan"]), len(Bucket["blotch"]))
     for key, val in Bucket.items():
         try:
             df = pd.concat(val, ignore_index=True, sort=False)
@@ -551,10 +634,10 @@ def create_roi_file(obsids, roi_name, datapath):
         else:
             savename = f"{roi_name}_{pm.L1C_folder}_{key}.csv"
             savepath = savedir / savename
-            for col in ['x_tile', 'y_tile']:
-                df[col] = pd.to_numeric(df[col], downcast='signed')
-            if 'version' in df.columns:
-                df['version'] = pd.to_numeric(df['version'], downcast='signed')
+            for col in ["x_tile", "y_tile"]:
+                df[col] = pd.to_numeric(df[col], downcast="signed")
+            if "version" in df.columns:
+                df["version"] = pd.to_numeric(df["version"], downcast="signed")
             df.to_csv(savepath, index=False, float_format="%.2f")
             print(f"Created {savepath}.")
 
