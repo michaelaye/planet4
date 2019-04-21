@@ -348,14 +348,8 @@ class PathManager(object):
             if self.id != "":
                 LOGGER.debug("Entering obsid search for known image_id.")
                 db = DBManager()
-                data = db.get_image_id_markings(self.id)
-                try:
-                    obsid = data.image_name.iloc[0]
-                except IndexError:
-                    raise IndexError(
-                        "obsid access broken. Did you forget to use the `obsid` keyword"
-                        " at initialization?"
-                    )
+                df = db.read(db.dbname, columns=['image_id', 'image_name'])
+                obsid = df.query("image_id==@self.id").image_name.iloc[0]
                 LOGGER.debug("obsid found: %s", obsid)
                 self._obsid = obsid
         return self._obsid
