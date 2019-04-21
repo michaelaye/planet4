@@ -3,9 +3,11 @@ import datetime as dt
 import logging
 import os
 import shutil
+import warnings
 from pathlib import Path
 from urllib.error import URLError
 
+import dask.dataframe as dd
 import matplotlib.image as mplimg
 import pandas as pd
 import pkg_resources as pr
@@ -18,7 +20,7 @@ try:
 except ImportError:
     from urllib.request import urlretrieve
 
-pkg_name = __name__.split('.')[0]
+pkg_name = __name__.split(".")[0]
 
 configpath = Path.home() / ".{}.ini".format(pkg_name)
 
@@ -53,46 +55,53 @@ def set_database_path(dbfolder):
         d = get_config()
     except IOError:
         d = configparser.ConfigParser()
-        d['planet4_db'] = {}
-    d['planet4_db']['path'] = dbfolder
-    with configpath.open('w') as f:
+        d["planet4_db"] = {}
+    d["planet4_db"]["path"] = dbfolder
+    with configpath.open("w") as f:
         d.write(f)
     print("Saved database path into {}.".format(configpath))
 
 
 def get_data_root():
     d = get_config()
-    data_root = Path(d['planet4_db']['path']).expanduser()
+    data_root = Path(d["planet4_db"]["path"]).expanduser()
     data_root.mkdir(exist_ok=True, parents=True)
     return data_root
 
 
 def get_ground_projection_root():
     d = get_config()
-    gp_root = Path(d['ground_projection']['path'])
-    gp_root.mkdir(exist_ok=True)
+    try:
+        gp_root = Path(d["ground_projection"]["path"])
+    except KeyError:
+        warnings.warn(
+            "ground_projection_root not set in config.\n"
+            "Read/Write of projected data is disabled."
+        )
+        gp_root = None
+    else:
+        gp_root.mkdir(exist_ok=True)
     return gp_root
 
 
 if not configpath.exists():
     print("No configuration file {} found.\n".format(configpath))
-    savepath = input(
-        "Please provide the path where you want to store planet4 results:")
+    savepath = input("Please provide the path where you want to store planet4 results:")
     set_database_path(savepath)
 else:
     data_root = get_data_root()
 
 
 def dropbox():
-    return Path.home() / 'Dropbox'
+    return Path.home() / "Dropbox"
 
 
 def p4data():
-    return dropbox() / 'data' / 'planet4'
+    return dropbox() / "data" / "planet4"
 
 
 def analysis_folder():
-    name = 'p4_analysis'
+    name = "p4_analysis"
     if p4data().exists():
         path = p4data() / name
     else:
@@ -106,7 +115,7 @@ def check_and_pad_id(imgid):
         return None
     imgid_template = "APF0000000"
     if len(imgid) < len(imgid_template):
-        imgid = imgid_template[:-len(imgid)] + imgid
+        imgid = imgid_template[: -len(imgid)] + imgid
     return imgid
 
 
@@ -119,7 +128,7 @@ def get_subframe(url):
     Then uses matplotlib.image to read the image into a numpy-array
     and finally returns it.
     """
-    targetpath = data_root / 'images' / os.path.basename(url)
+    targetpath = data_root / "images" / os.path.basename(url)
     targetpath.parent.mkdir(exist_ok=True)
     if not targetpath.exists():
         LOGGER.info("Did not find image in cache. Downloading ...")
@@ -138,11 +147,10 @@ def get_subframe(url):
 
 
 class P4DBName(object):
-
     def __init__(self, fname):
         self.p = Path(fname)
         date = str(self.name)[:10]
-        self.date = dt.datetime(*[int(i) for i in date.split('-')])
+        self.date = dt.datetime(*[int(i) for i in date.split("-")])
 
     def __getattr__(self, name):
         "looking up things in the Path object if not in `self`."
@@ -165,22 +173,29 @@ def get_latest_file(filenames):
 
 def get_latest_cleaned_db(datadir=None):
     datadir = data_root if datadir is None else Path(datadir)
-    h5files = list(datadir.glob('201*_queryable_cleaned*.h5'))
-    if len(h5files) == 0:
+    basestr = "201*_queryable_cleaned*"
+    conf = get_config()
+    dbformat = conf['options']['dbformat']
+    parquet = True if dbformat == 'parquet' else False
+    if not parquet:
+        files = list(datadir.glob(basestr + ".h5"))
+    else:
+        files = list(datadir.glob(basestr + ".parquet"))
+    if len(files) == 0:
         LOGGER.error("No files found. Searching in %s", str(datadir))
         raise NoFilesFoundError(f"No files found. Searching in {str(datadir)}")
-    return get_latest_file(h5files)
+    return get_latest_file(files)
 
 
 def get_latest_season23_dbase(datadir=None):
     if datadir is None:
         datadir = data_root
-    h5files = list(datadir.glob('201*_queryable_cleaned_seasons2and3.h5'))
+    h5files = list(datadir.glob("201*_queryable_cleaned_seasons2and3.h5"))
     return get_latest_file(h5files)
 
 
 def get_test_database():
-    fname = pr.resource_filename('planet4', 'data/test_db.csv')
+    fname = pr.resource_filename("planet4", "data/test_db.csv")
     return pd.read_csv(fname)
 
 
@@ -188,18 +203,18 @@ def get_latest_tutorial_data(datadir=None):
     if datadir is None:
         datadir = data_root
 
-    tut_files = datadir.glob('/*_tutorials.h5')
+    tut_files = datadir.glob("/*_tutorials.h5")
     tut_files = [i for i in tut_files if i.parent[:4].isdigit()]
     if not tut_files:
         raise NoFilesFoundError
-    return pd.read_hdf(str(get_latest_file(tut_files)), 'df')
+    return pd.read_hdf(str(get_latest_file(tut_files)), "df")
 
 
 def common_gold_ids():
     # read the common gold_ids to check
-    with open('../data/gold_standard_commons.txt') as f:
+    with open("../data/gold_standard_commons.txt") as f:
         gold_ids = f.read()
-    gold_ids = gold_ids.split('\n')
+    gold_ids = gold_ids.split("\n")
     del gold_ids[-1]  # last one is empty
     return gold_ids
 
@@ -218,27 +233,29 @@ def get_image_names_from_db(dbfname):
         Array of unique image names.
     """
     path = Path(dbfname)
-    if path.suffix in ['.hdf', '.h5']:
-        with pd.HDFStore(str(dbfname)) as store:
-            return store.select_column('df', 'image_name').unique()
-    elif path.suffix == '.csv':
-        return pd.read_csv(dbfname).image_id.unique()
+    if path.suffix in [".hdf", ".h5"]:
+        return dd.read_hdf(str(path), "df").image_name.unique()
+    elif path.suffix == ".csv":
+        return dd.read_csv(path).image_name.unique()
+    elif path.suffix == ".parquet":
+        return dd.read_parquet(path).image_name.unique()
+    else:
+        raise UserWarning(f"Unknown suffix: {path.suffix}")
 
 
 def get_latest_marked():
-    return pd.read_hdf(str(get_latest_cleaned_db()), 'df',
-                       where='marking!=None')
+    return pd.read_hdf(str(get_latest_cleaned_db()), "df", where="marking!=None")
 
 
 def get_image_id_from_fname(fname):
     "Return image_id from beginning of Path(fname).name"
     fname = Path(fname)
     name = fname.name
-    return name.split('_')[0]
+    return name.split("_")[0]
 
 
-def get_image_ids_in_folder(folder, extension='.csv'):
-    fnames = Path(folder).glob('*' + extension)
+def get_image_ids_in_folder(folder, extension=".csv"):
+    fnames = Path(folder).glob("*" + extension)
     return [get_image_id_from_fname(i) for i in fnames]
 
 
@@ -276,8 +293,15 @@ class PathManager(object):
         Defined in `get_cut_folder`.
     """
 
-    def __init__(self, id_='', datapath='clustering', suffix='.csv', obsid='', cut=0.5,
-                 extra_path=''):
+    def __init__(
+        self,
+        id_="",
+        datapath="clustering",
+        suffix=".csv",
+        obsid="",
+        cut=0.5,
+        extra_path="",
+    ):
         self.id = id_
         self.cut = cut
         self._obsid = obsid
@@ -285,7 +309,7 @@ class PathManager(object):
 
         if datapath is None:
             # take default path if none given
-            self._datapath = Path(data_root) / 'clustering'
+            self._datapath = Path(data_root) / "clustering"
         elif Path(datapath).is_absolute():
             # if given datapath is absolute, take only that:
             self._datapath = Path(datapath)
@@ -295,13 +319,13 @@ class PathManager(object):
         self.suffix = suffix
 
         # point reader to correct function depending on required suffix
-        if suffix in ['.hdf', '.h5']:
+        if suffix in [".hdf", ".h5"]:
             self.reader = pd.read_hdf
-        elif suffix == '.csv':
+        elif suffix == ".csv":
             self.reader = pd.read_csv
 
         # making sure to warn the user here if the data isn't where it's expected to be
-        if id_ != '':
+        if id_ != "":
             if not self.path_so_far.exists():
                 raise FileNotFoundError(f"{self.path_so_far} does not exist.")
 
@@ -316,20 +340,22 @@ class PathManager(object):
 
     @property
     def clustering_logfile(self):
-        return self.fanfile.parent / 'clustering_settings.yaml'
+        return self.fanfile.parent / "clustering_settings.yaml"
 
     @property
     def obsid(self):
-        if self._obsid is '':
-            if self.id is not '':
+        if self._obsid == "":
+            if self.id != "":
                 LOGGER.debug("Entering obsid search for known image_id.")
                 db = DBManager()
                 data = db.get_image_id_markings(self.id)
                 try:
                     obsid = data.image_name.iloc[0]
                 except IndexError:
-                    raise IndexError("obsid access broken. Did you forget to use the `obsid` keyword"
-                                     " at initialization?")
+                    raise IndexError(
+                        "obsid access broken. Did you forget to use the `obsid` keyword"
+                        " at initialization?"
+                    )
                 LOGGER.debug("obsid found: %s", obsid)
                 self._obsid = obsid
         return self._obsid
@@ -340,7 +366,7 @@ class PathManager(object):
 
     @property
     def obsid_results_savefolder(self):
-        subfolder = 'p4_catalog' if self.datapath is None else self.datapath
+        subfolder = "p4_catalog" if self.datapath is None else self.datapath
         savefolder = analysis_folder() / subfolder
         savefolder.mkdir(exist_ok=True, parents=True)
         return savefolder
@@ -367,19 +393,19 @@ class PathManager(object):
     @property
     def L1A_folder(self):
         "Subfolder name for the clustered data before fnotching."
-        return 'L1A'
+        return "L1A"
 
     @property
     def L1B_folder(self):
         "Subfolder name for the fnotched data, before cut is applied."
-        return 'L1B'
+        return "L1B"
 
     @property
     def L1C_folder(self):
         "subfolder name for the final catalog after applying `cut`."
-        return 'L1C_cut_{:.1f}'.format(self.cut)
+        return "L1C_cut_{:.1f}".format(self.cut)
 
-    def get_path(self, marking, specific=''):
+    def get_path(self, marking, specific=""):
         p = self.path_so_far
         # now add the image_id
         try:
@@ -387,12 +413,12 @@ class PathManager(object):
         except TypeError:
             logging.warning("self.id not set. Storing in obsid level.")
 
-        id_ = self.id if self.id != '' else self.obsid
+        id_ = self.id if self.id != "" else self.obsid
 
         # add the specific sub folder
         p /= specific
 
-        if specific != '':
+        if specific != "":
             p /= f"{id_}_{specific}_{marking}{self.suffix}"
         else:
             # prepend the data level to file name if given.
@@ -409,7 +435,7 @@ class PathManager(object):
         folder = self.path_so_far
         # cast to upper case for the lazy... ;)
         level = level.upper()
-        image_id_paths = [item for item in folder.glob('*') if item.is_dir()]
+        image_id_paths = [item for item in folder.glob("*") if item.is_dir()]
         bucket = []
         for p in image_id_paths:
             try:
@@ -423,7 +449,7 @@ class PathManager(object):
 
     @property
     def fanfile(self):
-        return self.get_path('fans', self.L1A_folder)
+        return self.get_path("fans", self.L1A_folder)
 
     @property
     def fandf(self):
@@ -431,7 +457,7 @@ class PathManager(object):
 
     @property
     def reduced_fanfile(self):
-        return self.get_path('fans', self.L1B_folder)
+        return self.get_path("fans", self.L1B_folder)
 
     @property
     def reduced_fandf(self):
@@ -439,7 +465,7 @@ class PathManager(object):
 
     @property
     def final_fanfile(self):
-        return self.get_path('fans', self.L1C_folder)
+        return self.get_path("fans", self.L1C_folder)
 
     @property
     def final_fandf(self):
@@ -447,7 +473,7 @@ class PathManager(object):
 
     @property
     def blotchfile(self):
-        return self.get_path('blotches', self.L1A_folder)
+        return self.get_path("blotches", self.L1A_folder)
 
     @property
     def blotchdf(self):
@@ -455,7 +481,7 @@ class PathManager(object):
 
     @property
     def reduced_blotchfile(self):
-        return self.get_path('blotches', self.L1B_folder)
+        return self.get_path("blotches", self.L1B_folder)
 
     @property
     def reduced_blotchdf(self):
@@ -463,7 +489,7 @@ class PathManager(object):
 
     @property
     def final_blotchfile(self):
-        return self.get_path('blotches', self.L1C_folder)
+        return self.get_path("blotches", self.L1C_folder)
 
     @property
     def final_blotchdf(self):
@@ -471,7 +497,7 @@ class PathManager(object):
 
     @property
     def fnotchfile(self):
-        return self.get_path('fnotches', self.L1B_folder)
+        return self.get_path("fnotches", self.L1B_folder)
 
     @property
     def fnotchdf(self):
@@ -521,14 +547,23 @@ class DBManager(object):
         s += "Database name: {}\n".format(Path(self.dbname).name)
         return s
 
+    def read(self, *args, **kwargs):
+        p = Path(self.dbname)
+        if p.suffix.endswith("hdf"):
+            return pd.read_hdf(*args, **kwargs)
+        elif p.suffix.endswith("parquet"):
+            return pd.read_parquet(*args, **kwargs)
+        elif p.suffix.endswith("csv"):
+            return pd.read_csv(*args, **kwargs)
+
     @property
     def orig_csv(self):
         p = Path(self.dbname)
-        return p.parent / (p.name[:38] + '.csv')
+        return p.parent / (p.name[:38] + ".csv")
 
     def set_latest_with_dupes_db(self, datadir=None):
         datadir = data_root if datadir is None else Path(datadir)
-        h5files = datadir.glob('201*_queryable.h5')
+        h5files = datadir.glob("201*_queryable.h5")
         dbname = get_latest_file(h5files)
         print("Setting {} as dbname.".format(dbname.name))
         self.dbname = str(dbname)
@@ -547,7 +582,7 @@ class DBManager(object):
     def image_ids(self):
         "Return list of unique image_ids in database."
         with pd.HDFStore(self.dbname) as store:
-            return store.select_column('df', 'image_id').unique()
+            return store.select_column("df", "image_id").unique()
 
     @property
     def n_image_ids(self):
@@ -563,11 +598,11 @@ class DBManager(object):
         return self.image_names
 
     def get_all(self, datadir=None):
-        return pd.read_hdf(str(self.dbname), 'df')
+        return self.read(str(self.dbname))
 
     def get_obsid_markings(self, obsid):
         "Return marking data for given HiRISE obsid."
-        return pd.read_hdf(self.dbname, 'df', where='image_name=' + obsid)
+        return self.read(self.dbname, where="image_name=" + obsid)
 
     def get_image_name_markings(self, image_name):
         "Alias for get_obsid_markings."
@@ -576,7 +611,7 @@ class DBManager(object):
     def get_image_id_markings(self, image_id):
         "Return marking data for one Planet4 image_id"
         image_id = check_and_pad_id(image_id)
-        return pd.read_hdf(self.dbname, 'df', where='image_id=' + image_id)
+        return self.read(self.dbname, where="image_id=" + image_id)
 
     def get_data_for_obsids(self, obsids):
         bucket = []
@@ -586,17 +621,17 @@ class DBManager(object):
 
     def get_classification_id_data(self, class_id):
         "Return data for one classification_id"
-        return pd.read_hdf(self.dbname, 'df',
-                           where="classification_id=='{}'".format(class_id))
+        return self.read(self.dbname, where="classification_id=='{}'".format(class_id))
 
     @property
     def season2and3_image_names(self):
         "numpy.array : List of image_names for season 2 and 3."
         image_names = self.image_names
-        metadf = pd.DataFrame(pd.Series(image_names).astype(
-            'str'), columns=['image_name'])
+        metadf = pd.DataFrame(
+            pd.Series(image_names).astype("str"), columns=["image_name"]
+        )
         stats.define_season_column(metadf)
         return metadf[(metadf.season > 1) & (metadf.season < 4)].image_name.unique()
 
     def get_general_filter(self, f):
-        return pd.read_hdf(self.dbname, 'df', where=f)
+        return self.read(self.dbname, where=f)
