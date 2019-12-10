@@ -2,7 +2,6 @@ from math import tau
 
 import numpy as np
 import pandas as pd
-from pandas import to_datetime
 
 mars_years = {28: "2006-01-23",
               29: "2007-12-10",
