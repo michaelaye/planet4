@@ -30,7 +30,7 @@ def get_clusters_in_path(path):
     """
     clusters = []
     id_ = get_id_from_path(path)
-    for kind in ['fans', 'blotches']:
+    for kind in ["fans", "blotches"]:
         try:
             df = pd.read_csv(str(path / f"{id_}_L1A_{kind}.csv"))
         except FileNotFoundError:
@@ -39,7 +39,7 @@ def get_clusters_in_path(path):
     return clusters
 
 
-def data_to_centers(df, kind, scope='hirise'):
+def data_to_centers(df, kind, scope="hirise"):
     """Convert a dataframe with marking data to an array of center coords.
 
     Parameters
@@ -53,7 +53,7 @@ def data_to_centers(df, kind, scope='hirise'):
     np.array
         Array with the center coordinates, dimensions: (rows, 2)
     """
-    if kind == 'blotch':
+    if kind == "blotch":
         # only the blotch arrays have distance un-defined
         Marking = markings.Blotch
     else:
@@ -105,7 +105,7 @@ def remove_opposing_fans(fans, eps=20):
     pd.DataFrame
         Data with opposing fans removed.
     """
-    distances = pdist(data_to_centers(fans, 'fan'))
+    distances = pdist(data_to_centers(fans, "fan"))
     close_indices = np.where(distances < eps)[0]
     ind_to_remove = []
     for index in close_indices:
@@ -125,11 +125,11 @@ def remove_opposing_fans(fans, eps=20):
     return fans.drop(ind_to_remove)
 
 
-def fnotch_image_ids(obsid, eps=20, savedir=None, scope='hirise'):
+def fnotch_image_ids(obsid, eps=20, savedir=None, scope="hirise"):
     "Cluster each image_id for an obsid separately."
     # the clustering results were stored as L1A products
     pm = io.PathManager(obsid=obsid, datapath=savedir)
-    paths = pm.get_obsid_paths('L1A')
+    paths = pm.get_obsid_paths("L1A")
     if len(paths) == 0:
         logger.warning("No paths to fnotch found for %s", obsid)
     for path in paths:
@@ -144,8 +144,10 @@ def fnotch_image_ids(obsid, eps=20, savedir=None, scope='hirise'):
             fans = remove_opposing_fans(fans)
         if not any([fans is None, blotches is None]):
             logger.debug("Fnotching %s", id_)
-            distances = cdist(data_to_centers(fans, 'fan', scope=scope),
-                              data_to_centers(blotches, 'blotch', scope=scope))
+            distances = cdist(
+                data_to_centers(fans, "fan", scope=scope),
+                data_to_centers(blotches, "blotch", scope=scope),
+            )
             X, Y = np.where(distances < eps)
             # X are the indices along the fans input, Y for blotches respectively
 
@@ -183,11 +185,11 @@ def fnotch_image_ids(obsid, eps=20, savedir=None, scope='hirise'):
                 fans.to_csv(pm.reduced_fanfile, index=False)
 
 
-def fnotch_image_ids_with_shapely(obsid, eps=20, savedir=None, scope='hirise'):
+def fnotch_image_ids_with_shapely(obsid, eps=20, savedir=None, scope="hirise"):
     "Cluster each image_id for an obsid separately."
     # the clustering results were stored as L1A products
     pm = io.PathManager(obsid=obsid, datapath=savedir)
-    paths = pm.get_obsid_paths('L1A')
+    paths = pm.get_obsid_paths("L1A")
     if len(paths) == 0:
         logger.warning("No paths to fnotch found for %s", obsid)
     for path in paths:
@@ -202,8 +204,10 @@ def fnotch_image_ids_with_shapely(obsid, eps=20, savedir=None, scope='hirise'):
             fans = remove_opposing_fans(fans)
         if not any([fans is None, blotches is None]):
             logger.debug("Fnotching %s", id_)
-            distances = cdist(data_to_centers(fans, 'fan', scope=scope),
-                              data_to_centers(blotches, 'blotch', scope=scope))
+            distances = cdist(
+                data_to_centers(fans, "fan", scope=scope),
+                data_to_centers(blotches, "blotch", scope=scope),
+            )
             X, Y = np.where(distances < eps)
             # X are the indices along the fans input, Y for blotches respectively
 
@@ -243,7 +247,7 @@ def fnotch_image_ids_with_shapely(obsid, eps=20, savedir=None, scope='hirise'):
 
 def fnotch_obsid(obsid, eps=20, savedir=None):
     pm = io.PathManager(obsid=obsid, datapath=savedir)
-    paths = pm.get_obsid_paths('L1A')
+    paths = pm.get_obsid_paths("L1A")
     if len(paths) == 0:
         logger.warning("No paths to fnotch found for %s", obsid)
     fans = []
@@ -264,8 +268,10 @@ def fnotch_obsid(obsid, eps=20, savedir=None):
         # clean up fans with opposite angles
         fans = remove_opposing_fans(fans)
     if not any([fans is None, blotches is None]):
-        distances = cdist(data_to_centers(fans, 'fan', scope='hirise'),
-                          data_to_centers(blotches, 'blotch', scope='hirise'))
+        distances = cdist(
+            data_to_centers(fans, "fan", scope="hirise"),
+            data_to_centers(blotches, "blotch", scope="hirise"),
+        )
         X, Y = np.where(distances < eps)
         # X are the indices along the fans input, Y for blotches respectively
 
@@ -330,11 +336,11 @@ def write_l1c(kind, slashed, pm):
         # the pathmanager can read the csv files as well:
         old_kinds = getattr(pm, f"reduced_{kind}df")
     except FileNotFoundError:
-        logger.debug('No old %s file.', kind)
+        logger.debug("No old %s file.", kind)
         old_kinds = pd.DataFrame()
     logger.debug("Combining. Writing to %s", str(l1c))
-    combined = pd.concat([old_kinds, new_kinds], ignore_index=True)
-    combined.dropna(how='all', axis=1, inplace=True)
+    combined = pd.concat([old_kinds, new_kinds], ignore_index=True, sort=False)
+    combined.dropna(how="all", axis=1, inplace=True)
     if len(combined) > 0:
         logger.debug("Writing %s", str(l1c))
         combined.to_csv(str(l1c), index=False)
@@ -357,7 +363,7 @@ def apply_cut_obsid(obsid, cut=0.5, savedir=None):
     else:
         # apply cut
         slashed = fnotches[fnotches.vote_ratio > pm.cut]
-        for kind in ['fan', 'blotch']:
+        for kind in ["fan", "blotch"]:
             write_l1c(kind, slashed, pm)
 
 
@@ -372,7 +378,7 @@ def apply_cut(obsid, cut=0.5, savedir=None):
         Value where to cut the vote_ratio of the fnotches.
     """
     pm = io.PathManager(obsid=obsid, cut=cut, datapath=savedir)
-    paths = pm.get_obsid_paths('L1B')
+    paths = pm.get_obsid_paths("L1B")
     for path in paths:
         id_ = get_id_from_path(path)
         logger.debug("Slashing %s", id_)
@@ -392,5 +398,5 @@ def apply_cut(obsid, cut=0.5, savedir=None):
         else:
             # apply cut
             slashed = fnotches[fnotches.vote_ratio > pm.cut]
-            for kind in ['fan', 'blotch']:
+            for kind in ["fan", "blotch"]:
                 write_l1c(kind, slashed, pm)
