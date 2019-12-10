@@ -45,6 +45,13 @@ def get_average_objects(clusters, kind):
         meandata.angle = circmean(cluster_df.angle, high=high)
         meandata["angle_std"] = circstd(cluster_df.angle, high=high)
         meandata["n_votes"] = len(cluster_df)
+        meandata["x_std"] = cluster_df.x.std()
+        meandata["y_std"] = cluster_df.y.std()
+        meandata["distance_std"] = cluster_df.distance.std()
+        meandata["spread_std"] = cluster_df.spread.std()
+        meandata["radius1_std"] = cluster_df.radius_1.std()
+        meandata["radius2_std"] = cluster_df.radius_2.std()
+
         yield meandata.to_frame().T
 
 
