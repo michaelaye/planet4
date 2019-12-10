@@ -348,7 +348,7 @@ class PathManager(object):
             if self.id != "":
                 LOGGER.debug("Entering obsid search for known image_id.")
                 db = DBManager()
-                df = db.read(db.dbname, columns=['image_id', 'image_name'])
+                df = db.read(columns=['image_id', 'image_name'])
                 obsid = df.query("image_id==@self.id").image_name.iloc[0]
                 LOGGER.debug("obsid found: %s", obsid)
                 self._obsid = obsid
@@ -541,19 +541,31 @@ class DBManager(object):
         s += "Database name: {}\n".format(Path(self.dbname).name)
         return s
 
-    def read(self, *args, **kwargs):
+    def read(self, **kwargs):
         p = Path(self.dbname)
         if p.suffix.endswith("hdf"):
-            return pd.read_hdf(*args, **kwargs)
+            return pd.read_hdf(p, **kwargs)
         elif p.suffix.endswith("parquet"):
-            return pd.read_parquet(*args, **kwargs)
+            where = kwargs.pop('where', None)
+            if where is not None:
+                obsid = where.split('=')[-1].strip()
+                folder = p.parent / p.stem
+                fname = (folder / obsid).with_suffix('.parquet')
+                return pd.read_parquet(fname)
+            else:
+                return pd.read_parquet(p, **kwargs)
         elif p.suffix.endswith("csv"):
-            return pd.read_csv(*args, **kwargs)
+            return pd.read_csv(p, **kwargs)
 
     @property
     def orig_csv(self):
         p = Path(self.dbname)
         return p.parent / (p.name[:38] + ".csv")
+
+    def get_obsid_for_tile_id(self, tile_id):
+        df = self.read(columns=['image_id', 'image_name'])
+        obsid = df.query("image_id==@tile_id").image_name.iloc[0]
+        return obsid
 
     def set_latest_with_dupes_db(self, datadir=None):
         datadir = data_root if datadir is None else Path(datadir)
@@ -592,20 +604,23 @@ class DBManager(object):
         return self.image_names
 
     def get_all(self, datadir=None):
-        return self.read(str(self.dbname))
+        return self.read()
 
     def get_obsid_markings(self, obsid):
         "Return marking data for given HiRISE obsid."
-        return self.read(self.dbname, where="image_name=" + obsid)
+        return self.read(where="image_name=" + obsid)
 
     def get_image_name_markings(self, image_name):
         "Alias for get_obsid_markings."
         return self.get_obsid_markings(image_name)
 
-    def get_image_id_markings(self, image_id):
+    def get_image_id_markings(self, image_id, obsid=None):
         "Return marking data for one Planet4 image_id"
         image_id = check_and_pad_id(image_id)
-        return self.read(self.dbname, where="image_id=" + image_id)
+        if obsid is None:
+            obsid = self.get_obsid_for_tile_id(image_id)
+        data = self.get_image_name_markings(obsid)
+        return data.query("image_id==@image_id")
 
     def get_data_for_obsids(self, obsids):
         bucket = []
@@ -615,7 +630,7 @@ class DBManager(object):
 
     def get_classification_id_data(self, class_id):
         "Return data for one classification_id"
-        return self.read(self.dbname, where="classification_id=='{}'".format(class_id))
+        return self.read(where="classification_id=='{}'".format(class_id))
 
     @property
     def season2and3_image_names(self):
@@ -628,4 +643,4 @@ class DBManager(object):
         return metadf[(metadf.season > 1) & (metadf.season < 4)].image_name.unique()
 
     def get_general_filter(self, f):
-        return self.read(self.dbname, where=f)
+        return self.read(where=f)
