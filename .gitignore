@@ -68,3 +68,5 @@ notebooks/myids\.npy
 *.npy
 
 \.vscode/
+
+\.mypy_cache/
