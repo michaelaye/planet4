@@ -93,11 +93,12 @@ class TileID(object):
         If the data was already extracted before init, it can be provided here.
     """
 
-    def __init__(self, imgid, scope='planet4', dbname=None, data=None):
+    def __init__(self, imgid, scope='planet4', dbname=None, data=None, image_name=None):
         self.imgid = io.check_and_pad_id(imgid)
         self._data = data
         self.scope = scope
         self.dbname = dbname
+        self._image_name = image_name
 
     @property
     def data(self):
@@ -105,7 +106,7 @@ class TileID(object):
             return self._data
         try:
             db = io.DBManager(self.dbname)
-            self._data = db.get_image_id_markings(self.imgid)
+            self._data = db.get_image_id_markings(self.imgid, self.image_name)
             return self._data
         except NoFilesFoundError:
             print("Cannot find PlanetFour database.")
@@ -113,7 +114,10 @@ class TileID(object):
 
     @property
     def image_name(self):
-        return self.data.image_name.iloc[0]
+        if self._image_name is None:
+            db = io.DBManager(self.dbname)
+            self._image_name = db.get_obsid_for_tile_id(self.imgid)
+        return self._image_name
 
     @property
     def tile_coords(self):
@@ -235,7 +239,7 @@ class TileID(object):
     def plot_fans(self, data=None, **kwargs):
         self.plot_markings('fan', data=data, **kwargs)
 
-    def plot_all(self):
+    def plot_all(self, savedir=None):
         fig, axes = plt.subplots(2, 2)
         axes = axes.ravel()
         for i in [0, 2]:
@@ -244,9 +248,12 @@ class TileID(object):
         self.plot_blotches(ax=axes[3])
         for ax in axes:
             ax.set_axis_off()
-        fig.subplots_adjust(left=None, top=None, bottom=None, right=None,
-                            wspace=1e-3, hspace=1e-3)
-        plt.show()
+        # fig.subplots_adjust(left=None, top=None, bottom=None, right=None,
+                            # wspace=1e-3, hspace=1e-3)
+        fig.suptitle(self.imgid)
+        if savedir is not None:
+            savepath = savedir / f"{self.imgid}.png"
+            fig.savefig(savepath, dpi=150)
 
 
 class Blotch(Ellipse):
