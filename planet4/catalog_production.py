@@ -5,14 +5,11 @@ processing.
 If you execute this locally, you can create one with `ipcluster start -n <no>`, with <no> the number
 of cores you want to provide to the parallel processing routines.
 """
-import argparse
 import itertools
 import logging
 import string
 
 import pandas as pd
-from ipyparallel import Client
-from ipyparallel.util import interactive
 from tqdm import tqdm
 
 from nbtools import execute_in_parallel
@@ -121,7 +118,7 @@ def cluster_obsid_parallel(args):
 
 def fnotch_obsid_parallel(args):
     "Create argument tuples for cluster_obsid, for parallel usage."
-    obsid, savedir = args
+    obsid, savedir, _ = args
     return fnotch_obsid(obsid, savedir)
 
 
@@ -233,8 +230,8 @@ class ReleaseManager:
         If ._obsids is None, get default full obsids list for current default P4 database.
         """
         if self._obsids is None:
-            db = io.DBManager()
-            self._obsids = db.obsids
+            db = io.DBManager(dbname=self.dbname)
+            self._obsids = db.obsids.compute()
         return self._obsids
 
     @obsids.setter
@@ -271,12 +268,14 @@ class ReleaseManager:
     def read_blotch_file(self):
         return pd.read_csv(self.blotch_merged)
 
-    def check_for_todo(self):
+    def check_for_todo(self, overwrite=None):
+        if overwrite is None:
+            overwrite = self.overwrite
         bucket = []
         for obsid in self.obsids:
             pm = io.PathManager(obsid=obsid, datapath=self.savefolder)
             path = pm.obsid_results_savefolder / obsid
-            if path.exists() and self.overwrite is False:
+            if path.exists() and overwrite is False:
                 continue
             else:
                 bucket.append(obsid)
@@ -286,7 +285,7 @@ class ReleaseManager:
         return [(i, self.catalog, self.dbname) for i in self.todo]
 
     def get_no_of_tiles_per_obsid(self):
-        db = io.DBManager()
+        db = io.DBManager(self.dbname)
         all_data = db.get_all()
         return all_data.groupby("image_name").image_id.nunique()
 
@@ -346,7 +345,7 @@ class ReleaseManager:
             tilecalc.calc_tile_coords()
 
         if not len(todo) == 0:
-            results = execute_in_parallel(get_tile_coords, todo)
+            _ = execute_in_parallel(get_tile_coords, todo)
 
         bucket = []
         for cubepath in tqdm(cubepaths):
@@ -412,7 +411,9 @@ class ReleaseManager:
         )
 
         # drop unnecessary columns
-        tile_coords.drop(self.DROP_FOR_TILE_COORDS, axis=1, inplace=True)
+        tile_coords.drop(
+            self.DROP_FOR_TILE_COORDS, axis=1, inplace=True, errors="ignore"
+        )
         # save cleaned tile_coords
         tile_coords.rename({"image_id": "tile_id"}, axis=1, inplace=True)
         tile_coords.to_csv(
@@ -460,7 +461,7 @@ class ReleaseManager:
 
         for obsid in tqdm(self.obsids):
             data = combined[combined.image_name == obsid]
-            xy = XY2LATLON(data, self.savefolder)
+            xy = XY2LATLON(data, self.savefolder, overwrite=self.overwrite)
             xy.process_inpath()
 
     def collect_marking_coordinates(self):

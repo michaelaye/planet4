@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import pvl
 
-from hirise_tools import downloads, labels, products
+from pyrise import downloads, labels, products
 
 from . import io
 

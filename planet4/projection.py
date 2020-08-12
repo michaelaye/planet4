@@ -11,16 +11,24 @@ import numpy as np
 import pandas as pd
 import pvl
 
-from hirise_tools.products import RED_PRODUCT_ID
+from pyrise.products import RED_PRODUCT_ID
 from planet4 import io
 from pysis import CubeFile
 from pysis.exceptions import ProcessError
+
 logger = logging.getLogger(__name__)
 
 
 try:
-    from pysis.isis import (campt, cubenorm, getkey, handmos, hi2isis, histitch,
-                            spiceinit)
+    from pysis.isis import (
+        campt,
+        cubenorm,
+        getkey,
+        handmos,
+        hi2isis,
+        histitch,
+        spiceinit,
+    )
 except ImportError:
     logger.warning("ISIS commands not found.")
 
@@ -33,7 +41,7 @@ def nocal_hi(source_product):
 
     Parameters
     ----------
-    source_product : hirise_tools.SOURCE_PRODUCT_ID
+    source_product : pyrise.SOURCE_PRODUCT_ID
         Class object managing the precise filenames and locations for HiRISE source products
     """
     logger.info("hi2isis and spiceinit for %s", source_product)
@@ -52,10 +60,9 @@ def stitch_cubenorm(spid1, spid2):
     "Stitch together the 2 CCD chip images and do a cubenorm."
     logger.info("Stitch/cubenorm %s and %s", spid1, spid2)
     cub = spid1.local_cube.with_name(spid1.stitched_cube_name)
-    norm = cub.with_suffix('.norm.cub')
+    norm = cub.with_suffix(".norm.cub")
     try:
-        histitch(from1=str(spid1.local_cube), from2=str(spid2.local_cube),
-                 to=cub)
+        histitch(from1=str(spid1.local_cube), from2=str(spid2.local_cube), to=cub)
         cubenorm(from_=cub, to=norm)
     except ProcessError as e:
         print(e.stdout)
@@ -79,33 +86,34 @@ def get_RED45_mosaic_inputs(obsid, saveroot):
 
     Example
     -------
-    ESP_011350_0945 returns a list of hirise_tools.RED_PRODUCT_ID objects, that represent
+    ESP_011350_0945 returns a list of pyrise.RED_PRODUCT_ID objects, that represent
     themselves in the notebook as:
     [RED_PRODUCT_ID: ESP_011350_0945_RED4_0, .... RED4_1, .... RED5_0, .... RED5_1]
 
     Returns
     -------
     list
-        List of 4 hirise_tools.RED_PRODUCT_IDs
+        List of 4 pyrise.RED_PRODUCT_IDs
     """
     inputs = []
     for channel in [4, 5]:
         for chip in [0, 1]:
-            inputs.append(RED_PRODUCT_ID(
-                obsid, channel, chip, saveroot=saveroot))
+            inputs.append(RED_PRODUCT_ID(obsid, channel, chip, saveroot=saveroot))
     return inputs
 
 
 def create_RED45_mosaic(obsid, overwrite=False):
     gp_root = io.get_ground_projection_root()
 
-    logger.info('Processing the EDR data associated with ' + obsid)
+    if gp_root is None:
+        raise UserWarning("ground_projection_root is needed for mosaic creation.")
+    logger.info("Processing the EDR data associated with " + obsid)
 
-    mos_path = gp_root / obsid / f'{obsid}_mosaic_RED45.cub'
+    mos_path = gp_root / obsid / f"{obsid}_mosaic_RED45.cub"
 
     # bail out if exists:
     if mos_path.exists() and not overwrite:
-        print(f'{mos_path} already exists and I am not allowed to overwrite.')
+        print(f"{mos_path} already exists and I am not allowed to overwrite.")
         return obsid, True
 
     products = get_RED45_mosaic_inputs(obsid, gp_root)
@@ -122,15 +130,29 @@ def create_RED45_mosaic(obsid, overwrite=False):
     norm4, norm5 = norm_paths
     im0 = CubeFile.open(str(norm4))  # use CubeFile to get lines and samples
     # get binning mode from label
-    bin_ = int(getkey(from_=str(norm4), objname="isiscube", grpname="instrument",
-                      keyword="summing"))
+    bin_ = int(
+        getkey(
+            from_=str(norm4),
+            objname="isiscube",
+            grpname="instrument",
+            keyword="summing",
+        )
+    )
 
     # because there is a gap btw RED4 & 5, nsamples need to first make space
     # for 2 cubs then cut some overlap pixels
     try:
-        handmos(from_=str(norm4), mosaic=str(mos_path), nbands=1, outline=1, outband=1,
-                create='Y', outsample=1, nsamples=im0.samples * 2 - 48 // bin_,
-                nlines=im0.lines)
+        handmos(
+            from_=str(norm4),
+            mosaic=str(mos_path),
+            nbands=1,
+            outline=1,
+            outband=1,
+            create="Y",
+            outsample=1,
+            nsamples=im0.samples * 2 - 48 // bin_,
+            nlines=im0.lines,
+        )
     except ProcessError as e:
         print("STDOUT:", e.stdout)
         print("STDERR:", e.stderr)
@@ -138,8 +160,14 @@ def create_RED45_mosaic(obsid, overwrite=False):
     im0 = CubeFile.open(str(norm5))  # use CubeFile to get lines and samples
 
     # deal with the overlap gap between RED4 & 5:
-    handmos(from_=str(norm5), mosaic=str(mos_path), outline=1, outband=1, create='N',
-            outsample=im0.samples - 48 // bin_ + 1)
+    handmos(
+        from_=str(norm5),
+        mosaic=str(mos_path),
+        outline=1,
+        outband=1,
+        create="N",
+        outsample=im0.samples - 48 // bin_ + 1,
+    )
     for norm in [norm4, norm5]:
         norm.unlink()
     return obsid, True
@@ -148,7 +176,7 @@ def create_RED45_mosaic(obsid, overwrite=False):
 def cleanup(data_dir, img):
     # do some cleanup removing temporary files
     # removing ISIS cubes made during processing that aren't needed
-    fs = data_dir.glob(f'{img}_RED*.cub')
+    fs = data_dir.glob(f"{img}_RED*.cub")
 
     print(fs)
     for p in fs:
@@ -156,22 +184,22 @@ def cleanup(data_dir, img):
 
     # removing the normalized files
 
-    fs = data_dir.glob(f'{img}_RED*.norm.cub')
+    fs = data_dir.glob(f"{img}_RED*.norm.cub")
     for p in fs:
         p.unlink()
 
     # remove the raw EDR data
 
-    fs = data_dir.glob(f'{img}_RED*.IMG')
+    fs = data_dir.glob(f"{img}_RED*.IMG")
     for p in fs:
         p.unlink()
 
 
 def get_campt_label(frompath, sample, line):
     try:
-        group = pvl.load(campt(from_=str(frompath),
-                               sample=sample,
-                               line=line)).get('GroundPoint')
+        group = pvl.load(campt(from_=str(frompath), sample=sample, line=line)).get(
+            "GroundPoint"
+        )
     except ProcessError as e:
         print(e.stdout)
         print(e.stderr)
@@ -183,8 +211,14 @@ def get_campt_label(frompath, sample, line):
 def do_campt(mosaicname, savepath, temppath):
     print("Calling do_campt")
     try:
-        campt(from_=mosaicname, to=savepath, format='flat', append='no',
-              coordlist=temppath, coordtype='image')
+        campt(
+            from_=mosaicname,
+            to=savepath,
+            format="flat",
+            append="no",
+            coordlist=temppath,
+            coordtype="image",
+        )
     except ProcessError as e:
         print(e.stderr)
         return mosaicname, False
@@ -224,14 +258,13 @@ def tilecenter_to_hirise(x_tile, y_tile=None):
     "get HiRISE pixels for tile center"
     if y_tile is None:
         x_tile, y_tile = x_tile
-    return xy_to_hirise(img_x_size / 2, img_y_size / 2,
-                        x_tile, y_tile)
+    return xy_to_hirise(img_x_size / 2, img_y_size / 2, x_tile, y_tile)
 
 
 class TileCalculator(object):
-    def __init__(self, cubepath, read_data=True):
+    def __init__(self, cubepath, read_data=True, dbname=None):
         self.cubepath = Path(cubepath)
-        db = io.DBManager()
+        db = io.DBManager(dbname)
         if read_data:
             self.data = db.get_image_name_markings(self.img_name)
 
@@ -254,19 +287,18 @@ class TileCalculator(object):
         return self.cubepath.parent / savename
 
     def get_xy_tiles(self):
-        return np.mgrid[1:self.x_tile_max + 1,
-                        1:self.y_tile_max + 1]
+        return np.mgrid[1 : self.x_tile_max + 1, 1 : self.y_tile_max + 1]
 
     def get_campt_input_coords(self):
         xtiles, ytiles = self.get_xy_tiles()
         df = pd.DataFrame(dict(x_tile=xtiles.ravel(), y_tile=ytiles.ravel()))
-        df['x_hirise'] = p4tile_center_to_hirise_pix(xtiles.ravel(), 'x')
-        df['y_hirise'] = p4tile_center_to_hirise_pix(ytiles.ravel(), 'y')
+        df["x_hirise"] = p4tile_center_to_hirise_pix(xtiles.ravel(), "x")
+        df["y_hirise"] = p4tile_center_to_hirise_pix(ytiles.ravel(), "y")
         return df
 
     @property
     def temppath(self):
-        return self.cubepath.with_suffix('.tocampt')
+        return self.cubepath.with_suffix(".tocampt")
 
     @property
     def final_path(self):
@@ -277,27 +309,32 @@ class TileCalculator(object):
     @property
     def tile_coords_df(self):
         df = pd.read_csv(self.final_path)
-        df['obsid'] = self.img_name
+        df["obsid"] = self.img_name
         return df
 
     def calc_tile_coords(self):
         df = self.get_campt_input_coords()
-        df[['x_hirise', 'y_hirise']].to_csv(
-            self.temppath, header=False, index=False)
+        df[["x_hirise", "y_hirise"]].to_csv(self.temppath, header=False, index=False)
         do_campt(self.cubepath, self.campt_results_path, self.temppath)
         results = pd.read_csv(self.campt_results_path)
-        subdf = results[['Sample', 'Line',
-                         'PlanetocentricLatitude',
-                         'PlanetographicLatitude',
-                         'PositiveEast360Longitude',
-                         'BodyFixedCoordinateX',
-                         'BodyFixedCoordinateY',
-                         'BodyFixedCoordinateZ']]
-        joined = df.merge(subdf, left_on=['x_hirise', 'y_hirise'],
-                          right_on=['Sample', 'Line'])
+        subdf = results[
+            [
+                "Sample",
+                "Line",
+                "PlanetocentricLatitude",
+                "PlanetographicLatitude",
+                "PositiveEast360Longitude",
+                "BodyFixedCoordinateX",
+                "BodyFixedCoordinateY",
+                "BodyFixedCoordinateZ",
+            ]
+        ]
+        joined = df.merge(
+            subdf, left_on=["x_hirise", "y_hirise"], right_on=["Sample", "Line"]
+        )
 
         # now correlate tiles with image_id
-        subset = self.data[['image_id', 'x_tile', 'y_tile']]
+        subset = self.data[["image_id", "x_tile", "y_tile"]]
         # # this subset is not unique because it comes from marking data,
         # # there are many markings per tile, but i only need one line per tiles
         subset = subset.drop_duplicates()
@@ -319,7 +356,10 @@ class XY2LATLON:
 
     @property
     def obsid(self):
-        return self.df.image_name.iloc[0] if self._obsid is None else self._obsid
+        try:
+            return self.df.image_name.iloc[0] if self._obsid is None else self._obsid
+        except IndexError:
+            raise IndexError("self.df maybe empty?")
 
     @obsid.setter
     def obsid(self, value):
@@ -351,7 +391,9 @@ class XY2LATLON:
 
     def process_inpath(self):
         df = self.df
-        tempcoords = ['image_x', 'image_y']
+        if len(df) == 0:
+            return
+        tempcoords = ["image_x", "image_y"]
         df[tempcoords].to_csv(str(self.temppath), header=False, index=False)
         if self.savepath.exists() and self.overwrite is False:
             return

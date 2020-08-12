@@ -15,14 +15,23 @@ logger = logging.getLogger(__name__)
 
 
 def get_clustering_log(pm):
-    fpath = pm.blotchfile.parent / 'clustering_settings.yaml'
+    fpath = pm.blotchfile.parent / "clustering_settings.yaml"
     with open(fpath) as fp:
-        return yaml.load(fp)
+        return yaml.safe_load(fp)
 
 
-def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
-                           savetitle='', saveroot=None, do_title=True, via_obsid=False,
-                           figsize=None, **kwargs):
+def plot_image_id_pipeline(
+    image_id,
+    dbname=None,
+    datapath=None,
+    save=False,
+    savetitle="",
+    saveroot=None,
+    do_title=True,
+    via_obsid=False,
+    figsize=None,
+    **kwargs,
+):
     """Plotting tool to show the results along the P4 pipeline.
 
     Parameters
@@ -50,10 +59,10 @@ def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
         datapath = Path(datapath)
     else:
         datapath = pm.path_so_far.parent
-    imgid = markings.TileID(image_id, dbname=dbname, scope='planet4')
+    imgid = markings.TileID(image_id, dbname=dbname, scope="planet4")
 
     clustering_settings = get_clustering_log(pm)
-    min_samples = clustering_settings['min_samples']
+    min_samples = clustering_settings["min_samples"]
     # min_samples = 'no_log'
 
     n_classifications = imgid.n_marked_classifications
@@ -64,16 +73,12 @@ def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
     imgid.plot_fans(ax=axes[1])
     imgid.plot_blotches(ax=axes[2])
 
-    n_clust_fans = plot_clustered_markings(image_id,
-                                           'fan',
-                                           ax=axes[4],
-                                           datapath=datapath,
-                                           **kwargs)
-    n_clust_blotches = plot_clustered_markings(image_id,
-                                               'blotch',
-                                               ax=axes[5],
-                                               datapath=datapath,
-                                               **kwargs)
+    n_clust_fans = plot_clustered_markings(
+        image_id, "fan", ax=axes[4], datapath=datapath, **kwargs
+    )
+    n_clust_blotches = plot_clustered_markings(
+        image_id, "blotch", ax=axes[5], datapath=datapath, **kwargs
+    )
     plot_finals(image_id, ax=axes[3], datapath=datapath, via_obsid=via_obsid)
 
     # for ax in axes:
@@ -82,47 +87,48 @@ def plot_image_id_pipeline(image_id, dbname=None, datapath=None, save=False,
     if do_title is True:
         figtitle = "min_samples: {}".format(min_samples)
         figtitle += ", n_(blotch|fan) classif.: {}".format(n_classifications)
-        figtitle += ("\nn_clustered_fans: {}, n_clustered_blotches: {}"
-                     .format(n_clust_fans, n_clust_blotches))
-        fig.suptitle(image_id + ', ' + str(figtitle))
+        figtitle += "\nn_clustered_fans: {}, n_clustered_blotches: {}".format(
+            n_clust_fans, n_clust_blotches
+        )
+        fig.suptitle(image_id + ", " + str(figtitle))
 
-    fig.subplots_adjust(left=None, top=None, bottom=None, right=None,
-                        wspace=0.01, hspace=0.01)
+    # fig.subplots_adjust(left=None, top=None, bottom=None, right=None,
+    # wspace=0.01, hspace=0.01)
     if save:
         fname = "P4_pipeline_{}_{}.png".format(imgid.imgid, savetitle)
         if saveroot is None:
-            saveroot = pm.final_fanfile.parent / 'plots'
+            saveroot = pm.final_fanfile.parent / "plots"
         else:
             saveroot = Path(saveroot)
         saveroot.mkdir(exist_ok=True)
         fpath = saveroot / fname
         logging.debug("Saving plot at %s", str(fpath))
-        plt.savefig(str(fpath), dpi=200, bbox_inches='tight')
+        plt.savefig(str(fpath), dpi=200, bbox_inches="tight")
 
 
 def plot_raw_fans(id_, ax=None, dbname=None):
-    imgid = markings.TileID(id_, scope='planet4', dbname=dbname)
+    imgid = markings.TileID(id_, scope="planet4", dbname=dbname)
 
     imgid.plot_fans(ax=ax)
 
 
 def plot_raw_blotches(id_, ax=None):
-    imgid = markings.TileID(id_, scope='planet4')
+    imgid = markings.TileID(id_, scope="planet4")
 
     imgid.plot_blotches(ax=ax)
 
 
-def plot_finals_with_input(id_, datapath=None, horizontal=True, scope='planet4'):
+def plot_finals_with_input(id_, datapath=None, horizontal=True, scope="planet4"):
     imgid = markings.TileID(id_, scope=scope)
     pm = io.PathManager(id_=id_, datapath=datapath)
     if horizontal is True:
-        kwargs = {'ncols': 2}
+        kwargs = {"ncols": 2}
     else:
-        kwargs = {'nrows': 2}
+        kwargs = {"nrows": 2}
     fig, ax = plt.subplots(figsize=(4, 5), **kwargs)
     ax[0].set_title(imgid.imgid, fontsize=6)
     imgid.show_subframe(ax=ax[0])
-    for marking in ['fan', 'blotch']:
+    for marking in ["fan", "blotch"]:
         try:
             df = getattr(pm, f"final_{marking}df")
         except:
@@ -132,18 +138,17 @@ def plot_finals_with_input(id_, datapath=None, horizontal=True, scope='planet4')
             imgid.plot_markings(marking, data, ax=ax[1])
 
 
-def plot_finals(id_, datapath=None, ax=None, scope='planet4',
-                via_obsid=False, **kwargs):
+def plot_finals(
+    id_, datapath=None, ax=None, scope="planet4", via_obsid=False, **kwargs
+):
     id_ = io.check_and_pad_id(id_)
     imgid = markings.TileID(id_, scope=scope)
     if not via_obsid:
         pm = io.PathManager(id_=id_, datapath=datapath)
     else:
-        pm = io.PathManager(obsid=imgid.image_name,
-                            datapath=datapath)
+        pm = io.PathManager(obsid=imgid.image_name, datapath=datapath)
         logger.debug("via_obsid active. Fan path: %s", str(pm.final_fanfile))
-        logger.debug("via_obsid active. Blotch path: %s",
-                     str(pm.final_blotchfile))
+        logger.debug("via_obsid active. Blotch path: %s", str(pm.final_blotchfile))
 
     if ax is None:
         _, ax = plt.subplots()
@@ -165,13 +170,15 @@ def plot_finals(id_, datapath=None, ax=None, scope='planet4',
 def blotches_all(id_, datapath=None):
     fig, axes = plt.subplots(ncols=2)
     plot_raw_blotches(id_, ax=axes[0])
-    plot_clustered_markings(id_, kind='blotch', datapath=datapath, ax=axes[1])
-    fig.subplots_adjust(left=None, top=None, bottom=None, right=None,
-                        wspace=0.001, hspace=0.001)
+    plot_clustered_markings(id_, kind="blotch", datapath=datapath, ax=axes[1])
+    fig.subplots_adjust(
+        left=None, top=None, bottom=None, right=None, wspace=0.001, hspace=0.001
+    )
 
 
-def plot_clustered_markings(image_id, kind, datapath=None, ax=None, obsid=None,
-                            **kwargs):
+def plot_clustered_markings(
+    image_id, kind, datapath=None, ax=None, obsid=None, **kwargs
+):
     """Plot the reduced/clustered objects.
 
     Plot the clustered fans for a planet4 image_id.
@@ -192,7 +199,7 @@ def plot_clustered_markings(image_id, kind, datapath=None, ax=None, obsid=None,
     obsid : str
         obsid (= image_name) to search in for image_id data.
     """
-    imgid = markings.TileID(image_id, scope='planet4')
+    imgid = markings.TileID(image_id, scope="planet4")
     if obsid is not None:
         pm = io.PathManager(obsid=obsid, datapath=datapath)
         objects = getattr(pm, f"{kind}df")
@@ -212,20 +219,22 @@ def plot_clustered_markings(image_id, kind, datapath=None, ax=None, obsid=None,
 def fans_all(id_, datapath=None):
     fig, axes = plt.subplots(ncols=2)
     plot_raw_fans(id_, ax=axes[0])
-    plot_clustered_markings(id_, 'fan', datapath=datapath, ax=axes[1])
-    fig.subplots_adjust(left=None, top=None, bottom=None, right=None,
-                        wspace=0.001, hspace=0.001)
+    plot_clustered_markings(id_, "fan", datapath=datapath, ax=axes[1])
+    fig.subplots_adjust(
+        left=None, top=None, bottom=None, right=None, wspace=0.001, hspace=0.001
+    )
 
 
 def get_tile_image(df, xtile, ytile):
-    filtered = df.query('x_tile=={} and y_tile=={}'.format(xtile, ytile))
+    filtered = df.query("x_tile=={} and y_tile=={}".format(xtile, ytile))
     return io.get_subframe(filtered.image_url.iloc[0])
 
 
 def get_four_tiles_df(df, x0, y0):
-    query = ('x_tile > {} and x_tile < {} and y_tile > {} and y_tile < {}'.
-             format(x0 - 1, x0 + 2, y0 - 1, y0 + 2))
-    return df.query(query).sort_values(by=['x_tile', 'y_tile'])
+    query = "x_tile > {} and x_tile < {} and y_tile > {} and y_tile < {}".format(
+        x0 - 1, x0 + 2, y0 - 1, y0 + 2
+    )
+    return df.query(query).sort_values(by=["x_tile", "y_tile"])
 
 
 def get_four_tiles_img(obsid, x0, y0):
@@ -254,13 +263,14 @@ def browse_images(obsid):
     def view_image(xtile=1, ytile=1):
         img = get_four_tiles_img(obsid, xtile, ytile)
         print(img.shape)
-        plt.imshow(img, origin='upper', aspect='auto')
-        plt.title(f'x_tile: {xtile}, y_tile: {ytile}')
+        plt.imshow(img, origin="upper", aspect="auto")
+        plt.title(f"x_tile: {xtile}, y_tile: {ytile}")
         plt.show()
+
     interact(view_image, xtile=(1, xmax - 1), ytile=(1, ymax - 1))
 
 
-def get_finals_from_obsid(obsid, datapath, kind='blotch', ids=None):
+def get_finals_from_obsid(obsid, datapath, kind="blotch", ids=None):
     # get final data for case of no given image_id, meaning it's for
     # fnotched on hirise level
     pm = io.PathManager(obsid=obsid, datapath=datapath)
@@ -281,12 +291,12 @@ def plot_four_tiles(obsid, x0, y0, ax=None):
     extent = [UL[0], LR[0], LR[1], UL[1]]
     if ax is None:
         _, ax = plt.subplots()
-    ax.imshow(all_, origin='upper', extent=extent, aspect='auto')
+    ax.imshow(all_, origin="upper", extent=extent, aspect="auto")
     return UL, LR, ax
 
 
 def plot_four_tiles_finals(obsid, datapath, x0, y0):
-    colors = itertools.cycle(sns.color_palette('bright', 12))
+    colors = itertools.cycle(sns.color_palette("bright", 12))
 
     obsid_data = io.DBManager().get_image_name_markings(obsid)
     p4data = get_four_tiles_df(obsid_data, x0, y0)
@@ -294,7 +304,7 @@ def plot_four_tiles_finals(obsid, datapath, x0, y0):
     # plotting
     UL, LR, ax = plot_four_tiles(obsid, x0, y0)
     for id_ in image_ids:
-        plot_finals(id_, datapath, ax, scope='hirise', via_obsid=False)
+        plot_finals(id_, datapath, ax, scope="hirise", via_obsid=False)
 
     ax.set_xlim(UL[0], LR[0])
     ax.set_ylim(LR[1], UL[1])

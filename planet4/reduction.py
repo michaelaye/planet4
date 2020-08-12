@@ -8,8 +8,12 @@ import sys
 import time
 from pathlib import Path
 
+import dask
+import dask.dataframe as dd
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
+from dask.distributed import Client as DaskClient
 from ipyparallel import Client
 from tqdm import tqdm
 
@@ -178,8 +182,11 @@ def get_temp_fname(image_name, root=None):
 
 def get_image_names(dbname):
     logger.info('Reading image_names from disk.')
-    store = pd.HDFStore(dbname)
-    image_names = store.select_column('df', 'image_name').unique()
+    if Path(dbname).suffix in  ['.hdf', '.h5']:
+        store = pd.HDFStore(dbname)
+        image_names = store.select_column('df', 'image_name').unique()
+    elif Path(dbname).suffix in ['.parq', '.parquet']:
+        image_names = pd.read_parquet(dbname, columns=['image_name']).squeeze().unique()
     logger.info('Got image_names')
     return image_names
 
@@ -315,6 +322,29 @@ def remove_duplicates_from_file(dbname):
     all_df.to_hdf(get_cleaned_dbname(dbname), 'df',
                   format='table', data_columns=data_columns)
     # merge_temp_files(dbname, image_names)
+    logger.info("Done.")
+
+
+def remove_duplicates_parquet(singlefile, dataset):
+    logger.info("Removing duplicates.")
+    image_names = get_image_names(singlefile)
+
+    def process_image_name(image_name):
+        f = ('image_name' , '==', image_name)
+        data = pq.read_table(dataset, filters=[f]).to_pandas()
+        return remove_duplicates_from_image_name_data(data)
+
+    client = DaskClient()
+
+    lazy_results = []
+    for image_name in image_names:
+        lazy_result = dask.delayed(process_image_name)(image_name)
+        lazy_results.append(lazy_result)
+
+    futures = dask.persist(*lazy_results)
+    results = dask.compute(*futures)
+    all_df = pd.concat(results, ignore_index=True)
+    all_df.to_parquet(get_cleaned_dbname(singlefile))
     logger.info("Done.")
 
 
