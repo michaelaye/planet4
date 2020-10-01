@@ -1,7 +1,11 @@
 from math import tau
+from pathlib import Path
 
+import dask.dataframe as dd
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from tqdm.auto import tqdm
 
 mars_years = {
     28: "2006-01-23",
@@ -126,3 +130,29 @@ def define_martian_year(df, time_col_name):
     df["MY"] = 0
     for yr, t in mars_timestamps.items():
         df.loc[df[time_col_name] > t, "MY"] = yr
+
+
+def calculate_percent_lost(database_fname):
+    ddf = dd.read_parquet(database_fname)
+    image_names = ddf.image_name.unique().compute()
+
+    keys = ["image_id", "user_name"]
+    cols = ["created_at", "classification_id"]
+
+    times = []
+    percent_lost = []
+    for image_name in tqdm(image_names):
+        example = ddf[ddf.image_name == image_name].compute()
+        old = example.shape[0]
+        g = example[keys + cols].groupby(keys, sort=False)
+        c_ids = g[cols].min().classification_id.values
+        new = example[example.classification_id.isin(c_ids)].shape[0]
+        percent_lost.append((old - new) / old * 100)
+        times.append(example.created_at.mean())
+
+    plt.figure()
+    plt.plot(times, percent_lost, "*")
+    plt.grid()
+    plt.title("Duplicate loss over P4 time.")
+    plt.xlabel("Data collection date")
+    plt.ylabel("Duplicate data excluded [%]")
