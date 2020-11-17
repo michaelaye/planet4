@@ -175,8 +175,8 @@ def get_latest_cleaned_db(datadir=None):
     datadir = data_root if datadir is None else Path(datadir)
     basestr = "201*_queryable_cleaned*"
     conf = get_config()
-    dbformat = conf['options']['dbformat']
-    parquet = True if dbformat == 'parquet' else False
+    dbformat = conf["options"]["dbformat"]
+    parquet = True if dbformat == "parquet" else False
     if not parquet:
         files = list(datadir.glob(basestr + ".h5"))
     else:
@@ -237,8 +237,8 @@ def get_image_names_from_db(dbfname):
         return dd.read_hdf(str(path), "df").image_name.unique()
     elif path.suffix == ".csv":
         return dd.read_csv(path).image_name.unique()
-    elif path.suffix == ".parquet":
-        return dd.read_parquet(path).image_name.unique()
+    elif path.suffix in [".parquet", ".parq"]:
+        return dd.read_parquet(path, index=False).image_name.unique()
     else:
         raise UserWarning(f"Unknown suffix: {path.suffix}")
 
@@ -348,7 +348,7 @@ class PathManager(object):
             if self.id != "":
                 LOGGER.debug("Entering obsid search for known image_id.")
                 db = DBManager()
-                df = db.read(columns=['image_id', 'image_name'])
+                df = db.read(columns=["image_id", "image_name"])
                 obsid = df.query("image_id==@self.id").image_name.iloc[0]
                 LOGGER.debug("obsid found: %s", obsid)
                 self._obsid = obsid
@@ -546,11 +546,11 @@ class DBManager(object):
         if p.suffix.endswith("hdf"):
             return pd.read_hdf(p, **kwargs)
         elif p.suffix.endswith("parquet"):
-            where = kwargs.pop('where', None)
+            where = kwargs.pop("where", None)
             if where is not None:
-                obsid = where.split('=')[-1].strip()
+                obsid = where.split("=")[-1].strip()
                 folder = p.parent / p.stem
-                fname = (folder / obsid).with_suffix('.parquet')
+                fname = (folder / obsid).with_suffix(".parquet")
                 return pd.read_parquet(fname)
             else:
                 return pd.read_parquet(p, **kwargs)
@@ -563,7 +563,8 @@ class DBManager(object):
         return p.parent / (p.name[:38] + ".csv")
 
     def get_obsid_for_tile_id(self, tile_id):
-        df = self.read(columns=['image_id', 'image_name'])
+        tile_id = check_and_pad_id(tile_id)
+        df = self.read(columns=["image_id", "image_name"])
         obsid = df.query("image_id==@tile_id").image_name.iloc[0]
         return obsid
 
