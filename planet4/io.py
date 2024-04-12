@@ -11,6 +11,8 @@ import dask.dataframe as dd
 import matplotlib.image as mplimg
 import pandas as pd
 import pkg_resources as pr
+from planetarypy.config import config
+from planetarypy.utils import url_retrieve
 
 from . import stats
 from .exceptions import NoFilesFoundError
@@ -74,10 +76,10 @@ def get_ground_projection_root():
     try:
         gp_root = Path(d["ground_projection"]["path"])
     except KeyError:
-        warnings.warn(
-            "ground_projection_root not set in config.\n"
-            "Read/Write of projected data is disabled."
-        )
+        # warnings.warn(
+        #     "ground_projection_root not set in config.\n"
+        #     "Read/Write of projected data is disabled."
+        # )
         gp_root = None
     else:
         gp_root.mkdir(exist_ok=True)
@@ -133,20 +135,19 @@ def get_subframe(url):
     if not targetpath.exists():
         LOGGER.info("Did not find image in cache. Downloading ...")
         try:
-            path = urlretrieve(url)[0]
+            url_retrieve(url, targetpath)
         except URLError:
             msg = "Cannot receive subframe image. No internet?"
             LOGGER.error(msg)
             return None
         LOGGER.debug("Done.")
-        shutil.move(path, str(targetpath))
     else:
         LOGGER.debug("Found image in cache.")
     im = mplimg.imread(targetpath)
     return im
 
 
-class P4DBName(object):
+class P4DBName:
     def __init__(self, fname):
         self.p = Path(fname)
         date = str(self.name)[:10]
@@ -259,7 +260,7 @@ def get_image_ids_in_folder(folder, extension=".csv"):
     return [get_image_id_from_fname(i) for i in fnames]
 
 
-class PathManager(object):
+class PathManager:
 
     """Manage file paths and folders related to the analysis pipeline.
 
@@ -499,7 +500,7 @@ class PathManager(object):
         return pd.read_csv(self.fnotchfile, index_col=0)
 
 
-class DBManager(object):
+class DBManager:
 
     """Access class for database activities.
 
@@ -532,9 +533,10 @@ class DBManager(object):
             database.
         """
         if dbname is None:
-            self.dbname = str(get_latest_cleaned_db())
+            self.dbname = Path(get_latest_cleaned_db())
         else:
-            self.dbname = str(dbname)
+            self.dbname = Path(dbname)
+        self.df = dd.read_parquet(self.dbname)
 
     def __repr__(self):
         s = "Database root: {}\n".format(Path(self.dbname).parent)
@@ -559,13 +561,12 @@ class DBManager(object):
 
     @property
     def orig_csv(self):
-        p = Path(self.dbname)
+        p = self.dbname
         return p.parent / (p.name[:38] + ".csv")
 
     def get_obsid_for_tile_id(self, tile_id):
         tile_id = check_and_pad_id(tile_id)
-        df = self.read(columns=["image_id", "image_name"])
-        obsid = df.query("image_id==@tile_id").image_name.iloc[0]
+        obsid = self.df[self.df.image_id == tile_id].image_name.compute().iloc[0]
         return obsid
 
     def set_latest_with_dupes_db(self, datadir=None):
@@ -573,7 +574,7 @@ class DBManager(object):
         h5files = datadir.glob("201*_queryable.h5")
         dbname = get_latest_file(h5files)
         print("Setting {} as dbname.".format(dbname.name))
-        self.dbname = str(dbname)
+        self.dbname = Path(dbname)
 
     @property
     def image_names(self):
@@ -583,13 +584,12 @@ class DBManager(object):
         --------
         get_image_names_from_db
         """
-        return get_image_names_from_db(self.dbname)
+        return self.df.image_name.unique().compute()
 
     @property
     def image_ids(self):
         "Return list of unique image_ids in database."
-        with pd.HDFStore(self.dbname) as store:
-            return store.select_column("df", "image_id").unique()
+        return self.df.image_id.unique().compute()
 
     @property
     def n_image_ids(self):
@@ -604,12 +604,9 @@ class DBManager(object):
         "Alias to self.image_names."
         return self.image_names
 
-    def get_all(self, datadir=None):
-        return self.read()
-
     def get_obsid_markings(self, obsid):
         "Return marking data for given HiRISE obsid."
-        return self.read(where="image_name=" + obsid)
+        return self.df[self.df.image_name == obsid].compute()
 
     def get_image_name_markings(self, image_name):
         "Alias for get_obsid_markings."

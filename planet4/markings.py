@@ -76,7 +76,7 @@ def set_subframe_size(ax):
     ax.set_ylim(IMG_Y_SIZE, 0)
 
 
-class TileID(object):
+class TileID:
 
     """Manage Planet 4 Image ids, getting data, plot stuff etc.
 

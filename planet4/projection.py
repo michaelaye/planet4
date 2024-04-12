@@ -10,25 +10,18 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pvl
+import rasterio
+import rioxarray as rxr
+from kalasiris.pysis import ProcessError
+from planetarypy.hirise import RED_PRODUCT, SOURCE_PRODUCT
 
-from pyrise.products import RED_PRODUCT_ID
 from planet4 import io
-from pysis import CubeFile
-from pysis.exceptions import ProcessError
 
 logger = logging.getLogger(__name__)
 
 
 try:
-    from pysis.isis import (
-        campt,
-        cubenorm,
-        getkey,
-        handmos,
-        hi2isis,
-        histitch,
-        spiceinit,
-    )
+    from kalasiris import campt, cubenorm, getkey, handmos, hi2isis, histitch, spiceinit
 except ImportError:
     logger.warning("ISIS commands not found.")
 
@@ -36,12 +29,39 @@ img_x_size = 840
 img_y_size = 648
 
 
+class P4Mosaic:
+    def __init__(self, obsid):
+        source_prod = SOURCE_PRODUCT(f"{obsid}_RED4_0")
+        self.mosaic_path = source_prod.local_path.parent / f"{obsid}_mosaic_RED45.cub"
+
+    def read(self):
+        return rxr.open_rasterio(self.mosaic_path, chunks=(1, 2024, 2024)).isel(
+            band=0, drop=True
+        )
+
+    def show(self, xslice=None, yslice=None):
+        data = self.read()
+        if xslice is not None or yslice is not None:
+            data = data.isel(x=xslice, y=yslice)
+        return data.hvplot.image(
+            x="y",
+            y="x",
+            rasterize=True,
+            widget_location="top_left",
+            cmap="gray",
+            # frame_height=800,
+            # frame_width=800,
+            flip_yaxis=True,
+            data_aspect=2,
+        )
+
+
 def nocal_hi(source_product):
     """Import HiRISE product into ISIS and spice-init it.
 
     Parameters
     ----------
-    source_product : pyrise.SOURCE_PRODUCT_ID
+    source_product : .SOURCE_PRODUCT_ID
         Class object managing the precise filenames and locations for HiRISE source products
     """
     logger.info("hi2isis and spiceinit for %s", source_product)
@@ -49,21 +69,23 @@ def nocal_hi(source_product):
     cub_name = source_product.local_cube
     try:
         hi2isis(from_=str(img_name), to=str(cub_name))
-        spiceinit(from_=str(cub_name))
+        spiceinit(str(cub_name), web="true")
     except ProcessError as e:
         logger.error("Error in nocal_hi. STDOUT: %s", e.stdout)
         logger.error("STDERR: %s", e.stderr)
-        return
+        return False
+    else:
+        return True
 
 
 def stitch_cubenorm(spid1, spid2):
     "Stitch together the 2 CCD chip images and do a cubenorm."
     logger.info("Stitch/cubenorm %s and %s", spid1, spid2)
-    cub = spid1.local_cube.with_name(spid1.stitched_cube_name)
-    norm = cub.with_suffix(".norm.cub")
+    cub = spid1.stitched_cube_path
+    normed = cub.with_suffix(".norm.cub")
     try:
         histitch(from1=str(spid1.local_cube), from2=str(spid2.local_cube), to=cub)
-        cubenorm(from_=cub, to=norm)
+        cubenorm(from_=cub, to=normed)
     except ProcessError as e:
         print(e.stdout)
         print(e.stderr)
@@ -71,10 +93,10 @@ def stitch_cubenorm(spid1, spid2):
     for spid in [spid1, spid2]:
         spid.local_cube.unlink()
     cub.unlink()
-    return norm
+    return normed
 
 
-def get_RED45_mosaic_inputs(obsid, saveroot):
+def get_RED45_mosaic_inputs(obsid, saveroot=None):
     """Create list with filenames for RED4 and RED5 CCD chips 0 and 1, respectively.
 
     Parameters
@@ -86,41 +108,39 @@ def get_RED45_mosaic_inputs(obsid, saveroot):
 
     Example
     -------
-    ESP_011350_0945 returns a list of pyrise.RED_PRODUCT_ID objects, that represent
+    ESP_011350_0945 returns a list of pyrise.RED_PRODUCT objects, that represent
     themselves in the notebook as:
-    [RED_PRODUCT_ID: ESP_011350_0945_RED4_0, .... RED4_1, .... RED5_0, .... RED5_1]
+    [RED_PRODUCT: ESP_011350_0945_RED4_0, .... RED4_1, .... RED5_0, .... RED5_1]
 
     Returns
     -------
     list
-        List of 4 pyrise.RED_PRODUCT_IDs
+        List of 4 hirise.RED_PRODUCTs
     """
     inputs = []
     for channel in [4, 5]:
         for chip in [0, 1]:
-            inputs.append(RED_PRODUCT_ID(obsid, channel, chip, saveroot=saveroot))
+            inputs.append(RED_PRODUCT(obsid, channel, chip, saveroot=saveroot))
     return inputs
 
 
 def create_RED45_mosaic(obsid, overwrite=False):
-    gp_root = io.get_ground_projection_root()
-
-    if gp_root is None:
-        raise UserWarning("ground_projection_root is needed for mosaic creation.")
     logger.info("Processing the EDR data associated with " + obsid)
 
-    mos_path = gp_root / obsid / f"{obsid}_mosaic_RED45.cub"
+    products = get_RED45_mosaic_inputs(obsid)
+
+    mos_path = products[0].local_path.parent / f"{obsid}_mosaic_RED45.cub"
 
     # bail out if exists:
     if mos_path.exists() and not overwrite:
         print(f"{mos_path} already exists and I am not allowed to overwrite.")
         return obsid, True
 
-    products = get_RED45_mosaic_inputs(obsid, gp_root)
-
     for prod in products:
         prod.download()
-        nocal_hi(prod)
+        ret = nocal_hi(prod)
+        if not ret:
+            return obsid, False
 
     norm_paths = []
     for channel_products in [products[:2], products[2:]]:
@@ -128,7 +148,7 @@ def create_RED45_mosaic(obsid, overwrite=False):
 
     # handmos part
     norm4, norm5 = norm_paths
-    im0 = CubeFile.open(str(norm4))  # use CubeFile to get lines and samples
+    im0 = rasterio.open(norm4)  # use rasterio to get lines and samples
     # get binning mode from label
     bin_ = int(
         getkey(
@@ -136,7 +156,7 @@ def create_RED45_mosaic(obsid, overwrite=False):
             objname="isiscube",
             grpname="instrument",
             keyword="summing",
-        )
+        ).stdout
     )
 
     # because there is a gap btw RED4 & 5, nsamples need to first make space
@@ -150,14 +170,14 @@ def create_RED45_mosaic(obsid, overwrite=False):
             outband=1,
             create="Y",
             outsample=1,
-            nsamples=im0.samples * 2 - 48 // bin_,
-            nlines=im0.lines,
+            nsamples=im0.width * 2 - 48 // bin_,
+            nlines=im0.height,
         )
     except ProcessError as e:
         print("STDOUT:", e.stdout)
         print("STDERR:", e.stderr)
 
-    im0 = CubeFile.open(str(norm5))  # use CubeFile to get lines and samples
+    im0 = rasterio.open(norm5)  # use rasterio to get lines and samples
 
     # deal with the overlap gap between RED4 & 5:
     handmos(
@@ -166,7 +186,7 @@ def create_RED45_mosaic(obsid, overwrite=False):
         outline=1,
         outband=1,
         create="N",
-        outsample=im0.samples - 48 // bin_ + 1,
+        outsample=im0.width - 48 // bin_ + 1,
     )
     for norm in [norm4, norm5]:
         norm.unlink()
@@ -261,7 +281,7 @@ def tilecenter_to_hirise(x_tile, y_tile=None):
     return xy_to_hirise(img_x_size / 2, img_y_size / 2, x_tile, y_tile)
 
 
-class TileCalculator(object):
+class TileCalculator:
     def __init__(self, cubepath, read_data=True, dbname=None):
         self.cubepath = Path(cubepath)
         db = io.DBManager(dbname)
@@ -348,30 +368,29 @@ class XY2LATLON:
     edrpath = io.get_ground_projection_root()
 
     def __init__(self, df, inpath, overwrite=False, obsid=None):
-        self.obsid = obsid
         self.df = df
+        self.obsid = obsid
         self.inpath = inpath
         self.overwrite = overwrite
-        self._obsid = obsid
+        self.p4m = P4Mosaic(self.obsid)
 
     @property
     def obsid(self):
-        try:
-            return self.df.image_name.iloc[0] if self._obsid is None else self._obsid
-        except IndexError:
-            raise IndexError("self.df maybe empty?")
+        return self._obsid
 
     @obsid.setter
     def obsid(self, value):
-        self._obsid = value
-
-    @property
-    def mosaicname(self):
-        return f"{self.obsid}_mosaic_RED45.cub"
+        if value is None:
+            try:
+                self._obsid = self.df.image_name.iloc[0]
+            except IndexError:
+                raise IndexError("self.df maybe empty?")
+        else:
+            self._obsid = value
 
     @property
     def mosaicpath(self):
-        return self.edrpath / self.obsid / self.mosaicname
+        return self.p4m.mosaic_path
 
     @property
     def savepath(self):

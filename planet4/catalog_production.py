@@ -9,13 +9,17 @@ import itertools
 import logging
 import string
 
+import dask
 import pandas as pd
+from nbtools import execute_in_parallel
+from dask import delayed, compute
 from tqdm import tqdm
 
-from nbtools import execute_in_parallel
-
-from . import io, metadata as p4meta
-from .projection import TileCalculator, create_RED45_mosaic, XY2LATLON
+from . import io
+from . import metadata as p4meta
+from planetarypy.hirise import SOURCE_PRODUCT
+from planetarypy.pds.apps import get_index
+from .projection import XY2LATLON, TileCalculator, create_RED45_mosaic
 
 LOGGER = logging.getLogger(__name__)
 # logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
@@ -88,7 +92,13 @@ def cluster_obsid(obsid=None, savedir=None, imgid=None, dbname=None):
     # cluster
     dbscanner = dbscan.DBScanner(savedir=savedir, dbname=dbname)
     dbscanner.cluster_image_name(obsid)
+    return obsid
 
+def cluster_obsid_parallel(obsids, savedir, dbname):
+    lazys = []
+    for obsid in obsids:
+        lazys.append(delayed(cluster_obsid)(obsid, savedir, dbname=dbname))
+    return dask.compute(*lazys)
 
 def fnotch_obsid(obsid=None, savedir=None, fnotch_via_obsid=False, imgid=None):
     """
@@ -110,17 +120,11 @@ def fnotch_obsid(obsid=None, savedir=None, fnotch_via_obsid=False, imgid=None):
     return obsid
 
 
-def cluster_obsid_parallel(args):
-    "Create argument tuples for cluster_obsid, for parallel usage."
-    obsid, savedir, dbname = args
-    return cluster_obsid(obsid, savedir, dbname=dbname)
-
-
-def fnotch_obsid_parallel(args):
-    "Create argument tuples for cluster_obsid, for parallel usage."
-    obsid, savedir, _ = args
-    return fnotch_obsid(obsid, savedir)
-
+def fnotch_obsid_parallel(obsids, savedir):
+    lazys = []
+    for obsid in obsids:
+        lazys.append(delayed(fnotch_obsid)(obsid, savedir))
+    return dask.compute(*lazys)
 
 class ReleaseManager:
     """Class to manage releases and find relevant files.
@@ -231,7 +235,7 @@ class ReleaseManager:
         """
         if self._obsids is None:
             db = io.DBManager(dbname=self.dbname)
-            self._obsids = db.obsids.compute()
+            self._obsids = db.obsids
         return self._obsids
 
     @obsids.setter
@@ -285,8 +289,7 @@ class ReleaseManager:
         return [(i, self.catalog, self.dbname) for i in self.todo]
 
     def get_no_of_tiles_per_obsid(self):
-        db = io.DBManager(self.dbname)
-        all_data = db.get_all()
+        all_data = pd.read_parquet(self.dbname)
         return all_data.groupby("image_name").image_id.nunique()
 
     @property
@@ -296,7 +299,7 @@ class ReleaseManager:
     def calc_metadata(self):
         if not self.EDRINDEX_meta_path.exists():
             NAs = p4meta.get_north_azimuths_from_SPICE(self.obsids)
-            edrindex = pd.read_hdf("/Volumes/Data/hirise/EDRCUMINDEX.hdf")
+            edrindex = get_index('mro.hirise', 'edr')
             p4_edr = (
                 edrindex[edrindex.OBSERVATION_ID.isin(self.obsids)]
                 .query('CCD_NAME=="RED4"')
@@ -327,9 +330,8 @@ class ReleaseManager:
         LOGGER.info("Wrote %s", str(self.metadata_path))
 
     def calc_tile_coordinates(self):
-        edrpath = io.get_ground_projection_root()
         cubepaths = [
-            edrpath / obsid / f"{obsid}_mosaic_RED45.cub" for obsid in self.obsids
+            P4Mosaic(obsid).mosaic_path for obsid in self.obsids
         ]
 
         todo = []
@@ -488,6 +490,9 @@ class ReleaseManager:
         blotches = blotches.merge(ground[self.COLS_TO_MERGE], on=INDEX)
         return fans, blotches
 
+    def perform_clustering(self):
+        lazy_results = []
+
     def launch_catalog_production(self):
 
         # check for data that is unprocessed
@@ -496,9 +501,7 @@ class ReleaseManager:
         # perform the clustering
         if len(self.todo) > 0:
             LOGGER.info("Performing the clustering.")
-            results = execute_in_parallel(
-                cluster_obsid_parallel, self.get_parallel_args()
-            )
+            results = cluster_obsid_parallel(self.todo, self.catalog, self.dbname)
 
             # create marking_ids
             fan_id = fan_id_generator()
@@ -510,7 +513,7 @@ class ReleaseManager:
 
             # fnotch and apply cuts
             LOGGER.info("Start fnotching")
-            execute_in_parallel(fnotch_obsid_parallel, self.get_parallel_args())
+            results = fnotch_obsid_parallel(self.todo, self.catalog)
 
         # create summary CSV files of the clustering output
         LOGGER.info("Creating L1C fan and blotch database files.")

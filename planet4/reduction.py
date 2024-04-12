@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 
 # the split trick creates lists when u don't want to break ur fingers with
 # typing ',,'','',',,' all the time...
-blotch_data_cols = "x y image_x image_y radius_1 radius_2".split()
-fan_data_cols = "x y image_x image_y distance angle spread".split()
+blotch_data_cols = "x y radius_1 radius_2".split()
+fan_data_cols = "x y distance angle spread".split()
 
 analysis_cols = [
     "classification_id",

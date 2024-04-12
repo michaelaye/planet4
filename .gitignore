@@ -70,3 +70,5 @@ notebooks/myids\.npy
 \.vscode/
 
 \.mypy_cache/
+
+*P4_catalog_*

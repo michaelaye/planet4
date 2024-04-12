@@ -11,6 +11,7 @@ import pyaml
 import seaborn as sns
 from scipy.stats import circmean, circstd
 from sklearn.cluster import DBSCAN
+from tqdm.auto import tqdm
 
 from . import io, markings
 
@@ -31,7 +32,7 @@ def get_average_objects(clusters, kind):
     -------
     Generator providing single row pandas.DataFrames with the average values
     """
-    logger.debug("Averaging clusters.")
+    logger.debug("Averaging clusters with kind = %s.", kind)
     for cluster_df in clusters:
         # first filter for outliers more than 1 std away
         # for
@@ -39,7 +40,7 @@ def get_average_objects(clusters, kind):
         logger.debug("Averaging %i objects.", len(cluster_df))
         logger.debug("x.mean: %f", cluster_df.x.mean())
         logger.debug("y.mean: %f", cluster_df.y.mean())
-        meandata = cluster_df.mean()
+        meandata = cluster_df.mean(numeric_only=True)
         # this determines the upper limit for circular mean
         high = 180 if kind == "blotch" else 360
         meandata.angle = circmean(cluster_df.angle, high=high)
@@ -47,10 +48,12 @@ def get_average_objects(clusters, kind):
         meandata["n_votes"] = len(cluster_df)
         meandata["x_std"] = cluster_df.x.std()
         meandata["y_std"] = cluster_df.y.std()
-        meandata["distance_std"] = cluster_df.distance.std()
-        meandata["spread_std"] = cluster_df.spread.std()
-        meandata["radius1_std"] = cluster_df.radius_1.std()
-        meandata["radius2_std"] = cluster_df.radius_2.std()
+        if kind == "fan":
+            meandata["distance_std"] = cluster_df.distance.std()
+            meandata["spread_std"] = cluster_df.spread.std()
+        elif kind == 'blotch':
+            meandata["radius1_std"] = cluster_df.radius_1.std()
+            meandata["radius2_std"] = cluster_df.radius_2.std()
 
         yield meandata.to_frame().T
 
@@ -72,7 +75,7 @@ def plot_results(p4id, labels, data=None, kind=None, reduced_data=None, ax=None)
         functions[kind](ax=ax, data=reduced_data, lw=1, with_center=True)
 
 
-class DBScanner(object):
+class DBScanner:
     """Potential replacement for ClusteringManager
 
     Parameters
@@ -139,7 +142,7 @@ class DBScanner(object):
 
     def cluster_any(self, X, eps):
         logger.debug("Clustering any.")
-        db = DBSCAN(eps, self.min_samples).fit(X)
+        db = DBSCAN(eps, min_samples=self.min_samples).fit(X)
         labels = db.labels_
         unique_labels = sorted(set(labels))
 
@@ -314,9 +317,9 @@ class DBScanner(object):
         data = db.get_image_name_markings(image_name)
         image_ids = data.image_id.unique()
         logger.debug("Number of image_ids found: %i", len(image_ids))
-        for image_id in image_ids:
+        for image_id in tqdm(image_ids):
             self.pm.id = image_id
-            self.cluster_image_id(image_id, msf, eps_values)
+            self.cluster_image_id(image_id, msf, eps_values, image_name)
 
     def write_settings_file(self, eps_values):
         eps_values["min_samples"] = self.min_samples
@@ -327,7 +330,7 @@ class DBScanner(object):
         with open(settingspath, "w") as fp:
             pyaml.dump(eps_values, fp)
 
-    def cluster_image_id(self, img_id, msf=None, eps_values=None):
+    def cluster_image_id(self, img_id, msf=None, eps_values=None, image_name=None):
         """Interface function for users to cluster data for one P4 image_id.
 
         This method does the data splitting in case it is required and calls the
@@ -352,7 +355,7 @@ class DBScanner(object):
         `self.reduced_data`.
         """
         self.p4id = markings.TileID(
-            img_id, scope="planet4", dbname=self.dbname, data=self.data
+            img_id, scope="planet4", dbname=self.dbname, data=self.data, image_name=image_name
         )
         self.pm.obsid = self.p4id.image_name
         self.pm.id = img_id
@@ -466,7 +469,7 @@ class DBScanner(object):
             reduced_data = pd.concat(averaged, ignore_index=True, sort=True)
         except ValueError as e:
             if e.args[0].startswith("No objects to concatenate"):
-                logger.warning("No clusters survived.")
+                # logger.warning("No clusters survived.")
                 return None
             else:
                 raise e

@@ -66,7 +66,7 @@ def plot_image_id_pipeline(
     # min_samples = 'no_log'
 
     n_classifications = imgid.n_marked_classifications
-    fig, axes = plt.subplots(nrows=2, ncols=3, figsize=figsize)
+    fig, axes = plt.subplots(nrows=2, ncols=3, figsize=figsize, constrained_layout=True)
     axes = axes.ravel()
     for ax in axes:
         imgid.show_subframe(ax=ax)
@@ -103,7 +103,8 @@ def plot_image_id_pipeline(
         saveroot.mkdir(exist_ok=True)
         fpath = saveroot / fname
         logging.debug("Saving plot at %s", str(fpath))
-        plt.savefig(str(fpath), dpi=200, bbox_inches="tight")
+        plt.savefig(str(fpath), dpi=200, transparent=False, facecolor='white')
+        plt.savefig(fpath.with_suffix(".pdf"), facecolor='white')
 
 
 def plot_raw_fans(id_, ax=None, dbname=None):
