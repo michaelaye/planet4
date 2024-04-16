@@ -6,3 +6,6 @@ matplotlib
 ipyparallel
 scikit-learn
 seaborn
+dask
+PyYAML
+pyaml
