@@ -5,21 +5,21 @@ processing.
 If you execute this locally, you can create one with `ipcluster start -n <no>`, with <no> the number
 of cores you want to provide to the parallel processing routines.
 """
+
 import itertools
 import logging
 import string
 
 import dask
 import pandas as pd
+from dask import delayed
 from nbtools import execute_in_parallel
-from dask import delayed, compute
+from planetarypy.pds.apps import get_index
 from tqdm import tqdm
 
 from . import io
 from . import metadata as p4meta
-from planetarypy.hirise import SOURCE_PRODUCT
-from planetarypy.pds.apps import get_index
-from .projection import XY2LATLON, TileCalculator, create_RED45_mosaic
+from .projection import XY2LATLON, P4Mosaic, TileCalculator, create_RED45_mosaic
 
 LOGGER = logging.getLogger(__name__)
 # logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
@@ -94,11 +94,13 @@ def cluster_obsid(obsid=None, savedir=None, imgid=None, dbname=None):
     dbscanner.cluster_image_name(obsid)
     return obsid
 
+
 def cluster_obsid_parallel(obsids, savedir, dbname):
     lazys = []
     for obsid in obsids:
         lazys.append(delayed(cluster_obsid)(obsid, savedir, dbname=dbname))
     return dask.compute(*lazys)
+
 
 def fnotch_obsid(obsid=None, savedir=None, fnotch_via_obsid=False, imgid=None):
     """
@@ -125,6 +127,7 @@ def fnotch_obsid_parallel(obsids, savedir):
     for obsid in obsids:
         lazys.append(delayed(fnotch_obsid)(obsid, savedir))
     return dask.compute(*lazys)
+
 
 class ReleaseManager:
     """Class to manage releases and find relevant files.
@@ -299,7 +302,7 @@ class ReleaseManager:
     def calc_metadata(self):
         if not self.EDRINDEX_meta_path.exists():
             NAs = p4meta.get_north_azimuths_from_SPICE(self.obsids)
-            edrindex = get_index('mro.hirise', 'edr')
+            edrindex = get_index("mro.hirise", "edr")
             p4_edr = (
                 edrindex[edrindex.OBSERVATION_ID.isin(self.obsids)]
                 .query('CCD_NAME=="RED4"')
@@ -330,9 +333,7 @@ class ReleaseManager:
         LOGGER.info("Wrote %s", str(self.metadata_path))
 
     def calc_tile_coordinates(self):
-        cubepaths = [
-            P4Mosaic(obsid).mosaic_path for obsid in self.obsids
-        ]
+        cubepaths = [P4Mosaic(obsid).mosaic_path for obsid in self.obsids]
 
         todo = []
         for cubepath in cubepaths:
@@ -494,7 +495,6 @@ class ReleaseManager:
         lazy_results = []
 
     def launch_catalog_production(self):
-
         # check for data that is unprocessed
         self.check_for_todo()
 
