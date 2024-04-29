@@ -69,7 +69,11 @@ def nocal_hi(source_product):
     cub_name = source_product.local_cube
     try:
         hi2isis(from_=str(img_name), to=str(cub_name))
-        spiceinit(str(cub_name), web="true")
+        spiceinit(
+            str(cub_name),
+            web="true",
+            url="https://astrogeology.usgs.gov/apis/ale/v0.9.1/spiceserver/",
+        )
     except ProcessError as e:
         logger.error("Error in nocal_hi. STDOUT: %s", e.stdout)
         logger.error("STDERR: %s", e.stderr)
@@ -96,7 +100,9 @@ def stitch_cubenorm(spid1, spid2):
     return normed
 
 
-def get_RED45_mosaic_inputs(obsid, saveroot=None):
+def get_RED45_mosaic_inputs(
+    obsid: str, saveroot: Path = None
+) -> list[type[RED_PRODUCT]]:
     """Create list with filenames for RED4 and RED5 CCD chips 0 and 1, respectively.
 
     Parameters
@@ -118,16 +124,16 @@ def get_RED45_mosaic_inputs(obsid, saveroot=None):
         List of 4 hirise.RED_PRODUCTs
     """
     inputs = []
-    for channel in [4, 5]:
-        for chip in [0, 1]:
-            inputs.append(RED_PRODUCT(obsid, channel, chip, saveroot=saveroot))
+    for ccdno in [4, 5]:  # only need inner channel/CCD no 4 and 5
+        for channel in [0, 1]:  # always need both channels of one CCD
+            inputs.append(RED_PRODUCT(obsid, ccdno, channel, saveroot=saveroot))
     return inputs
 
 
 def create_RED45_mosaic(obsid, overwrite=False):
     logger.info("Processing the EDR data associated with " + obsid)
 
-    products = get_RED45_mosaic_inputs(obsid)
+    products = get_RED45_mosaic_inputs(obsid)  # get list of RED_PRODUCTS
 
     mos_path = products[0].local_path.parent / f"{obsid}_mosaic_RED45.cub"
 
@@ -137,8 +143,8 @@ def create_RED45_mosaic(obsid, overwrite=False):
         return obsid, True
 
     for prod in products:
-        prod.download()
-        ret = nocal_hi(prod)
+        prod.download()  # the RED_PRODUCT knows how to download
+        ret = nocal_hi(prod)  # here the spiceinit happens
         if not ret:
             return obsid, False
 
