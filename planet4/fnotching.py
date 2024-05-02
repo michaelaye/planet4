@@ -58,7 +58,8 @@ def data_to_centers(df, kind, scope="hirise"):
         Marking = markings.Blotch
     else:
         Marking = markings.Fan
-    return np.vstack(Marking(row, scope=scope).center for _, row in df.iterrows())
+    
+    return np.vstack([Marking(row, scope=scope).center for _, row in df.iterrows()])
 
 
 def calc_indices_from_index(n, c):
