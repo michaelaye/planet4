@@ -38,69 +38,69 @@ def get_fraction_of_black_pixels(savepath):
     return np.array(fractions).mean()
 
 
-# class MetadataReader:
+class MetadataReader:
 
-#     def __init__(self, obsid):
-#         self.obsid = obsid
-#         self.prodid = ProductPathfinder(obsid+"_COLOR")
-#         if not self.labelpath.exists():
-#             self.download_label()
+    def __init__(self, obsid):
+        self.obsid = obsid
+        self.prodid = ProductPathfinder(obsid+"_COLOR")
+        if not self.labelpath.exists():
+            self.download_label()
 
-#     def read_edr_index(self):
-#         return get_index("mro.hirise", "edr")
+    def read_edr_index(self):
+        return get_index("mro.hirise", "edr")
 
-#     @property
-#     def labelpath(self):
-#         return self.prodid.local_label_path
+    @property
+    def labelpath(self):
+        return self.prodid.local_label_path
 
-#     def download_label(self):
-#         self.prodid.download_label()
+    def download_label(self):
+        self.prodid.download_label()
 
-#     @property
-#     def label(self):
-#         return labels.HiRISE_Label(self.labelpath)
+    @property
+    def label(self):
+        return labels.HiRISE_Label(self.labelpath)
 
-#     @property
-#     def campt_out_path(self):
-#         p4m = projection.P4Mosaic(self.obsid)
-#         return p4m.mosaic_path.parent / f"{self.obsid}_campt_out.csv"
+    @property
+    def campt_out_path(self):
+        p4m = projection.P4Mosaic(self.obsid)
+        return p4m.mosaic_path.parent / f"{self.obsid}_campt_out.csv"
 
-#     @property
-#     def campt_out_df(self):
-#         return pd.read_csv(self.campt_out_path)
+    @property
+    def campt_out_df(self):
+        return pd.read_csv(self.campt_out_path)
 
-#     def get_data_dic(self):
-#         """Defines a dictionary with metadata
+    def get_data_dic(self):
+        """Defines a dictionary with metadata
 
-#         Uses mostly the mosaic label data, but adds the previously
-#         SPICE-calculated NorthAzimuth angle from `campt` ISIS tool.
+        Uses mostly the mosaic label data, but adds the previously
+        SPICE-calculated NorthAzimuth angle from `campt` ISIS tool.
 
-#         Prerequisite for this call is, that the campt files have all been
-#         created for the obsids to be done.
-#         This is usually the case after all tile coordinates have been created
-#         using projection.TileCalculator.
+        Prerequisite for this call is, that the campt files have all been
+        created for the obsids to be done.
+        This is usually the case after all tile coordinates have been created
+        using projection.TileCalculator.
 
-#         FIXME
-#         """
-#         # edrindex = pd.read_hdf("/Volumes/Data/hirise/EDRCUMINDEX.hdf")
-#         # p4_edr = edrindex[edrindex.OBSERVATION_ID.isin(obsids)].query(
-#         #     'CCD_NAME=="RED4"').drop_duplicates(subset='OBSERVATION_ID')
+        FIXME
+        """
+        # edrindex = pd.read_hdf("/Volumes/Data/hirise/EDRCUMINDEX.hdf")
+        # p4_edr = edrindex[edrindex.OBSERVATION_ID.isin(obsids)].query(
+        #     'CCD_NAME=="RED4"').drop_duplicates(subset='OBSERVATION_ID')
 
-#         # label = self.label
-#         # labelpath = self.labelpath
-#         # d = dict(obsid=self.obsid,
-#         #          l_s=label.l_s, line_samples=label.line_samples,
-#         #          lines=label.lines, map_scale=label.map_scale)
-#         # d['north_azimuth'] = self.campt_out_df['NorthAzimuth'].median()
-#         # return d
+        # label = self.label
+        # labelpath = self.labelpath
+        # d = dict(obsid=self.obsid,
+        #          l_s=label.l_s, line_samples=label.line_samples,
+        #          lines=label.lines, map_scale=label.map_scale)
+        # d['north_azimuth'] = self.campt_out_df['NorthAzimuth'].median()
+        # return d
 
 
-# def get_north_azimuths_from_SPICE(obsids):
-#     NAs = []
-#     for obsid in obsids:
-#         meta = MetadataReader(obsid)
-#         NAs.append(meta.campt_out_df['NorthAzimuth'].median())
-#     return pd.DataFrame(dict(OBSERVATION_ID=obsids, north_azimuth=NAs))
+def get_north_azimuths_from_SPICE(obsids):
+    NAs = []
+    for obsid in obsids:
+        meta = MetadataReader(obsid)
+        NAs.append(meta.campt_out_df['NorthAzimuth'].median())
+    return pd.DataFrame(dict(OBSERVATION_ID=obsids, north_azimuth=NAs))
 
 #     savedir = downloads.hirise_dropbox() / 'browse'
 #     savepath = savedir / prodid.browse_path.name
