@@ -297,7 +297,7 @@ class Blotch(Ellipse):
         self._n_members = 1
         super(Blotch, self).__init__((self.x, self.y),
                                      data.radius_1 * 2, data.radius_2 * 2,
-                                     data.angle, alpha=0.65,
+                                     angle=data.angle, alpha=0.65,
                                      fill=False, **kwargs)
         self.data = data
 

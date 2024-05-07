@@ -58,7 +58,8 @@ def data_to_centers(df, kind, scope="hirise"):
         Marking = markings.Blotch
     else:
         Marking = markings.Fan
-    return np.vstack(Marking(row, scope=scope).center for _, row in df.iterrows())
+    
+    return np.vstack([Marking(row, scope=scope).center for _, row in df.iterrows()])
 
 
 def calc_indices_from_index(n, c):
@@ -172,10 +173,10 @@ def fnotch_image_ids(obsid, eps=20, savedir=None, scope="hirise"):
                     raise ValueError
 
             # write out the fans and blotches that where not within fnotching distance:
-            fans_remaining = fans.loc[set(fans.index) - set(X)]
+            fans_remaining = fans.loc[list(set(fans.index) - set(X))]
             if len(fans_remaining) > 0:
                 fans_remaining.to_csv(pm.reduced_fanfile, index=False)
-            blotches_remaining = blotches.loc[set(blotches.index) - set(Y)]
+            blotches_remaining = blotches.loc[list(set(blotches.index) - set(Y))]
             if len(blotches_remaining) > 0:
                 blotches_remaining.to_csv(pm.reduced_blotchfile, index=False)
         else:

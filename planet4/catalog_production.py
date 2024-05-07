@@ -382,7 +382,7 @@ class ReleaseManager:
         """
         out = []
         for df in [fans, blotches]:
-            averaged = df.groupby("marking_id").mean()
+            averaged = df.groupby("marking_id").mean(numeric_only=True)
             tmp = df.drop_duplicates(subset="marking_id").set_index("marking_id")
             averaged = averaged.join(tmp[["image_id", "obsid"]], how="inner")
             out.append(averaged.reset_index())
